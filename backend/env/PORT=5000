@@ -1,0 +1,6 @@
+PORT=5000
+NODE_ENV=development
+MONGODB_URI=mongodb+srv://krish_100ni:@Krish_100ni#9827@cluster0.smve6os.mongodb.net/?appName=Cluster0
+JWT_SECRET=aJWT_SECRET=legalitt2024xK9mP2qL7vN4wZ1aBkrish
+JWT_EXPIRES_IN=7d
+FRONTEND_URL=http://localhost:5173
