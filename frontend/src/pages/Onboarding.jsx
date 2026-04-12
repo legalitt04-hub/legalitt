@@ -27,7 +27,7 @@ export default function Onboarding() {
   const navigate = useNavigate();
   const handleSkip = () => {
     localStorage.setItem('onboarding_done', 'true');
-    navigate('/login');
+    navigate('/welcome');
   };
   const [phase, setPhase] = useState('splash'); // splash | slides
   const [slide, setSlide] = useState(0);
@@ -44,11 +44,11 @@ export default function Onboarding() {
     if (slide < SLIDES.length - 1) {
       setSlide(s => s + 1);
     } else {
-      navigate('/login');
+      navigate('/welcome');
     }
   };
 
-  const skip = () => navigate('/login');
+  const skip = () => navigate('/welcome');
 
   // ── Splash ──────────────────────────────────────────
   if (phase === 'splash') {
