@@ -28,9 +28,9 @@ export default function RoleSelect({ onSelect }) {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col px-6 pt-16 pb-10">
+    <div className="min-h-screen bg-white flex flex-col px-6 pt-10 pb-6">
       {/* Illustration placeholder */}
-      <div className="flex-1 flex flex-col items-center justify-center">
+      <div className="flex flex-col items-center justify-center py-6">
         <div className="w-28 h-28 bg-primary-50 rounded-3xl flex items-center justify-center mb-10">
           <User size={56} className="text-primary-400" strokeWidth={1.2} />
         </div>
