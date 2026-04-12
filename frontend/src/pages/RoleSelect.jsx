@@ -1,20 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Briefcase, ChevronRight } from 'lucide-react';
+import { User, Briefcase } from 'lucide-react';
 
 const ROLES = [
-  {
-    id: 'user',
-    icon: User,
-    label: 'User',
-    desc: 'Get Legal Services',
-  },
-  {
-    id: 'lawyer',
-    icon: Briefcase,
-    label: 'Lawyer',
-    desc: 'Offer Legal Services',
-  },
+  { id: 'user', icon: User, label: 'User', desc: 'Get Legal Services' },
+  { id: 'lawyer', icon: Briefcase, label: 'Lawyer', desc: 'Offer Legal Services' },
 ];
 
 export default function RoleSelect({ onSelect }) {
@@ -23,18 +13,18 @@ export default function RoleSelect({ onSelect }) {
 
   const handleNext = () => {
     if (!selected) return;
+    localStorage.setItem('legalitt_role', selected);
     if (onSelect) onSelect(selected);
-    navigate('/login');
+    navigate('/welcome');
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col px-6 pt-10 pb-6">
-      {/* Illustration placeholder */}
-      <div className="flex flex-col items-center justify-center py-6">
-        <div className="w-28 h-28 bg-primary-50 rounded-3xl flex items-center justify-center mb-10">
+    <div className="min-h-screen bg-white flex flex-col px-6 py-10">
+      {/* Illustration */}
+      <div className="flex flex-col items-center justify-center py-8">
+        <div className="w-28 h-28 bg-primary-50 rounded-3xl flex items-center justify-center mb-6">
           <User size={56} className="text-primary-400" strokeWidth={1.2} />
         </div>
-
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-gray-900">Choose Your Role</h1>
           <p className="text-gray-500 text-sm mt-2">You Have To Choose Your Role — What Is Your Profession</p>
@@ -72,13 +62,14 @@ export default function RoleSelect({ onSelect }) {
       </div>
 
       {/* Next button */}
-      <button
-        onClick={handleNext}
-        disabled={!selected}
-        className="w-full bg-primary-500 hover:bg-primary-600 disabled:opacity-40 text-white font-bold py-4 rounded-2xl text-base transition-all active:scale-95 shadow-lg shadow-primary-200"
-      >
-        Next
-      </button>
+      <div className="mt-auto pt-6">
+        <button
+          onClick={handleNext}
+          disabled={!selected}
+          className="w-full bg-primary-500 hover:bg-primary-600 disabled:opacity-40 text-white font-bold py-4 rounded-2xl text-base transition-all active:scale-95 shadow-lg shadow-primary-200">
+          Next
+        </button>
+      </div>
     </div>
   );
 }
