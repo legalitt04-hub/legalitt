@@ -25,6 +25,10 @@ const SLIDES = [
 
 export default function Onboarding() {
   const navigate = useNavigate();
+  const handleSkip = () => {
+    localStorage.setItem('onboarding_done', 'true');
+    navigate('/login');
+  };
   const [phase, setPhase] = useState('splash'); // splash | slides
   const [slide, setSlide] = useState(0);
 
