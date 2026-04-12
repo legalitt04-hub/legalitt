@@ -5,11 +5,13 @@ import { Toaster } from 'react-hot-toast';
 import App from './App';
 import './index.css';
 
-if (!localStorage.getItem('onboarding_done')) {
-  localStorage.setItem('onboarding_done', 'true');
-  if (window.location.pathname === '/') {
-    window.location.replace('/onboarding');
-  }
+const token = localStorage.getItem('legalitt_token');
+const onboarded = localStorage.getItem('onboarding_done');
+
+if (!onboarded && !token && window.location.pathname === '/') {
+  window.location.replace('/onboarding');
+} else if (!token && window.location.pathname === '/') {
+  window.location.replace('/onboarding');
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(
@@ -26,7 +28,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
             borderRadius: '12px',
             padding: '12px 16px',
           },
-          success: { iconTheme: { primary: '#1a4fd6', secondary: '#fff' } },
+          success: { iconTheme: { primary: '#0d9488', secondary: '#fff' } },
           error: { iconTheme: { primary: '#ef4444', secondary: '#fff' } }
         }}
       />
