@@ -13,9 +13,9 @@ export default function Auth() {
   const handle = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const saveToken = (token, user) => {
-    localStorage.setItem("token", token);
-    localStorage.setItem("user", JSON.stringify(user));
-    window.location.href = "/";
+    localStorage.setItem("legalitt_token", token);
+    localStorage.setItem("legalitt_user", JSON.stringify(user));
+    window.location.reload();
   };
 
   const handleRegister = async () => {
