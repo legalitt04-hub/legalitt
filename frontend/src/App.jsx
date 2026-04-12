@@ -1,4 +1,5 @@
 import Welcome from './pages/Welcome';
+import Profile from './pages/Profile';
 import Auth from "./pages/Auth";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -36,7 +37,7 @@ export default function App() {
                 <Route path="/onboarding"  element={<Onboarding />} />
                 <Route path="/register"  element={<GuestRoute><Auth /></GuestRoute>} />
             <Route path="/role-select" element={<RoleSelect />} />
-            <Route path="/profile" element={<ProtectedRoute><Login /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                 <Route path="/auth" element={<GuestRoute><Auth /></GuestRoute>} />
                 <Route path="/login"       element={<GuestRoute><Login /></GuestRoute>} />
             <Route path="/"            element={<ProtectedRoute><Home /></ProtectedRoute>} />

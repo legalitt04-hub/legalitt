@@ -37,7 +37,7 @@ export default function Welcome() {
           Create Account
         </button>
         <button
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/login')}
           className="w-full text-white/60 py-3 font-semibold text-sm active:scale-95 transition-all"
         >
           Skip for now →
