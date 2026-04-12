@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Scale, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { authAPI } from '../services/api';
+import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../context/AuthContext';
 import Spinner from '../components/Spinner';
 import toast from 'react-hot-toast';
@@ -77,7 +78,13 @@ export default function Login() {
   };
 
   // ── Google login ──────────────────────────────────────
-  const handleGoogle = () => toast('Google sign-in coming soon!');
+  const handleGoogle = async (credentialResponse) => {
+    try {
+      await googleLogin(credentialResponse.credential);
+    } catch (err) {
+      toast.error('Google sign-in failed');
+    }
+  };
 
   // ─────────────────────────────────────────────────────
   return (

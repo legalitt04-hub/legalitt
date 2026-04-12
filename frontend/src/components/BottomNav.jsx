@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Home, Search, MapPin, User } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -10,6 +10,8 @@ const NAV_ITEMS = [
 
 export default function BottomNav() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const token = localStorage.getItem('legalitt_token');
 
   // Hide on auth pages
   const hide = ['/login', '/register'].includes(location.pathname);

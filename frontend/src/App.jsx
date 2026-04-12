@@ -31,7 +31,7 @@ export default function App() {
       <BrowserRouter>
         <div className="min-h-screen bg-surface max-w-lg mx-auto relative">
           <Routes>
-            <Route path="/onboarding"  element={<GuestRoute><Onboarding /></GuestRoute>} />
+            <Route path="/onboarding"  element={<Onboarding />} />
             <Route path="/role-select" element={<RoleSelect />} />
             <Route path="/profile" element={<ProtectedRoute><Login /></ProtectedRoute>} />
                 <Route path="/auth" element={<GuestRoute><Auth /></GuestRoute>} />
