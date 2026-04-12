@@ -5,11 +5,7 @@ import { Toaster } from 'react-hot-toast';
 import App from './App';
 
 // Redirect to onboarding on first visit
-if (!localStorage.getItem('onboarding_done')) {
-  localStorage.setItem('onboarding_done', 'true');
-  if (window.location.pathname === '/') {
-    window.location.replace('/onboarding');
-  }
+
   if (window.location.pathname === '/') {
     window.location.href = '/onboarding';
   }

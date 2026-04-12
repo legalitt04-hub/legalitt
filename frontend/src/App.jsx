@@ -34,11 +34,12 @@ export default function App() {
           <Routes>
             <Route path="/welcome" element={<Welcome />} />
                 <Route path="/onboarding"  element={<Onboarding />} />
+                <Route path="/register"  element={<GuestRoute><Auth /></GuestRoute>} />
             <Route path="/role-select" element={<RoleSelect />} />
             <Route path="/profile" element={<ProtectedRoute><Login /></ProtectedRoute>} />
                 <Route path="/auth" element={<GuestRoute><Auth /></GuestRoute>} />
                 <Route path="/login"       element={<GuestRoute><Login /></GuestRoute>} />
-            <Route path="/"            element={<Home />} />
+            <Route path="/"            element={<ProtectedRoute><Home /></ProtectedRoute>} />
             <Route path="/search"      element={<SearchPage />} />
             <Route path="/map"         element={<MapPage />} />
             <Route path="/advocate/:id" element={<AdvocateProfile />} />

@@ -88,7 +88,7 @@ export default function SearchPage() {
 
   const handleSearch = (e) => {
     e.preventDefault();
-    fetchAdvocates({ name: query, page: 1, limit: 15 });
+    fetchAdvocates({ search: query, page: 1, limit: 15 });
   };
 
   return (

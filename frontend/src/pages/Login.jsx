@@ -24,7 +24,7 @@ export default function Login() {
 
   const otpRefs = [useRef(), useRef(), useRef(), useRef()];
 
-  const inputType = isPhone(input) ? 'phone' : isEmail(input) ? 'email' : null;
+  const inputType = isEmail(input) ? 'email' : null;
 
   // ── Handle Next from main step ────────────────────────
   const handleNext = async () => {
@@ -34,10 +34,10 @@ export default function Login() {
     try {
       if (inputType === 'phone') {
         await authAPI.sendOTP(input.replace(/\s/g, ''));
-        setStep(STEPS.OTP);
+        setStep(STEPS.NAME);
       } else {
         // Email flow — prompt password via OTP step reused as password
-        setStep(STEPS.OTP);
+        setStep(STEPS.NAME);
       }
     } catch (_) {
     } finally { setLoading(false); }
