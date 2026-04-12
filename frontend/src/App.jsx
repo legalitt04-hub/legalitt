@@ -1,3 +1,4 @@
+import Auth from "./pages/Auth";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import BottomNav from './components/BottomNav';
@@ -32,7 +33,8 @@ export default function App() {
           <Routes>
             <Route path="/onboarding"  element={<GuestRoute><Onboarding /></GuestRoute>} />
             <Route path="/role-select" element={<RoleSelect />} />
-            <Route path="/login"       element={<GuestRoute><Login /></GuestRoute>} />
+            <Route path="/auth" element={<GuestRoute><Auth /></GuestRoute>} />
+                <Route path="/login"       element={<GuestRoute><Login /></GuestRoute>} />
             <Route path="/"            element={<Home />} />
             <Route path="/search"      element={<SearchPage />} />
             <Route path="/map"         element={<MapPage />} />
