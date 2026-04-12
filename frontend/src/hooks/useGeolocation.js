@@ -18,8 +18,8 @@ export const useGeolocation = () => {
         setLoading(false);
       },
       err => {
-        setError('Unable to get your location. Using default: Indore.');
-        setLocation({ lat: 22.7196, lng: 75.8577 }); // Default: Indore
+        setError('Unable to get your location. Using default: Jabalpur.');
+        setLocation({ lat: 23.1815, lng: 79.9864 }); // Default: Indore
         setLoading(false);
       },
       { timeout: 8000, enableHighAccuracy: false }

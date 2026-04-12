@@ -33,7 +33,8 @@ export default function App() {
           <Routes>
             <Route path="/onboarding"  element={<GuestRoute><Onboarding /></GuestRoute>} />
             <Route path="/role-select" element={<RoleSelect />} />
-            <Route path="/auth" element={<GuestRoute><Auth /></GuestRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><Login /></ProtectedRoute>} />
+                <Route path="/auth" element={<GuestRoute><Auth /></GuestRoute>} />
                 <Route path="/login"       element={<GuestRoute><Login /></GuestRoute>} />
             <Route path="/"            element={<Home />} />
             <Route path="/search"      element={<SearchPage />} />
