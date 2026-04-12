@@ -54,15 +54,13 @@ export default function Login() {
     onSuccess: async (tokenRes) => {
       setLoading(true);
       try {
-        // Exchange access token for ID token via userinfo
-        const userInfo = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-          headers: { Authorization: `Bearer ${tokenRes.access_token}` }
-        }).then(r => r.json());
-        // For full flow use idToken; this demo uses access token
         await googleLogin(tokenRes.access_token);
         navigate('/');
-      } catch (_) {} finally { setLoading(false); }
+      } catch (_) {
+        toast.error('Google login failed');
+      } finally { setLoading(false); }
     },
+    flow: 'implicit',
     onError: () => toast.error('Google login failed')
   });
 
