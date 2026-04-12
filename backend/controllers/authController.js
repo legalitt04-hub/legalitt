@@ -89,7 +89,7 @@ exports.login = async (req, res) => {
 // @POST /api/auth/google
 exports.googleAuth = async (req, res) => {
   try {
-    const { idToken } = req.body;
+    const { idToken, credential } = req.body; const token = idToken || credential;
     if (!idToken) return res.status(400).json({ success: false, message: 'idToken required.' });
 
     let payload;
