@@ -116,7 +116,7 @@ export default function Home() {
               <Bell size={18} />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-400 rounded-full border border-white" />
             </button>
-            <div onClick={() => navigate('/profile')} className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-sm overflow-hidden cursor-pointer hover:bg-white/30 transition-all">
+            <div onClick={() => window.location.href='/profile'} className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-sm overflow-hidden cursor-pointer hover:bg-white/30 transition-all">
               {user?.name?.[0]?.toUpperCase() || 'U'}
             </div>
           </div>
