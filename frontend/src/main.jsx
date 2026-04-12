@@ -3,14 +3,14 @@ import ReactDOM from 'react-dom/client';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { Toaster } from 'react-hot-toast';
 import App from './App';
+import './index.css';
 
-// Redirect to onboarding on first visit
-
+if (!localStorage.getItem('onboarding_done')) {
+  localStorage.setItem('onboarding_done', 'true');
   if (window.location.pathname === '/') {
-    window.location.href = '/onboarding';
+    window.location.replace('/onboarding');
   }
 }
-import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
