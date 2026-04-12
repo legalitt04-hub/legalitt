@@ -90,12 +90,12 @@ exports.login = async (req, res) => {
 exports.googleAuth = async (req, res) => {
   try {
     const { idToken, credential } = req.body; const token = idToken || credential;
-    if (!idToken) return res.status(400).json({ success: false, message: 'idToken required.' });
+   if (!token) return res.status(400).json({ success: false, message: 'Google token required' });
 
     let payload;
     try {
       const ticket = await client.verifyIdToken({
-        idToken,
+        idToken: token,
         audience: process.env.GOOGLE_CLIENT_ID
       });
       payload = ticket.getPayload();
