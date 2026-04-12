@@ -1,299 +1,252 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useGoogleLogin } from '@react-oauth/google';
-import { useAuth } from '../context/AuthContext';
+import { useState, useRef } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Scale, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { authAPI } from '../services/api';
-import { Eye, EyeOff, ArrowRight, ChevronLeft } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import Spinner from '../components/Spinner';
 import toast from 'react-hot-toast';
 
+const STEPS = { MAIN: 'main', OTP: 'otp', NAME: 'name' };
+const isPhone = v => /^[6-9]\d{9}$/.test(v.replace(/\s/g, ''));
+const isEmail = v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+
 export default function Login() {
-  const { login, googleLogin } = useAuth();
   const navigate = useNavigate();
-  const [step, setStep] = useState('main'); // 'main' | 'email' | 'otp' | 'otp-verify'
-  const [loading, setLoading] = useState(false);
-  const [showPwd, setShowPwd] = useState(false);
-  const [otpSent, setOtpSent] = useState(false);
-  const [form, setForm] = useState({ email: '', password: '', phone: '', otp: '' });
-  const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
+  const { login, register, googleLogin } = useAuth();
 
-  const handleEmailLogin = async (e) => {
-    e.preventDefault();
+  const [step, setStep]         = useState(STEPS.MAIN);
+  const [input, setInput]       = useState('');
+  const [otp, setOtp]           = useState(['', '', '', '']);
+  const [name, setName]         = useState('');
+  const [loading, setLoading]   = useState(false);
+  const [agreed, setAgreed]     = useState(false);
+
+  const otpRefs = [useRef(), useRef(), useRef(), useRef()];
+
+  const inputType = isPhone(input) ? 'phone' : isEmail(input) ? 'email' : null;
+
+  // ── Handle Next from main step ────────────────────────
+  const handleNext = async () => {
+    if (!inputType) { toast.error('Enter a valid email or 10-digit mobile number'); return; }
+    if (!agreed)    { toast.error('Please accept Terms & Privacy Policy');           return; }
     setLoading(true);
     try {
-      await login(form.email, form.password);
+      if (inputType === 'phone') {
+        await authAPI.sendOTP(input.replace(/\s/g, ''));
+        setStep(STEPS.OTP);
+      } else {
+        // Email flow — prompt password via OTP step reused as password
+        setStep(STEPS.OTP);
+      }
+    } catch (_) {
+    } finally { setLoading(false); }
+  };
+
+  // ── OTP box handling ──────────────────────────────────
+  const handleOtpChange = (i, val) => {
+    if (!/^\d?$/.test(val)) return;
+    const next = [...otp];
+    next[i] = val;
+    setOtp(next);
+    if (val && i < 3) otpRefs[i + 1].current?.focus();
+  };
+  const handleOtpKeyDown = (i, e) => {
+    if (e.key === 'Backspace' && !otp[i] && i > 0) otpRefs[i - 1].current?.focus();
+  };
+
+  const handleVerify = async () => {
+    const code = otp.join('');
+    if (code.length < 4) { toast.error('Enter the 4-digit code'); return; }
+    setLoading(true);
+    try {
+      await authAPI.verifyOTP(input, code, '');
+      setStep(STEPS.NAME);
+    } catch (_) {
+    } finally { setLoading(false); }
+  };
+
+  const handleFinish = async () => {
+    if (!name.trim()) { toast.error('Please enter your name'); return; }
+    setLoading(true);
+    try {
+      const code = otp.join('');
+      await authAPI.verifyOTP(input, code, name);
       navigate('/');
-    } catch (_) {} finally { setLoading(false); }
+    } catch (_) {
+    } finally { setLoading(false); }
   };
 
-  const handleSendOTP = async () => {
-    if (!/^[6-9]\d{9}$/.test(form.phone)) { toast.error('Enter a valid 10-digit mobile number'); return; }
-    setLoading(true);
-    try {
-      const res = await authAPI.sendOTP(form.phone);
-      setOtpSent(true);
-      setStep('otp-verify');
-      toast.success('OTP sent!');
-      if (res.data.otp) toast(`Dev OTP: ${res.data.otp}`, { icon: '🔑' });
-    } catch (_) {} finally { setLoading(false); }
-  };
+  // ── Google login ──────────────────────────────────────
+  const handleGoogle = () => toast('Google sign-in coming soon!');
 
-  const handleOTPLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const res = await authAPI.verifyOTP(form.phone, form.otp);
-      localStorage.setItem('legalitt_token', res.data.token);
-      localStorage.setItem('legalitt_user', JSON.stringify(res.data.user));
-      toast.success('Login successful!');
-      navigate('/');
-    } catch (_) {} finally { setLoading(false); }
-  };
-
-  const handleGoogle = useGoogleLogin({
-    onSuccess: async (tokenRes) => {
-      setLoading(true);
-      try {
-        await googleLogin(tokenRes.access_token);
-        navigate('/');
-      } catch (_) { toast.error('Google login failed'); } finally { setLoading(false); }
-    },
-    onError: () => toast.error('Google login failed')
-  });
-
+  // ─────────────────────────────────────────────────────
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: '#f5f7fa',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '16px',
-      fontFamily: "'DM Sans', sans-serif"
-    }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
-        .lg-card { background: white; border-radius: 28px; width: 100%; max-width: 420px; overflow: hidden; box-shadow: 0 4px 40px rgba(0,0,0,0.08); }
-        .lg-header { background: linear-gradient(135deg, #0d7a5f 0%, #0a6b52 100%); padding: 40px 32px 32px; }
-        .lg-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 28px; }
-        .lg-logo-icon { width: 44px; height: 44px; background: rgba(255,255,255,0.2); border-radius: 14px; display: flex; align-items: center; justify-content: center; }
-        .lg-logo-text { color: white; font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
-        .lg-title { color: white; font-size: 26px; font-weight: 700; margin: 0 0 6px; letter-spacing: -0.5px; }
-        .lg-subtitle { color: rgba(255,255,255,0.7); font-size: 14px; margin: 0; }
-        .lg-body { padding: 28px 32px 32px; }
-        .lg-input { width: 100%; padding: 14px 16px; border: 1.5px solid #e8eaed; border-radius: 14px; font-size: 15px; font-family: 'DM Sans', sans-serif; outline: none; transition: border-color 0.2s; box-sizing: border-box; color: #1a1a2e; background: #fafafa; }
-        .lg-input:focus { border-color: #0d7a5f; background: white; }
-        .lg-input::placeholder { color: #aab; }
-        .lg-label { font-size: 13px; font-weight: 600; color: #444; margin-bottom: 8px; display: block; }
-        .lg-btn { width: 100%; padding: 15px; background: #0d7a5f; color: white; border: none; border-radius: 14px; font-size: 15px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.2s, transform 0.1s; }
-        .lg-btn:hover { background: #0a6b52; }
-        .lg-btn:active { transform: scale(0.98); }
-        .lg-btn:disabled { opacity: 0.7; cursor: not-allowed; }
-        .lg-btn-outline { background: white; color: #333; border: 1.5px solid #e8eaed; }
-        .lg-btn-outline:hover { background: #f5f7fa; border-color: #ccc; }
-        .lg-divider { display: flex; align-items: center; gap: 12px; margin: 20px 0; }
-        .lg-divider-line { flex: 1; height: 1px; background: #e8eaed; }
-        .lg-divider-text { font-size: 12px; color: #999; font-weight: 500; }
-        .lg-option { display: flex; align-items: center; gap: 14px; padding: 16px; border: 1.5px solid #e8eaed; border-radius: 16px; cursor: pointer; transition: all 0.2s; margin-bottom: 12px; background: white; width: 100%; text-align: left; }
-        .lg-option:hover { border-color: #0d7a5f; background: #f0faf7; }
-        .lg-option-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .lg-option-text { font-size: 15px; font-weight: 600; color: #1a1a2e; }
-        .lg-option-sub { font-size: 12px; color: #888; margin-top: 2px; }
-        .lg-back { display: flex; align-items: center; gap: 6px; background: none; border: none; color: rgba(255,255,255,0.8); font-size: 14px; font-family: 'DM Sans', sans-serif; cursor: pointer; padding: 0; margin-bottom: 20px; }
-        .lg-back:hover { color: white; }
-        .lg-phone-row { display: flex; gap: 8px; }
-        .lg-prefix { padding: 14px 14px; background: #f0faf7; border: 1.5px solid #e8eaed; border-radius: 14px; font-size: 15px; font-weight: 600; color: #0d7a5f; white-space: nowrap; }
-        .lg-otp-boxes { display: flex; gap: 10px; justify-content: center; margin: 8px 0; }
-        .lg-otp-box { width: 52px; height: 56px; border: 1.5px solid #e8eaed; border-radius: 14px; text-align: center; font-size: 22px; font-weight: 700; font-family: 'DM Sans', sans-serif; outline: none; background: #fafafa; color: #1a1a2e; transition: border-color 0.2s; }
-        .lg-otp-box:focus { border-color: #0d7a5f; background: white; }
-        .lg-terms { font-size: 12px; color: #999; text-align: center; margin-top: 20px; line-height: 1.6; }
-        .lg-terms a { color: #0d7a5f; text-decoration: none; }
-        .slide-in { animation: slideIn 0.25s ease; }
-        @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
-      `}</style>
+    <div className="min-h-screen bg-white flex flex-col px-6 pt-14 pb-10">
 
-      <div className="lg-card">
-        {/* Header */}
-        <div className="lg-header">
-          {step !== 'main' && (
-            <button className="lg-back" onClick={() => { setStep('main'); setOtpSent(false); }}>
-              <ChevronLeft size={18} /> Back
-            </button>
-          )}
-          <div className="lg-logo">
-            <div className="lg-logo-icon">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2L3 7v10l9 5 9-5V7L12 2z" stroke="white" strokeWidth="2" strokeLinejoin="round"/>
-                <path d="M8 12h8M12 8v8" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-              </svg>
-            </div>
-            <span className="lg-logo-text">Legalitt</span>
+      {/* Back button (steps > main) */}
+      {step !== STEPS.MAIN && (
+        <button
+          onClick={() => { setStep(STEPS.MAIN); setOtp(['','','','']); }}
+          className="flex items-center gap-1.5 text-gray-500 text-sm mb-6 hover:text-gray-800 transition-colors"
+        >
+          <ArrowLeft size={18} /> Back
+        </button>
+      )}
+
+      {/* Logo */}
+      {step === STEPS.MAIN && (
+        <div className="flex items-center gap-3 mb-10">
+          <div className="w-10 h-10 bg-primary-500 rounded-xl flex items-center justify-center">
+            <Scale size={22} className="text-white" />
           </div>
-          <h1 className="lg-title">
-            {step === 'main' && 'Login / Register'}
-            {step === 'email' && 'Sign in with Email'}
-            {step === 'otp' && 'Enter Mobile Number'}
-            {step === 'otp-verify' && 'Verify OTP'}
-          </h1>
-          <p className="lg-subtitle">
-            {step === 'main' && 'Login/Register In Your Account'}
-            {step === 'email' && 'Enter your credentials to continue'}
-            {step === 'otp' && 'We will send a 6-digit code to your number'}
-            {step === 'otp-verify' && `Code sent to +91 ${form.phone}`}
+          <span className="text-xl font-bold text-gray-900">Legalitt</span>
+        </div>
+      )}
+
+      {/* ── STEP: MAIN ── */}
+      {step === STEPS.MAIN && (
+        <div className="flex-1 flex flex-col">
+          <h1 className="text-2xl font-bold text-gray-900 mb-1">Login / Register</h1>
+          <p className="text-gray-500 text-sm mb-8">Login/Register in Your Account</p>
+
+          <label className="text-xs font-semibold text-gray-600 mb-1.5">E-mail / Mobile No.</label>
+          <input
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            placeholder="E-mail / Mobile No."
+            type="text"
+            inputMode="text"
+            className="input mb-6"
+            onKeyDown={e => e.key === 'Enter' && handleNext()}
+          />
+
+          <button
+            onClick={handleNext}
+            disabled={loading}
+            className="w-full bg-primary-500 hover:bg-primary-600 text-white font-bold py-4 rounded-2xl transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 mb-6"
+          >
+            {loading ? <Spinner size="sm" color="white" /> : 'Next'}
+          </button>
+
+          {/* OR divider */}
+          <div className="flex items-center gap-3 mb-6">
+            <div className="flex-1 h-px bg-gray-200" />
+            <span className="text-xs text-gray-400 font-medium">OR</span>
+            <div className="flex-1 h-px bg-gray-200" />
+          </div>
+
+          {/* Social logins */}
+          <div className="flex items-center justify-center gap-5 mb-8">
+            {/* Google */}
+            <button
+              onClick={handleGoogle}
+              className="w-14 h-14 rounded-2xl border-2 border-gray-200 flex items-center justify-center hover:bg-gray-50 hover:border-gray-300 transition-all"
+            >
+              <svg width="24" height="24" viewBox="0 0 48 48">
+                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+              </svg>
+            </button>
+
+            {/* Facebook */}
+            <button className="w-14 h-14 rounded-2xl border-2 border-gray-200 flex items-center justify-center hover:bg-gray-50 hover:border-gray-300 transition-all">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="#1877F2">
+                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+              </svg>
+            </button>
+
+            {/* Apple */}
+            <button className="w-14 h-14 rounded-2xl border-2 border-gray-200 flex items-center justify-center hover:bg-gray-50 hover:border-gray-300 transition-all">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="#000">
+                <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+              </svg>
+            </button>
+          </div>
+
+          {/* Terms */}
+          <div className="flex items-start gap-2.5 mt-auto">
+            <button
+              onClick={() => setAgreed(a => !a)}
+              className={`w-5 h-5 rounded border-2 flex-shrink-0 flex items-center justify-center transition-all mt-0.5 ${
+                agreed ? 'bg-primary-500 border-primary-500' : 'border-gray-300'
+              }`}
+            >
+              {agreed && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+            </button>
+            <p className="text-xs text-gray-500 leading-relaxed">
+              Follow{' '}
+              <button className="text-primary-600 font-semibold">Terms & Condition</button>
+              {' | '}
+              <button className="text-primary-600 font-semibold">Privacy Policy</button>
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ── STEP: OTP ── */}
+      {step === STEPS.OTP && (
+        <div className="flex-1 flex flex-col">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Enter verification code</h1>
+          <p className="text-gray-500 text-sm mb-10">
+            Code sent to <span className="font-semibold text-gray-800">{input}</span>
           </p>
+
+          <label className="text-xs font-semibold text-gray-500 mb-3">Code</label>
+          <div className="flex gap-3 mb-10">
+            {otp.map((digit, i) => (
+              <input
+                key={i}
+                ref={otpRefs[i]}
+                value={digit}
+                onChange={e => handleOtpChange(i, e.target.value)}
+                onKeyDown={e => handleOtpKeyDown(i, e)}
+                maxLength={1}
+                inputMode="numeric"
+                className="w-16 h-16 text-center text-2xl font-bold border-2 rounded-2xl outline-none transition-all focus:border-primary-500 focus:ring-2 focus:ring-primary-100 border-gray-200 bg-gray-50"
+              />
+            ))}
+          </div>
+
+          <button
+            onClick={handleVerify}
+            disabled={loading || otp.join('').length < 4}
+            className="w-full bg-primary-500 hover:bg-primary-600 text-white font-bold py-4 rounded-2xl transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 mt-auto"
+          >
+            {loading ? <Spinner size="sm" color="white" /> : 'Next'}
+          </button>
+
+          <button className="text-center text-sm text-primary-600 font-semibold mt-4 hover:underline">
+            Resend Code
+          </button>
         </div>
+      )}
 
-        {/* Body */}
-        <div className="lg-body">
+      {/* ── STEP: NAME ── */}
+      {step === STEPS.NAME && (
+        <div className="flex-1 flex flex-col">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">What's your name?</h1>
+          <p className="text-gray-500 text-sm mb-8">Help us personalize your experience</p>
 
-          {/* MAIN — choose method */}
-          {step === 'main' && (
-            <div className="slide-in">
-              <div style={{ marginBottom: 8 }}>
-                <label className="lg-label">E-mail / Mobile No</label>
-                <input
-                  className="lg-input"
-                  placeholder="Enter email or mobile number"
-                  value={form.email}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setForm(f => ({ ...f, email: v, phone: v }));
-                  }}
-                />
-              </div>
+          <label className="text-xs font-semibold text-gray-600 mb-1.5">Full Name</label>
+          <input
+            value={name}
+            onChange={e => setName(e.target.value)}
+            placeholder="Enter your full name"
+            className="input mb-6"
+            onKeyDown={e => e.key === 'Enter' && handleFinish()}
+          />
 
-              <button
-                className="lg-btn"
-                style={{ marginTop: 16 }}
-                onClick={() => {
-                  const v = form.email;
-                  if (/^[6-9]\d{9}$/.test(v)) setStep('otp');
-                  else if (v.includes('@')) setStep('email');
-                  else { setStep('otp'); }
-                }}
-              >
-                Next <ArrowRight size={16} />
-              </button>
-
-              <div className="lg-divider">
-                <div className="lg-divider-line" />
-                <span className="lg-divider-text">OR</span>
-                <div className="lg-divider-line" />
-              </div>
-
-              {/* Google */}
-              <button className="lg-btn lg-btn-outline" onClick={() => handleGoogle()} disabled={loading} style={{ marginBottom: 10 }}>
-                <svg width="18" height="18" viewBox="0 0 48 48">
-                  <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-                  <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-                  <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-                  <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-                </svg>
-                Continue with Google
-              </button>
-
-              <div className="lg-terms">
-                Follow <a href="#">Terms & Condition</a> | <a href="#">Privacy Policy</a>
-              </div>
-
-              <p style={{ textAlign: 'center', fontSize: 13, color: '#666', marginTop: 16 }}>
-                No account?{' '}
-                <Link to="/register" style={{ color: '#0d7a5f', fontWeight: 600, textDecoration: 'none' }}>
-                  Create one free
-                </Link>
-              </p>
-            </div>
-          )}
-
-          {/* EMAIL LOGIN */}
-          {step === 'email' && (
-            <form onSubmit={handleEmailLogin} className="slide-in" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div>
-                <label className="lg-label">Email address</label>
-                <input type="email" value={form.email} onChange={set('email')} required
-                  placeholder="you@example.com" className="lg-input" />
-              </div>
-              <div>
-                <label className="lg-label">Password</label>
-                <div style={{ position: 'relative' }}>
-                  <input type={showPwd ? 'text' : 'password'} value={form.password} onChange={set('password')}
-                    required placeholder="••••••••" className="lg-input" style={{ paddingRight: 44 }} />
-                  <button type="button" onClick={() => setShowPwd(!showPwd)} style={{
-                    position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)',
-                    background: 'none', border: 'none', cursor: 'pointer', color: '#999'
-                  }}>
-                    {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </div>
-              <button type="submit" disabled={loading} className="lg-btn" style={{ marginTop: 4 }}>
-                {loading ? <Spinner size="sm" color="white" /> : <><span>Sign In</span><ArrowRight size={16} /></>}
-              </button>
-              <p style={{ textAlign: 'center', fontSize: 13, color: '#666' }}>
-                No account?{' '}
-                <Link to="/register" style={{ color: '#0d7a5f', fontWeight: 600, textDecoration: 'none' }}>Create one free</Link>
-              </p>
-            </form>
-          )}
-
-          {/* OTP — enter phone */}
-          {step === 'otp' && (
-            <div className="slide-in" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div>
-                <label className="lg-label">Mobile Number</label>
-                <div className="lg-phone-row">
-                  <div className="lg-prefix">🇮🇳 +91</div>
-                  <input type="tel" value={form.phone} onChange={set('phone')} maxLength={10}
-                    placeholder="9876543210" className="lg-input" style={{ flex: 1 }} />
-                </div>
-              </div>
-              <button onClick={handleSendOTP} disabled={loading} className="lg-btn">
-                {loading ? <Spinner size="sm" color="white" /> : <><span>Send OTP</span><ArrowRight size={16} /></>}
-              </button>
-            </div>
-          )}
-
-          {/* OTP — verify */}
-          {step === 'otp-verify' && (
-            <form onSubmit={handleOTPLogin} className="slide-in" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div>
-                <label className="lg-label" style={{ textAlign: 'center' }}>Enter verification code</label>
-                <div className="lg-otp-boxes">
-                  {[0,1,2,3,4,5].map(i => (
-                    <input
-                      key={i}
-                      id={`otp-${i}`}
-                      className="lg-otp-box"
-                      maxLength={1}
-                      value={form.otp[i] || ''}
-                      onChange={e => {
-                        const val = e.target.value.replace(/\D/g,'');
-                        const arr = (form.otp + '      ').split('').slice(0,6);
-                        arr[i] = val;
-                        setForm(f => ({ ...f, otp: arr.join('').trim() }));
-                        if (val && i < 5) document.getElementById(`otp-${i+1}`)?.focus();
-                      }}
-                      onKeyDown={e => {
-                        if (e.key === 'Backspace' && !form.otp[i] && i > 0) document.getElementById(`otp-${i-1}`)?.focus();
-                      }}
-                    />
-                  ))}
-                </div>
-                <button type="button" onClick={() => { setStep('otp'); setOtpSent(false); }} style={{
-                  background: 'none', border: 'none', color: '#0d7a5f', fontSize: 13,
-                  cursor: 'pointer', display: 'block', margin: '8px auto 0', fontFamily: 'DM Sans, sans-serif'
-                }}>
-                  Change number
-                </button>
-              </div>
-              <button type="submit" disabled={loading} className="lg-btn">
-                {loading ? <Spinner size="sm" color="white" /> : <><span>Verify & Login</span><ArrowRight size={16} /></>}
-              </button>
-            </form>
-          )}
-
+          <button
+            onClick={handleFinish}
+            disabled={loading || !name.trim()}
+            className="w-full bg-primary-500 hover:bg-primary-600 text-white font-bold py-4 rounded-2xl transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 mt-auto"
+          >
+            {loading ? <Spinner size="sm" color="white" /> : 'Get Started →'}
+          </button>
         </div>
-      </div>
+      )}
     </div>
   );
 }

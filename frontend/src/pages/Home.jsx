@@ -1,222 +1,249 @@
 import { useEffect, useState, useRef } from 'react';
-import { Link } from 'react-router-dom';
-import { MapPin, Navigation, Search, Scale, ChevronRight } from 'lucide-react';
-import AdvocateCard from '../components/AdvocateCard';
-import SearchFilters from '../components/SearchFilters';
-import Spinner from '../components/Spinner';
+import { useNavigate, Link } from 'react-router-dom';
+import {
+  Bell, Search, MapPin, Navigation, MessageSquare,
+  ChevronRight, FileText, Users, Settings, Star,
+  Briefcase, IndianRupee, CheckCircle2, SlidersHorizontal
+} from 'lucide-react';
 import { useAdvocates } from '../hooks/useAdvocates';
 import { useGeolocation } from '../hooks/useGeolocation';
+import { useAuth } from '../context/AuthContext';
+import Spinner from '../components/Spinner';
 
-const HERO_SPECS = ['Criminal Law','Family Law','Property Law','Corporate Law','Consumer Law','Cyber Law'];
+const SPECIALIZATIONS = [
+  'All', 'Criminal Law', 'Family Law', 'Property Law',
+  'Corporate Law', 'Consumer Law', 'Cyber Law', 'Labour Law',
+];
+
+const QUICK_ACTIONS = [
+  { icon: MessageSquare, label: 'My Chats',    color: 'bg-teal-50  text-primary-600', to: '/chats' },
+  { icon: FileText,      label: 'My Requests', color: 'bg-blue-50  text-blue-600',    to: '/requests' },
+  { icon: Users,         label: 'Saved\nAdvocates', color: 'bg-purple-50 text-purple-600', to: '/saved' },
+  { icon: Settings,      label: 'Settings',    color: 'bg-orange-50 text-orange-600', to: '/settings' },
+];
+
+function NearbyCard({ advocate, showDistance }) {
+  const navigate = useNavigate();
+  return (
+    <div
+      onClick={() => navigate(`/advocate/${advocate._id}`)}
+      className="flex items-center gap-3 bg-white rounded-2xl p-3 shadow-card hover:shadow-card-hover transition-all cursor-pointer active:scale-[0.98]"
+    >
+      <img
+        src={advocate.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(advocate.name)}&background=0d7a5f&color=fff&size=64`}
+        alt={advocate.name}
+        className="w-14 h-14 rounded-xl object-cover flex-shrink-0 bg-primary-50"
+        onError={e => { e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(advocate.name)}&background=0d7a5f&color=fff&size=64`; }}
+      />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5">
+          <h3 className="font-semibold text-gray-900 text-sm truncate">{advocate.name}</h3>
+          {advocate.verified && <CheckCircle2 size={12} className="text-primary-500 flex-shrink-0" />}
+        </div>
+        <p className="text-xs text-gray-500 truncate mt-0.5">{advocate.specialization}</p>
+        <div className="flex items-center gap-2.5 mt-1.5">
+          <span className="flex items-center gap-0.5 text-xs font-semibold text-gray-700">
+            <Star size={11} className="text-gold-400 fill-gold-400" />
+            {advocate.rating?.toFixed(1)}
+          </span>
+          <span className="flex items-center gap-0.5 text-xs text-gray-400">
+            <MapPin size={10} />
+            {advocate.location?.city || 'MP'}
+            {showDistance && advocate.distance != null && (
+              <span className="text-primary-600 font-medium ml-0.5">· {advocate.distance} km</span>
+            )}
+          </span>
+          <span className="flex items-center gap-0.5 text-xs text-gray-400">
+            <IndianRupee size={10} />
+            {advocate.fees?.toLocaleString('en-IN')}
+          </span>
+        </div>
+      </div>
+      <div className="flex-shrink-0">
+        <button
+          onClick={e => { e.stopPropagation(); navigate(`/advocate/${advocate._id}`); }}
+          className="bg-primary-500 text-white text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-primary-600 transition-colors"
+        >
+          Book
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function Home() {
+  const { user } = useAuth();
   const { advocates, loading, error, pagination, fetchAdvocates, fetchNearby } = useAdvocates();
   const { location, loading: locLoading } = useGeolocation();
-  const [activeFilters, setActiveFilters] = useState({});
-  const [nearbyMode, setNearbyMode] = useState(false);
-  const [radius, setRadius] = useState(20);
-  const [page, setPage] = useState(1);
-  const listRef = useRef(null);
+  const [activeSpec, setActiveSpec]     = useState('All');
+  const [nearbyMode, setNearbyMode]     = useState(false);
+  const [searchQuery, setSearchQuery]   = useState('');
+  const [showSearch, setShowSearch]     = useState(false);
+  const searchRef = useRef(null);
+
+  const firstName = user?.name?.split(' ')[0] || 'there';
 
   useEffect(() => {
-    fetchAdvocates({ ...activeFilters, page, limit: 12 });
-  }, [activeFilters, page]);
+    const filters = activeSpec !== 'All' ? { specialization: activeSpec } : {};
+    if (searchQuery) filters.name = searchQuery;
+    fetchAdvocates({ ...filters, page: 1, limit: 10 });
+    setNearbyMode(false);
+  }, [activeSpec]);
 
   const handleNearby = () => {
     if (!location) return;
     setNearbyMode(true);
-    fetchNearby({ lat: location.lat, lng: location.lng, radius, ...activeFilters });
+    const filters = activeSpec !== 'All' ? { specialization: activeSpec } : {};
+    fetchNearby({ lat: location.lat, lng: location.lng, radius: 20, ...filters });
   };
 
-  const handleFilter = (filters) => {
-    setActiveFilters(filters);
-    setPage(1);
-    setNearbyMode(false);
-    listRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const handleSearch = (e) => {
+    e.preventDefault();
+    fetchAdvocates({ name: searchQuery, page: 1, limit: 10 });
   };
 
   return (
-    <div>
-      {/* Hero */}
-      <section className="bg-gradient-to-br from-primary-900 via-primary-800 to-primary-700 text-white pt-14 pb-20 px-4 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10" style={{
-          backgroundImage: 'radial-gradient(circle at 20% 80%, #4d7aff 0%, transparent 50%), radial-gradient(circle at 80% 10%, #84a7ff 0%, transparent 40%)'
-        }} />
-        <div className="max-w-4xl mx-auto text-center relative z-10">
-          <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-1.5 text-xs font-medium mb-6 animate-fade-in">
-            <Scale size={13} /> 21,000+ Verified Advocates in Madhya Pradesh
+    <div className="min-h-screen bg-surface pb-24">
+      {/* ── Header ── */}
+      <div className="bg-primary-500 pt-12 pb-20 px-4">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p className="text-primary-200 text-xs font-medium">Good morning 👋</p>
+            <h1 className="text-white text-xl font-bold mt-0.5">Hello, {firstName}</h1>
           </div>
-          <h1 className="font-display text-4xl sm:text-5xl md:text-6xl font-bold leading-tight mb-5 animate-fade-in-up">
-            Find the Right Advocate<br />
-            <span className="text-gold-400">Near You</span>
-          </h1>
-          <p className="text-primary-200 text-base sm:text-lg max-w-xl mx-auto mb-8 animate-fade-in-up stagger-1">
-            Browse verified lawyers across Bhopal, Indore, Jabalpur, Gwalior and 12 more cities in MP.
-          </p>
+          <div className="flex items-center gap-2">
+            <button className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center text-white hover:bg-white/25 transition-colors relative">
+              <Bell size={18} />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-400 rounded-full border border-white" />
+            </button>
+            <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-sm overflow-hidden">
+              {user?.name?.[0]?.toUpperCase() || 'U'}
+            </div>
+          </div>
+        </div>
 
-          {/* Spec pills */}
-          <div className="flex flex-wrap justify-center gap-2 mb-8 animate-fade-in-up stagger-2">
-            {HERO_SPECS.map(s => (
+        {/* Search bar */}
+        <form onSubmit={handleSearch} className="relative mt-2">
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            ref={searchRef}
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Search advocates, specializations..."
+            className="w-full bg-white rounded-xl pl-9 pr-12 py-3 text-sm text-gray-800 placeholder-gray-400 outline-none shadow-sm"
+          />
+          <button
+            type="button"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-primary-500 transition-colors"
+          >
+            <SlidersHorizontal size={16} />
+          </button>
+        </form>
+      </div>
+
+      {/* ── Main Card (overlapping the header) ── */}
+      <div className="px-4 -mt-12 space-y-4">
+
+        {/* AI Legal Assistant Banner */}
+        <div className="bg-primary-600 rounded-2xl p-4 flex items-center gap-3 shadow-lg">
+          <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+            <MessageSquare size={20} className="text-white" />
+          </div>
+          <div className="flex-1">
+            <p className="text-white font-semibold text-sm">Chat With AI Legal Assistant</p>
+            <p className="text-primary-200 text-xs mt-0.5">Get instant answers to legal questions</p>
+          </div>
+          <ChevronRight size={18} className="text-white/60" />
+        </div>
+
+        {/* Quick Actions */}
+        <div className="bg-white rounded-2xl p-4 shadow-card">
+          <div className="grid grid-cols-4 gap-2">
+            {QUICK_ACTIONS.map(({ icon: Icon, label, color, to }) => (
+              <Link to={to} key={label} className="flex flex-col items-center gap-2 group">
+                <div className={`w-12 h-12 rounded-2xl ${color} flex items-center justify-center group-hover:scale-105 transition-transform`}>
+                  <Icon size={20} />
+                </div>
+                <span className="text-[10px] text-gray-600 font-medium text-center leading-tight whitespace-pre-line">
+                  {label}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* Nearby Lawyers Section */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="font-bold text-gray-900 text-base">Nearby Lawyers</h2>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleNearby}
+                disabled={locLoading}
+                className="flex items-center gap-1.5 text-xs font-semibold text-primary-600 bg-primary-50 px-3 py-1.5 rounded-full hover:bg-primary-100 transition-colors"
+              >
+                {locLoading ? <Spinner size="sm" /> : <Navigation size={12} />}
+                Near Me
+              </button>
+              <Link to="/map" className="text-xs font-semibold text-primary-600">
+                View Map →
+              </Link>
+            </div>
+          </div>
+
+          {/* Spec filter pills */}
+          <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+            {SPECIALIZATIONS.map(s => (
               <button
                 key={s}
-                onClick={() => handleFilter({ specialization: s })}
-                className="bg-white/10 hover:bg-white/20 border border-white/20 rounded-full px-4 py-1.5 text-xs font-medium transition-all"
+                onClick={() => setActiveSpec(s)}
+                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                  activeSpec === s
+                    ? 'bg-primary-500 text-white border-primary-500'
+                    : 'bg-white text-gray-600 border-gray-200 hover:border-primary-300'
+                }`}
               >
                 {s}
               </button>
             ))}
           </div>
 
-          {/* CTA */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 animate-fade-in-up stagger-3">
+          {/* Cards */}
+          {loading && (
+            <div className="flex justify-center py-10">
+              <Spinner size="lg" />
+            </div>
+          )}
+
+          {!loading && error && (
+            <div className="text-center py-8 text-red-500 text-sm bg-white rounded-2xl">
+              {error} — <button onClick={() => fetchAdvocates({ page: 1, limit: 10 })} className="underline">Retry</button>
+            </div>
+          )}
+
+          {!loading && !error && advocates.length === 0 && (
+            <div className="text-center py-10 bg-white rounded-2xl text-gray-400 text-sm">
+              No advocates found. Try a different filter.
+            </div>
+          )}
+
+          {!loading && advocates.length > 0 && (
+            <div className="space-y-3">
+              {advocates.map(adv => (
+                <NearbyCard key={adv._id} advocate={adv} showDistance={nearbyMode || adv.distance != null} />
+              ))}
+            </div>
+          )}
+
+          {/* View all */}
+          {!loading && advocates.length > 0 && (
             <button
-              onClick={handleNearby}
-              disabled={locLoading}
-              className="flex items-center gap-2 bg-white text-primary-700 font-semibold px-6 py-3 rounded-xl hover:bg-primary-50 transition-all shadow-lg hover:shadow-xl active:scale-95"
+              onClick={() => fetchAdvocates({ page: 1, limit: 50 })}
+              className="w-full py-3 rounded-2xl border-2 border-dashed border-gray-200 text-sm font-medium text-gray-400 hover:border-primary-300 hover:text-primary-500 transition-all"
             >
-              {locLoading ? <Spinner size="sm" /> : <Navigation size={17} />}
-              Find Near Me
+              View all advocates
             </button>
-            <Link to="/map" className="flex items-center gap-2 border-2 border-white/30 hover:border-white/60 text-white px-6 py-3 rounded-xl transition-all font-medium">
-              <MapPin size={17} /> Open Map View
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Stats strip */}
-      <div className="bg-white border-b border-gray-100 py-5">
-        <div className="max-w-7xl mx-auto px-4 grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-          {[
-            ['21,000+', 'Advocates'],
-            ['16', 'Cities in MP'],
-            ['12', 'Specializations'],
-            ['Free', 'Registration'],
-          ].map(([n, l]) => (
-            <div key={l}>
-              <p className="font-display text-2xl font-bold text-primary-700">{n}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{l}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Main content */}
-      <div className="max-w-7xl mx-auto px-4 py-8" ref={listRef}>
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* Sidebar filters */}
-          <aside className="lg:w-72 flex-shrink-0">
-            <div className="sticky top-20 space-y-4">
-              <SearchFilters onFilter={handleFilter} showDistanceSort={nearbyMode} />
-
-              {/* Radius control */}
-              {nearbyMode && (
-                <div className="bg-white rounded-2xl shadow-card p-4 animate-fade-in">
-                  <label className="text-xs font-medium text-gray-700 block mb-2">
-                    Search Radius: <span className="text-primary-600 font-bold">{radius} km</span>
-                  </label>
-                  <input
-                    type="range" min={5} max={100} step={5} value={radius}
-                    onChange={e => setRadius(+e.target.value)}
-                    className="w-full accent-primary-500"
-                  />
-                  <div className="flex justify-between text-xs text-gray-400 mt-1"><span>5 km</span><span>100 km</span></div>
-                  <button onClick={handleNearby} className="btn-primary w-full text-sm py-2 mt-3">
-                    Update Radius
-                  </button>
-                </div>
-              )}
-
-              {!nearbyMode && (
-                <button onClick={handleNearby} disabled={locLoading}
-                  className="w-full flex items-center justify-center gap-2 bg-primary-50 hover:bg-primary-100 text-primary-700 font-medium px-4 py-3 rounded-xl text-sm transition-all border border-primary-200">
-                  <Navigation size={15} />
-                  Switch to Nearby Mode
-                </button>
-              )}
-            </div>
-          </aside>
-
-          {/* Advocates grid */}
-          <div className="flex-1">
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h2 className="font-display text-xl font-bold text-gray-900">
-                  {nearbyMode ? 'Nearby Advocates' : 'All Advocates'}
-                </h2>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  {nearbyMode
-                    ? `${advocates.length} advocates within ${radius} km`
-                    : pagination.total
-                      ? `${pagination.total.toLocaleString()} advocates found`
-                      : ''}
-                </p>
-              </div>
-              {nearbyMode && (
-                <button onClick={() => { setNearbyMode(false); fetchAdvocates({ ...activeFilters, page: 1 }); }}
-                  className="text-xs text-primary-600 hover:underline font-medium">
-                  Show all
-                </button>
-              )}
-            </div>
-
-            {loading && (
-              <div className="flex items-center justify-center py-20">
-                <div className="text-center">
-                  <Spinner size="lg" />
-                  <p className="text-gray-400 text-sm mt-4">Loading advocates...</p>
-                </div>
-              </div>
-            )}
-
-            {!loading && error && (
-              <div className="text-center py-20">
-                <p className="text-red-500 text-sm mb-3">{error}</p>
-                <button onClick={() => fetchAdvocates(activeFilters)} className="btn-outline text-sm">Retry</button>
-              </div>
-            )}
-
-            {!loading && !error && advocates.length === 0 && (
-              <div className="text-center py-20">
-                <Scale size={40} className="text-gray-200 mx-auto mb-4" />
-                <p className="text-gray-500 font-medium">No advocates found</p>
-                <p className="text-gray-400 text-sm mt-1">Try adjusting your filters or search radius</p>
-              </div>
-            )}
-
-            {!loading && advocates.length > 0 && (
-              <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {advocates.map((adv, i) => (
-                    <div key={adv._id} className={`animate-fade-in-up stagger-${Math.min(i % 4 + 1, 4)}`}>
-                      <AdvocateCard advocate={adv} showDistance={nearbyMode || adv.distance != null} />
-                    </div>
-                  ))}
-                </div>
-
-                {/* Pagination */}
-                {!nearbyMode && pagination.pages > 1 && (
-                  <div className="flex items-center justify-center gap-2 mt-10">
-                    <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
-                      className="btn-outline text-sm px-4 py-2 disabled:opacity-40">← Prev</button>
-                    <div className="flex gap-1">
-                      {Array.from({ length: Math.min(pagination.pages, 7) }, (_, i) => {
-                        const p = i + 1;
-                        return (
-                          <button key={p} onClick={() => setPage(p)}
-                            className={`w-9 h-9 text-sm rounded-lg font-medium transition-all ${page === p ? 'bg-primary-500 text-white' : 'hover:bg-gray-100 text-gray-600'}`}>
-                            {p}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <button disabled={page === pagination.pages} onClick={() => setPage(p => p + 1)}
-                      className="btn-outline text-sm px-4 py-2 disabled:opacity-40">Next →</button>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+          )}
         </div>
       </div>
     </div>
