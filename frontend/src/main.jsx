@@ -8,6 +8,9 @@ import App from './App';
 if (!localStorage.getItem('onboarding_done')) {
   localStorage.setItem('onboarding_done', 'true');
   if (window.location.pathname === '/') {
+    window.location.replace('/onboarding');
+  }
+  if (window.location.pathname === '/') {
     window.location.href = '/onboarding';
   }
 }
