@@ -13,6 +13,7 @@ export default function MapPage() {
   const [selectedId, setSelectedId] = useState(null);
   const [radius, setRadius] = useState(20);
   const [filters, setFilters] = useState({});
+  const [showFilters, setShowFilters] = useState(false);
   const cardRefs = useRef({});
 
   useEffect(() => {
@@ -68,7 +69,11 @@ export default function MapPage() {
         {/* Left: list */}
         <div className="w-80 flex-shrink-0 flex flex-col bg-surface border-r border-gray-100 overflow-hidden">
           <div className="p-3 border-b border-gray-100 bg-white">
-            <SearchFilters onFilter={setFilters} showDistanceSort={!!location} />
+            {showFilters && <SearchFilters onFilter={setFilters} showDistanceSort={!!location} />}
+              <button onClick={() => setShowFilters(!showFilters)}
+                className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-4 py-2 text-sm font-medium text-gray-700 shadow-sm">
+                {showFilters ? '✕ Close Filters' : '⚙ Filters'}
+              </button>
           </div>
           <div className="flex-1 overflow-y-auto p-3 space-y-2">
             {loading && (

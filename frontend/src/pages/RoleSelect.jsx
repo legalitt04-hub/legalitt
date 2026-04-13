@@ -62,7 +62,7 @@ export default function RoleSelect({ onSelect }) {
       </div>
 
       {/* Next button */}
-      <div className="mt-auto pt-6">
+      <div className="fixed bottom-8 left-6 right-6">
         <button
           onClick={handleNext}
           disabled={!selected}
