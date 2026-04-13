@@ -66,7 +66,7 @@ export default function RoleSelect({ onSelect }) {
         <button
           onClick={handleNext}
           disabled={!selected}
-          className="w-full bg-primary-500 hover:bg-primary-600 disabled:opacity-40 text-white font-bold py-4 rounded-2xl text-base transition-all active:scale-95 shadow-lg shadow-primary-200">
+          className="w-full bg-primary-500 hover:bg-primary-600 disabled:opacity-40 text-white font-bold py-4 rounded-2xl text-base transition-all active:scale-95 shadow-lg shadow-primary-200 flex items-center justify-center gap-2">
           Next
         </button>
       </div>

@@ -108,7 +108,7 @@ export default function Onboarding() {
       <div className="px-6 pb-24">
         <button
           onClick={handleNext}
-          className="w-full bg-primary-500 hover:bg-primary-600 text-white font-bold py-4 rounded-2xl text-base transition-all active:scale-95 shadow-lg shadow-primary-200 flex items-center justify-center gap-2"
+          className="w-full bg-primary-500 hover:bg-primary-600 disabled:opacity-40 text-white font-bold py-4 rounded-2xl text-base transition-all active:scale-95 shadow-lg shadow-primary-200 flex items-center justify-center gap-2"
         >
           {slide === SLIDES.length - 1 ? 'Get Started' : 'Next'}
           <ChevronRight size={20} />
