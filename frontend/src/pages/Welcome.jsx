@@ -7,7 +7,7 @@ export default function Welcome() {
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(135deg, #0d9488 0%, #0f766e 100%)' }}>
       {/* Top section - Logo */}
-      <div className="flex-1 flex flex-col items-center justify-center gap-4 px-8">
+      <div className="flex-1 flex flex-col items-center justify-center gap-4 px-8 animate-fade-in">
         <div className="w-24 h-24 bg-white/20 rounded-3xl flex items-center justify-center shadow-xl backdrop-blur">
           <Scale size={52} className="text-white" strokeWidth={1.5} />
         </div>

@@ -66,7 +66,7 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen bg-surface flex flex-col items-center justify-center px-5">
+    <div className="min-h-screen bg-surface flex flex-col items-center justify-center px-5 animate-fade-in">
       {/* Logo */}
       <div className="flex flex-col items-center gap-2 mb-8">
         <div className="w-16 h-16 bg-primary-500 rounded-2xl flex items-center justify-center shadow-lg">
@@ -77,7 +77,7 @@ export default function Auth() {
       </div>
 
       {/* Card */}
-      <div className="w-full max-w-sm bg-white rounded-3xl shadow-card p-6">
+      <div className="w-full max-w-sm bg-white rounded-3xl shadow-card p-6 animate-fade-in-up animate-delay-100">
         {/* Tabs */}
         <div className="flex bg-gray-100 rounded-2xl p-1 mb-6">
           {["login", "register"].map((m) => (

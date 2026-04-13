@@ -105,7 +105,7 @@ export default function Onboarding() {
       </div>
 
       {/* CTA */}
-      <div className="px-6 pb-10 safe-area-pb">
+      <div className="px-6 pb-24">
         <button
           onClick={handleNext}
           className="w-full bg-primary-500 hover:bg-primary-600 text-white font-bold py-4 rounded-2xl text-base transition-all active:scale-95 shadow-lg shadow-primary-200 flex items-center justify-center gap-2"

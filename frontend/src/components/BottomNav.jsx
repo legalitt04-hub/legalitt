@@ -14,7 +14,7 @@ export default function BottomNav() {
   const token = localStorage.getItem('legalitt_token');
 
   // Hide on auth pages
-  const hide = ['/login', '/register'].includes(location.pathname);
+  const hide = ['/login', '/register', '/onboarding', '/welcome', '/role-select'].includes(location.pathname);
   if (hide) return null;
 
   return (
