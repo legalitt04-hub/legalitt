@@ -61,8 +61,8 @@ export default function RoleSelect({ onSelect }) {
         </div>
       </div>
 
-      {/* Next button */}
-      <div className="fixed bottom-8 left-6 right-6">
+      {/* Next button - matches onboarding style */}
+      <div className="px-6 pb-10">
         <button
           onClick={handleNext}
           disabled={!selected}
