@@ -1,0 +1,85 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# render.yaml — Render "Infrastructure as Code"
+#
+# What this does:
+#   - Defines ALL Render services in one file
+#   - Commit this to GitHub → Render reads it automatically
+#   - To move to AWS later: replace this file with terraform/main.tf
+#     (all environment variables stay the same — zero code changes needed)
+#
+# Deploy: Push to GitHub → Render auto-detects this file → deploys everything
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── Backend API ─────────────────────────────────────────────────────────────
+  - type: web
+    name: legalitt-api
+    runtime: node
+    region: singapore          # Closest to India. Options: singapore, ohio, oregon, frankfurt
+    plan: free                 # Change to "starter" ($7/mo) when you need no sleep + custom domain
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node src/server.js
+    healthCheckPath: /health
+
+    # Auto-deploy when you push to main branch
+    autoDeploy: true
+    branch: main
+
+    # Environment variables — these are injected at runtime
+    # NEVER put real values here — use Render dashboard to set them
+    # This section just declares what variables exist
+    envVars:
+
+      # Server
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+
+      # Database — set real value in Render dashboard
+      - key: MONGODB_URI
+        sync: false            # sync:false = Render won't auto-sync, you set it manually
+
+      # Security — generate with: node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+      - key: JWT_SECRET
+        generateValue: true    # Render auto-generates a secure random value
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 15m
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 7d
+
+      # External services — set in Render dashboard
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+
+      # Frontend URL (for CORS)
+      - key: FRONTEND_URL
+        value: https://legalitt.vercel.app
+
+      # Rate limiting
+      - key: RATE_LIMIT_WINDOW_MS
+        value: 900000
+      - key: RATE_LIMIT_MAX
+        value: 100
+
+      # MSG91 OTP (optional — set when ready)
+      - key: MSG91_AUTH_KEY
+        sync: false
+      - key: MSG91_TEMPLATE_ID
+        sync: false

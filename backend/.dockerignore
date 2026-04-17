@@ -1,0 +1,13 @@
+node_modules
+npm-debug.log*
+.env
+.env.*
+logs/
+tests/
+*.test.js
+.git
+.gitignore
+README.md
+ecosystem.config.js
+firebase-service-account.json
+google-services.json

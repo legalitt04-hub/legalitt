@@ -1,2 +1,38 @@
+# ─── Node ────────────────────────────────────────────────────────────────────
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ─── Environment ─────────────────────────────────────────────────────────────
 .env
+.env.local
+.env.production
+.env.development
+
+# ─── Backend ─────────────────────────────────────────────────────────────────
+backend/logs/
+backend/dist/
+firebase-service-account.json
+
+# ─── Mobile App ──────────────────────────────────────────────────────────────
+mobile-app/.expo/
+mobile-app/dist/
+mobile-app/build/
+mobile-app/android/
+mobile-app/ios/
+mobile-app/google-services.json
+mobile-app/GoogleService-Info.plist
+mobile-app/google-play-key.json
+
+# ─── OS / Editor ─────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ─── Expo ─────────────────────────────────────────────────────────────────────
+.expo-shared/
+web-build/

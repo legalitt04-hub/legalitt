@@ -1,0 +1,94 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# .github/workflows/deploy.yml
+#
+# What this does automatically on every git push to main:
+#   1. Runs backend syntax checks
+#   2. Runs API tests
+#   3. Triggers Render to redeploy the backend
+#   4. Triggers Vercel to redeploy the frontend (if you add one later)
+#
+# Setup required (one-time):
+#   GitHub repo → Settings → Secrets and variables → Actions → New secret:
+#   - RENDER_API_KEY      (from Render dashboard → Account Settings → API Keys)
+#   - RENDER_SERVICE_ID   (from Render dashboard → your service URL, e.g. srv-xxxxx)
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: Deploy Legalitt
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+
+  # ── Job 1: Test ─────────────────────────────────────────────────────────────
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Check syntax on all files
+        working-directory: backend
+        run: |
+          for f in $(find src -name "*.js"); do
+            node --check "$f" || exit 1
+          done
+          echo "All files passed syntax check"
+
+      - name: Run tests
+        working-directory: backend
+        run: npm test
+        env:
+          NODE_ENV: test
+          JWT_SECRET: test_secret_for_ci_only_not_real
+          JWT_REFRESH_SECRET: test_refresh_secret_for_ci_only
+          MONGODB_URI: mongodb://localhost:27017/legalitt_test
+          PORT: 5001
+
+  # ── Job 2: Deploy to Render (only on push to main, not PRs) ─────────────────
+  deploy-backend:
+    name: Deploy Backend to Render
+    runs-on: ubuntu-latest
+    needs: test                      # Only runs if tests pass
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Trigger Render Deploy
+        run: |
+          curl -X POST \
+            "https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}/deploys" \
+            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{"clearCache": false}'
+
+      - name: Wait for deploy to start
+        run: sleep 10
+
+      - name: Verify deployment health
+        run: |
+          echo "Waiting 60 seconds for deploy to complete..."
+          sleep 60
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            https://legalitt-api.onrender.com/health)
+          if [ "$STATUS" = "200" ]; then
+            echo "✅ Deployment successful — API is healthy"
+          else
+            echo "❌ Health check returned HTTP $STATUS"
+            exit 1
+          fi

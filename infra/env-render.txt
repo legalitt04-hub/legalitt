@@ -1,0 +1,69 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# infra/env-render.txt
+#
+# Copy-paste these into Render dashboard:
+# Your service → Environment → Add Environment Variable
+#
+# IMPORTANT: Never commit real values to GitHub.
+# This file only shows the KEY names, not real values.
+# ─────────────────────────────────────────────────────────────────────────────
+
+NODE_ENV=production
+PORT=5000
+
+# ── Database ──────────────────────────────────────────────────────────────────
+# Get from: MongoDB Atlas → Connect → Drivers
+# Format: mongodb+srv://USER:PASS@cluster.mongodb.net/legalitt
+MONGODB_URI=
+
+
+# ── Security ──────────────────────────────────────────────────────────────────
+# Generate with: node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+# Use Render's "Generate" button — it auto-creates secure values
+JWT_SECRET=
+JWT_REFRESH_SECRET=
+JWT_EXPIRES_IN=15m
+JWT_REFRESH_EXPIRES_IN=7d
+
+
+# ── Google OAuth ──────────────────────────────────────────────────────────────
+# Get from: console.cloud.google.com → Credentials → your OAuth client
+GOOGLE_CLIENT_ID=
+
+
+# ── Cloudinary (file uploads) ─────────────────────────────────────────────────
+# Get from: cloudinary.com → Dashboard
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+
+
+# ── Razorpay (payments) ───────────────────────────────────────────────────────
+# Test keys: rzp_test_xxxxx (use during development)
+# Live keys:  rzp_live_xxxxx (use after KYC approval)
+# Get from: razorpay.com → Settings → API Keys
+RAZORPAY_KEY_ID=
+RAZORPAY_KEY_SECRET=
+
+
+# ── Anthropic (AI features) ───────────────────────────────────────────────────
+# Get from: console.anthropic.com → API Keys
+ANTHROPIC_API_KEY=
+
+
+# ── MSG91 (phone OTP — Indian SMS) ───────────────────────────────────────────
+# Get from: msg91.com → Settings → Auth Key
+# Leave empty to skip phone OTP (email login still works)
+MSG91_AUTH_KEY=
+MSG91_TEMPLATE_ID=
+
+
+# ── Frontend URL (for CORS) ───────────────────────────────────────────────────
+# Your Vercel app URL — update after deploying frontend
+# If no frontend yet: https://legalitt-api.onrender.com
+FRONTEND_URL=https://legalitt.vercel.app
+
+
+# ── Rate Limiting ─────────────────────────────────────────────────────────────
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX=100

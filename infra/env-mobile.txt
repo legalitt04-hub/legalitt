@@ -1,0 +1,33 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# infra/env-mobile.txt
+# Copy values into mobile-app/.env for each environment
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── LOCAL DEVELOPMENT ─────────────────────────────────────────────────────────
+# Use your computer's local IP (not localhost — phone needs to reach your PC)
+# Find IP: Mac → ifconfig | grep inet, Windows → ipconfig
+API_URL=http://192.168.1.XXX:5000/api
+SOCKET_URL=http://192.168.1.XXX:5000
+GOOGLE_WEB_CLIENT_ID=YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com
+RAZORPAY_KEY_ID=rzp_test_XXXXXXXXXXXXXXXX
+
+
+# ── STAGING (Render preview) ──────────────────────────────────────────────────
+API_URL=https://legalitt-api.onrender.com/api
+SOCKET_URL=https://legalitt-api.onrender.com
+GOOGLE_WEB_CLIENT_ID=YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com
+RAZORPAY_KEY_ID=rzp_test_XXXXXXXXXXXXXXXX
+
+
+# ── PRODUCTION (used in EAS production builds) ────────────────────────────────
+API_URL=https://legalitt-api.onrender.com/api
+SOCKET_URL=https://legalitt-api.onrender.com
+GOOGLE_WEB_CLIENT_ID=YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com
+RAZORPAY_KEY_ID=rzp_live_XXXXXXXXXXXXXXXX   # Switch to live after Razorpay KYC
+
+
+# ── AWS PRODUCTION (update these when you move to AWS) ────────────────────────
+# API_URL=https://api.legalitt.com/api
+# SOCKET_URL=https://api.legalitt.com
+# GOOGLE_WEB_CLIENT_ID=YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com
+# RAZORPAY_KEY_ID=rzp_live_XXXXXXXXXXXXXXXX
