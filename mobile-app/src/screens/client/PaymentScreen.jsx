@@ -1,204 +1,320 @@
-import React, { useEffect } from 'react';
+// screens/client/PaymentScreen.jsx
+import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  StatusBar, ActivityIndicator,
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  SafeAreaView,
+  StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../../context/AuthContext';
-import { usePayment } from '../../hooks/usePayment';
-import Button from '../../components/common/Button';
-import { COLORS, SIZES, SHADOWS } from '../../constants/theme';
-import { formatINR } from '../../utils/helpers';
+import { COLORS } from '../../constants/theme';
 
-const METHODS = [
-  { id:'upi',        label:'UPI',               desc:'GPay, PhonePe, Paytm, BHIM',    icon:'phone-portrait-outline' },
-  { id:'card',       label:'Credit/Debit Card',  desc:'Visa, Mastercard, RuPay',        icon:'card-outline'           },
-  { id:'netbanking', label:'Net Banking',         desc:'All major Indian banks',         icon:'business-outline'       },
-  { id:'wallet',     label:'Wallet',              desc:'Mobikwik, Amazon Pay, Freecharge',icon:'wallet-outline'        },
-];
+const PaymentScreen = ({ navigation, route }) => {
+  const [selectedMethod, setSelectedMethod] = useState(null);
 
-const PaymentScreen = ({ route, navigation }) => {
-  const { bookingId, amount, advocateName } = route.params || {};
-  const { user } = useAuth();
-  const { loading, error, orderId, initOrder, pay } = usePayment();
-  const [selectedMethod, setSelectedMethod] = React.useState('upi');
-  const [initing, setIniting] = React.useState(true);
-  const [localOrderId, setLocalOrderId] = React.useState(null);
-  const [keyId, setKeyId] = React.useState(null);
+  // Get consultation fee from route params or use default
+  const consultationFee = route?.params?.fee || 800;
+  const platformFee = 0;
+  const totalAmount = consultationFee + platformFee;
 
-  useEffect(() => {
-    const init = async () => {
-      const result = await initOrder(bookingId);
-      if (result) {
-        setLocalOrderId(result.orderId);
-        setKeyId(result.keyId);
-      }
-      setIniting(false);
-    };
-    if (bookingId) init();
-    else setIniting(false);
-  }, [bookingId]);
+  const paymentMethods = [
+    {
+      id: 'upi',
+      icon: 'phone-portrait-outline',
+      title: 'UPI',
+      subtitle: 'Pay using any UPI app',
+    },
+    {
+      id: 'card',
+      icon: 'card-outline',
+      title: 'Credit/Debit Card',
+      subtitle: 'Debit card or credit card',
+    },
+    {
+      id: 'netbanking',
+      icon: 'business-outline',
+      title: 'Net Banking',
+      subtitle: 'Net Banking',
+    },
+  ];
 
-  const handlePay = async () => {
-    const result = await pay({
-      bookingId,
-      orderId: localOrderId,
-      amount,
-      keyId,
-      userName: user?.name,
-      userEmail: user?.email,
-      userPhone: user?.phone,
-      description: `Consultation with ${advocateName}`,
-    });
-    if (result?.success) {
-      navigation.replace('PaymentSuccess', {
-        bookingId,
-        chatId: result.chatId,
-        advocateName,
-      });
+  const handlePayment = () => {
+    if (!selectedMethod) {
+      alert('Please select a payment method');
+      return;
     }
+
+    // TODO: Integrate Razorpay payment gateway
+    console.log('Processing payment:', {
+      method: selectedMethod,
+      amount: totalAmount,
+    });
+
+    // Navigate to success screen
+    navigation.navigate('PaymentSuccess', {
+      amount: totalAmount,
+      method: selectedMethod,
+    });
   };
 
-  if (initing) {
-    return (
-      <View style={s.centered}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={s.initText}>Preparing payment...</Text>
-      </View>
-    );
-  }
-
   return (
-    <View style={s.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-      <View style={s.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{width:40,padding:4}}>
-          <Ionicons name="chevron-back" size={24} color={COLORS.textPrimary} />
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="chevron-back" size={24} color="#1F2937" />
         </TouchableOpacity>
-        <Text style={s.headerTitle}>Payment</Text>
-        <View style={{width:40}} />
+        <Text style={styles.headerTitle}>Payment</Text>
+        <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
-        {/* Razorpay logo */}
-        <View style={s.rzpBrand}>
-          <Text style={s.rzpTxt}><Text style={{color:'#072654'}}>Razor</Text><Text style={{color:'#3395ff'}}>pay</Text></Text>
-          <View style={{flexDirection:'row',alignItems:'center',gap:4,marginTop:4}}>
-            <Ionicons name="lock-closed" size={12} color={COLORS.success} />
-            <Text style={{fontSize:SIZES.caption,color:COLORS.textMuted}}>Secured by 256-bit SSL</Text>
-          </View>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Razorpay Logo */}
+        <View style={styles.logoContainer}>
+          <Text style={styles.logoText}>⚡ Razorpay</Text>
         </View>
 
-        {/* Fee breakdown */}
-        <View style={s.feeCard}>
-          <View style={s.feeRow}>
-            <Text style={s.feeLabel}>Consultation with</Text>
-            <Text style={[s.feeLabel,{fontWeight:'700',color:COLORS.textPrimary}]}>{advocateName}</Text>
-          </View>
-          <View style={s.divider} />
-          <View style={s.feeRow}>
-            <Text style={s.feeLabel}>Consultation Fee</Text>
-            <Text style={s.feeAmt}>{formatINR(amount)}/-</Text>
-          </View>
-          <View style={s.feeRow}>
-            <Text style={s.feeLabel}>Platform Fee</Text>
-            <Text style={{fontSize:SIZES.body,color:COLORS.textMuted}}>\u20b90/- (Free)</Text>
-          </View>
-          <View style={s.divider} />
-          <View style={s.feeRow}>
-            <Text style={[s.feeLabel,{fontWeight:'800',color:COLORS.textPrimary,fontSize:SIZES.body}]}>Total</Text>
-            <Text style={[s.feeAmt,{fontSize:SIZES.subtitle,color:COLORS.textPrimary}]}>{formatINR(amount)}/-</Text>
-          </View>
+        {/* Fee Breakdown Card */}
+        <View style={styles.feeCard}>
+          <FeeRow label="Consultation Fee" value={`₹${consultationFee}/-`} />
+          <FeeRow label="Platform Fee" value={`₹${platformFee}/-`} />
+
+          <View style={styles.divider} />
+
+          <FeeRow label="Total" value={`₹${totalAmount}/-`} bold />
         </View>
 
-        {/* Payment methods */}
-        <Text style={s.methodsTitle}>Pay {formatINR(amount)}/-</Text>
-        <View style={s.methodsCard}>
-          {METHODS.map((m, i) => {
-            const sel = selectedMethod === m.id;
-            return (
-              <React.Fragment key={m.id}>
-                <TouchableOpacity
-                  style={[s.methodRow, sel && s.methodRowSel]}
-                  onPress={() => setSelectedMethod(m.id)}
-                  activeOpacity={0.8}
-                >
-                  <View style={[s.methodIcon, sel && s.methodIconSel]}>
-                    <Ionicons name={m.icon} size={20} color={sel ? COLORS.primary : COLORS.textSecondary} />
-                  </View>
-                  <View style={{flex:1}}>
-                    <Text style={[s.methodLabel, sel && {color:COLORS.primary}]}>{m.label}</Text>
-                    <Text style={s.methodDesc}>{m.desc}</Text>
-                  </View>
-                  <View style={[s.radio, sel && s.radioSel]}>
-                    {sel && <View style={s.radioDot} />}
-                  </View>
-                </TouchableOpacity>
-                {i < METHODS.length-1 && <View style={s.divider} />}
-              </React.Fragment>
-            );
-          })}
-        </View>
+        {/* Payment Methods Section */}
+        <Text style={styles.sectionTitle}>Pay ₹{totalAmount}/-</Text>
 
-        {error && (
-          <Text style={{color:COLORS.error,fontSize:SIZES.caption,textAlign:'center',marginBottom:SIZES.md}}>
-            {error}
-          </Text>
-        )}
+        <View style={styles.methodsContainer}>
+          {paymentMethods.map((method) => (
+            <TouchableOpacity
+              key={method.id}
+              style={[
+                styles.methodCard,
+                selectedMethod === method.id && styles.methodCardSelected,
+              ]}
+              onPress={() => setSelectedMethod(method.id)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.methodIcon}>
+                <Ionicons name={method.icon} size={20} color={COLORS.primary} />
+              </View>
 
-        {/* Trust row */}
-        <View style={{flexDirection:'row',justifyContent:'center',gap:20}}>
-          {[
-            {icon:'shield-checkmark-outline',txt:'100% Secure'},
-            {icon:'card-outline',txt:'No card stored'},
-            {icon:'refresh-outline',txt:'Easy refund'},
-          ].map((item,i) => (
-            <View key={i} style={{flexDirection:'row',alignItems:'center',gap:4}}>
-              <Ionicons name={item.icon} size={14} color={COLORS.textSecondary} />
-              <Text style={{fontSize:SIZES.caption,color:COLORS.textSecondary}}>{item.txt}</Text>
-            </View>
+              <View style={styles.methodContent}>
+                <Text style={styles.methodTitle}>{method.title}</Text>
+                <Text style={styles.methodSubtitle}>{method.subtitle}</Text>
+              </View>
+
+              {selectedMethod === method.id ? (
+                <View style={styles.radioSelected}>
+                  <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+                </View>
+              ) : (
+                <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+              )}
+            </TouchableOpacity>
           ))}
         </View>
+
+        {/* Spacer */}
+        <View style={{ flex: 1, minHeight: 40 }} />
       </ScrollView>
 
-      <View style={s.footer}>
-        <Button
-          title={loading ? 'Processing...' : `Pay ${formatINR(amount)}`}
-          onPress={handlePay}
-          loading={loading}
-          disabled={!localOrderId || loading}
-        />
+      {/* Pay Button */}
+      <View style={styles.footer}>
+        <TouchableOpacity
+          style={[
+            styles.payButton,
+            !selectedMethod && styles.payButtonDisabled,
+          ]}
+          onPress={handlePayment}
+          disabled={!selectedMethod}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.payButtonText}>Pay ₹{totalAmount}</Text>
+        </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
-const s = StyleSheet.create({
-  container:    { flex:1, backgroundColor:COLORS.backgroundGrey },
-  centered:     { flex:1, alignItems:'center', justifyContent:'center', backgroundColor:'#fff', gap:12 },
-  initText:     { fontSize:SIZES.body, color:COLORS.textSecondary },
-  header:       { flexDirection:'row', alignItems:'center', justifyContent:'space-between', paddingHorizontal:SIZES.screenPadding, paddingTop:52, paddingBottom:12, backgroundColor:'#fff', borderBottomWidth:1, borderBottomColor:COLORS.border },
-  headerTitle:  { fontSize:SIZES.subtitle, fontWeight:'800', color:COLORS.textPrimary },
-  content:      { padding:SIZES.screenPadding, paddingBottom:120 },
-  rzpBrand:     { alignItems:'center', marginBottom:SIZES.xl },
-  rzpTxt:       { fontSize:28, fontWeight:'800' },
-  feeCard:      { backgroundColor:'#fff', borderRadius:SIZES.radiusLg, padding:SIZES.lg, ...SHADOWS.sm, marginBottom:SIZES.xl },
-  feeRow:       { flexDirection:'row', justifyContent:'space-between', alignItems:'center', paddingVertical:6 },
-  feeLabel:     { fontSize:SIZES.body, color:COLORS.textSecondary },
-  feeAmt:       { fontSize:SIZES.body, fontWeight:'700', color:COLORS.primary },
-  divider:      { height:1, backgroundColor:COLORS.borderLight, marginVertical:2 },
-  methodsTitle: { fontSize:SIZES.body, fontWeight:'700', color:COLORS.textPrimary, marginBottom:SIZES.sm },
-  methodsCard:  { backgroundColor:'#fff', borderRadius:SIZES.radiusLg, ...SHADOWS.sm, marginBottom:SIZES.xl, overflow:'hidden' },
-  methodRow:    { flexDirection:'row', alignItems:'center', padding:SIZES.lg },
-  methodRowSel: { backgroundColor:COLORS.primaryLight + '50' },
-  methodIcon:   { width:40, height:40, borderRadius:20, backgroundColor:COLORS.backgroundGrey, alignItems:'center', justifyContent:'center', marginRight:SIZES.md },
-  methodIconSel:{ backgroundColor:COLORS.primaryLight },
-  methodLabel:  { fontSize:SIZES.body, fontWeight:'700', color:COLORS.textPrimary },
-  methodDesc:   { fontSize:SIZES.caption, color:COLORS.textMuted, marginTop:2 },
-  radio:        { width:22, height:22, borderRadius:11, borderWidth:2, borderColor:COLORS.border, alignItems:'center', justifyContent:'center' },
-  radioSel:     { borderColor:COLORS.primary },
-  radioDot:     { width:10, height:10, borderRadius:5, backgroundColor:COLORS.primary },
-  footer:       { position:'absolute', bottom:0, left:0, right:0, backgroundColor:'#fff', padding:SIZES.screenPadding, paddingBottom:36, borderTopWidth:1, borderColor:COLORS.border },
+// Fee Row Component
+const FeeRow = ({ label, value, bold = false }) => (
+  <View style={styles.feeRow}>
+    <Text style={[styles.feeLabel, bold && styles.feeLabelBold]}>
+      {label}
+    </Text>
+    <Text style={[styles.feeValue, bold && styles.feeValueBold]}>
+      {value}
+    </Text>
+  </View>
+);
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  backButton: {
+    padding: 4,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 20,
+  },
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  logoText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  feeCard: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+  },
+  feeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  feeLabel: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  feeLabelBold: {
+    fontWeight: '700',
+    color: '#1F2937',
+  },
+  feeValue: {
+    fontSize: 14,
+    color: '#1F2937',
+  },
+  feeValueBold: {
+    fontWeight: '700',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#E5E7EB',
+    marginVertical: 8,
+  },
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 8,
+  },
+  methodsContainer: {
+    gap: 12,
+  },
+  methodCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 16,
+    padding: 16,
+    gap: 12,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  methodCardSelected: {
+    borderColor: COLORS.primary,
+    backgroundColor: '#F0FDFA',
+  },
+  methodIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F0FDFA',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  methodContent: {
+    flex: 1,
+  },
+  methodTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 2,
+  },
+  methodSubtitle: {
+    fontSize: 11,
+    color: '#6B7280',
+  },
+  radioSelected: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  footer: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  payButton: {
+    backgroundColor: COLORS.primary,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  payButtonDisabled: {
+    backgroundColor: '#D1D5DB',
+    opacity: 0.5,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  payButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
 });
 
 export default PaymentScreen;

@@ -7,10 +7,10 @@ const logger = require('../utils/logger');
 // POST /api/auth/send-otp
 exports.sendOTP = async (req, res, next) => {
   try {
-    const { phone } = req.body;
-    if (!phone) return next(new AppError('Phone number is required.', 400));
+    const { email } = req.body;
+    if (!email) return next(new AppError('Email address is required.', 400));
 
-    const result = await otpService.sendOTP(phone);
+    const result = await otpService.sendOTP(email);
     if (!result.success) return next(new AppError(result.message || 'Failed to send OTP.', 500));
 
     const response = { success: true, message: 'OTP sent successfully.' };
@@ -23,25 +23,26 @@ exports.sendOTP = async (req, res, next) => {
 // POST /api/auth/verify-otp
 exports.verifyOTP = async (req, res, next) => {
   try {
-    const { phone, otp, name } = req.body;
-    if (!phone || !otp) return next(new AppError('Phone and OTP are required.', 400));
+    const { email, otp, name, role } = req.body;
+    if (!email || !otp) return next(new AppError('Email and OTP are required.', 400));
 
-    const result = otpService.verifyOTP(phone, otp);
+    const result = otpService.verifyOTP(email, otp);
     if (!result.success) return next(new AppError(result.message, 400));
 
-    // Find or create user by phone
-    let user = await User.findOne({ phone });
+    const safeRole = ['client', 'advocate'].includes(role) ? role : 'client';
+
+    // Find or create user by email
+    let user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
-      user = await User.create({
-        name: name || `User${phone.slice(-4)}`,
-        phone,
-        isPhoneVerified: true,
-        role: 'client',
+      // Return success without creating user or issuing tokens yet (register endpoint will do it with password)
+      return res.json({
+        success: true,
+        message: 'OTP verified successfully. Please proceed to complete registration.'
       });
-    } else {
-      user.isPhoneVerified = true;
-      await user.save({ validateBeforeSave: false });
     }
+
+    user.isEmailVerified = true;
+    await user.save({ validateBeforeSave: false });
 
     // Issue tokens
     const accessToken = jwt.sign(

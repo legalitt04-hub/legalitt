@@ -21,7 +21,7 @@ router.get('/balance', protect, authorize('advocate'), async (req, res, next) =>
         $match: {
           advocate: advocate._id,
           'payment.status': 'paid',
-          status: 'completed',
+          status: { $in: ['confirmed', 'completed'] },
         },
       },
       {

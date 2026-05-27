@@ -1,0 +1,65 @@
+{
+  "cli": {
+    "version": ">= 7.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleDebug"
+      },
+      "ios": {
+        "simulator": true
+      },
+      "env": {
+        "API_URL": "http://localhost:5000/api",
+        "SOCKET_URL": "http://localhost:5000"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "API_URL": "https://legalitt-growth.onrender.com/api/v1",
+        "SOCKET_URL": "https://legalitt-growth.onrender.com",
+        "GOOGLE_WEB_CLIENT_ID": "145094326598-95qo14kskqa4ddr6k57rrs9ebp1so35t.apps.googleusercontent.com",
+        "MOBILE_APP_SECRET": "legalitt_mobile_app_secure_secret_2026"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "android": {
+        "buildType": "app-bundle",
+        "gradleCommand": ":app:bundleRelease"
+      },
+      "ios": {
+        "credentialsSource": "remote"
+      },
+      "env": {
+        "API_URL": "https://legalitt-growth.onrender.com/api/v1",
+        "SOCKET_URL": "https://legalitt-growth.onrender.com",
+        "GOOGLE_WEB_CLIENT_ID": "145094326598-95qo14kskqa4ddr6k57rrs9ebp1so35t.apps.googleusercontent.com",
+        "MOBILE_APP_SECRET": "legalitt_mobile_app_secure_secret_2026"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "android": {
+        "serviceAccountKeyPath": "./google-play-key.json",
+        "track": "internal",
+        "releaseStatus": "draft"
+      },
+      "ios": {
+        "appleId": "your@apple.com",
+        "ascAppId": "your_app_store_connect_app_id",
+        "appleTeamId": "YOUR_TEAM_ID"
+      }
+    }
+  }
+}

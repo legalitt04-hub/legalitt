@@ -1,156 +1,272 @@
+// screens/client/ProfileScreen.jsx
 import React from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  StatusBar, Alert, Image,
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  SafeAreaView,
+  StatusBar,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../../context/AuthContext';
-import { COLORS, SIZES, SHADOWS } from '../../constants/theme';
-
-const MenuItem = ({ icon, label, desc, onPress, danger = false }) => (
-  <TouchableOpacity style={styles.menuItem} onPress={onPress} activeOpacity={0.7}>
-    <View style={[styles.menuIcon, danger && styles.menuIconDanger]}>
-      <Ionicons name={icon} size={22} color={danger ? COLORS.error : COLORS.primary} />
-    </View>
-    <View style={styles.menuText}>
-      <Text style={[styles.menuLabel, danger && { color: COLORS.error }]}>{label}</Text>
-      {desc && <Text style={styles.menuDesc}>{desc}</Text>}
-    </View>
-    <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
-  </TouchableOpacity>
-);
+import { COLORS } from '../../constants/theme';
 
 const ProfileScreen = ({ navigation }) => {
-  const { user, logout } = useAuth();
+  const user = {
+    name: 'Suresh Chohan',
+    email: 'sureshchohan@gmail.com',
+    avatar: 'https://i.pravatar.cc/200?img=15',
+  };
+
+  const menuItems = [
+    {
+      id: '1',
+      icon: 'chatbubble-outline',
+      title: 'My Chats',
+      subtitle: 'All conversations with advocates',
+      screen: 'ChatList',
+      color: COLORS.primary,
+    },
+    {
+      id: '2',
+      icon: 'document-text-outline',
+      title: 'My Requests',
+      subtitle: 'Status and Report',
+      screen: 'MyBookings',
+      color: COLORS.primary,
+    },
+    {
+      id: '3',
+      icon: 'bookmark-outline',
+      title: 'Saved Advocates',
+      subtitle: 'Users can bookmark lawyers',
+      screen: 'Search',
+      color: COLORS.primaryDark || '#0D9488',
+    },
+    {
+      id: '4',
+      icon: 'settings-outline',
+      title: 'Settings',
+      subtitle: 'Language, notification & Privacy',
+      screen: 'Settings',
+      color: COLORS.primary,
+    },
+    {
+      id: '5',
+      icon: 'card-outline',
+      title: 'Payments',
+      subtitle: 'Consultation Payments & invoice',
+      screen: 'Payment',
+      color: COLORS.primary,
+    },
+  ];
 
   const handleLogout = () => {
-    Alert.alert('Logout', 'Are you sure you want to logout?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Logout', style: 'destructive', onPress: logout },
-    ]);
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: () => {
+            // TODO: Clear auth token and user data
+            navigation.replace('Splash');
+          },
+        },
+      ],
+      { cancelable: true }
+    );
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={24} color={COLORS.textPrimary} />
-        </TouchableOpacity>
         <Text style={styles.headerTitle}>Profile</Text>
-        <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Avatar + name */}
-        <View style={styles.avatarSection}>
-          <View style={styles.avatarWrap}>
-            {user?.avatar ? (
-              <Image source={{ uri: user.avatar }} style={styles.avatar} />
-            ) : (
-              <View style={styles.avatarPlaceholder}>
-                <Ionicons name="person" size={48} color={COLORS.primary} />
-              </View>
-            )}
-          </View>
-          <Text style={styles.userName}>{user?.name || 'User'}</Text>
-          <Text style={styles.userEmail}>{user?.email}</Text>
-          <TouchableOpacity style={styles.editBtn}>
-            <Ionicons name="pencil" size={14} color={COLORS.primary} />
-            <Text style={styles.editBtnText}>Edit Profile</Text>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* User Info Section */}
+        <View style={styles.userSection}>
+          <Image source={{ uri: user.avatar }} style={styles.avatar} />
+          <Text style={styles.userName}>{user.name}</Text>
+          <Text style={styles.userEmail}>{user.email}</Text>
+
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() => navigation.navigate('EditProfile')}
+          >
+            <Ionicons name="pencil-outline" size={12} color={COLORS.primary} />
+            <Text style={styles.editButtonText}>Edit Profile</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Menu */}
+        {/* Menu Items */}
         <View style={styles.menuSection}>
-          <MenuItem
-            icon="chatbubbles-outline"
-            label="My Chats"
-            desc="All conversations with advocates"
-            onPress={() => navigation.navigate('ChatList')}
-          />
-          <MenuItem
-            icon="document-text-outline"
-            label="My Requests"
-            desc="Status and Report"
-            onPress={() => navigation.navigate('MyBookings')}
-          />
-          <MenuItem
-            icon="bookmark-outline"
-            label="Saved Advocates"
-            desc="Users can bookmark lawyers"
-            onPress={() => {}}
-          />
-          <MenuItem
-            icon="settings-outline"
-            label="Settings"
-            desc="Language, notification & Privacy"
-            onPress={() => {}}
-          />
-          <MenuItem
-            icon="card-outline"
-            label="Payments"
-            desc="Consultation Payments & invoice"
-            onPress={() => navigation.navigate('MyBookings')}
-          />
-          <MenuItem
-            icon="power-outline"
-            label="Logout"
+          {menuItems.map((item) => (
+            <TouchableOpacity
+              key={item.id}
+              style={styles.menuItem}
+              onPress={() => {
+                if (item.screen === 'Settings') {
+                  // Settings screen doesn't exist yet
+                  Alert.alert('Coming Soon', 'Settings screen is under development');
+                } else {
+                  navigation.navigate(item.screen);
+                }
+              }}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.menuIcon, { backgroundColor: item.color }]}>
+                <Ionicons name={item.icon} size={18} color="#FFFFFF" />
+              </View>
+
+              <View style={styles.menuContent}>
+                <Text style={styles.menuTitle}>{item.title}</Text>
+                <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
+              </View>
+
+              <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+            </TouchableOpacity>
+          ))}
+
+          {/* Logout Button */}
+          <TouchableOpacity
+            style={styles.menuItem}
             onPress={handleLogout}
-            danger
-          />
+            activeOpacity={0.7}
+          >
+            <View style={[styles.menuIcon, styles.logoutIcon]}>
+              <Ionicons name="log-out-outline" size={18} color="#FFFFFF" />
+            </View>
+
+            <View style={styles.menuContent}>
+              <Text style={[styles.menuTitle, styles.logoutText]}>Logout</Text>
+            </View>
+
+            <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+          </TouchableOpacity>
         </View>
 
-        {/* App version */}
-        <Text style={styles.version}>Legalitt v1.0.0 • Made in India 🇮🇳</Text>
+        {/* Bottom Padding for Tab Bar */}
+        <View style={{ height: 100 }} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.backgroundGrey },
+  container: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: SIZES.screenPadding, paddingTop: 52, paddingBottom: 12,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderColor: COLORS.border,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
-  backBtn: { width: 40, padding: 4 },
-  headerTitle: { fontSize: SIZES.subtitle, fontWeight: '800', color: COLORS.textPrimary },
-  content: { paddingBottom: 100 },
-  avatarSection: { backgroundColor: COLORS.backgroundGrey, alignItems: 'center', paddingVertical: 32 },
-  avatarWrap: { marginBottom: 12 },
-  avatar: { width: SIZES.avatarXl, height: SIZES.avatarXl, borderRadius: SIZES.avatarXl / 2 },
-  avatarPlaceholder: {
-    width: SIZES.avatarXl, height: SIZES.avatarXl, borderRadius: SIZES.avatarXl / 2,
-    backgroundColor: COLORS.primaryLight, alignItems: 'center', justifyContent: 'center',
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+    textAlign: 'center',
   },
-  userName: { fontSize: SIZES.heading, fontWeight: '800', color: COLORS.textPrimary },
-  userEmail: { fontSize: SIZES.body, color: COLORS.textSecondary, marginTop: 4 },
-  editBtn: {
-    flexDirection: 'row', alignItems: 'center', marginTop: 12,
-    backgroundColor: COLORS.primaryLight, borderRadius: SIZES.radiusFull,
-    paddingHorizontal: 16, paddingVertical: 8,
+  scrollView: {
+    flex: 1,
   },
-  editBtnText: { color: COLORS.primary, fontWeight: '700', marginLeft: 6 },
-  menuSection: { backgroundColor: '#fff', marginTop: 4 },
+  scrollContent: {
+    paddingBottom: 20,
+  },
+  userSection: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+  },
+  avatar: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    marginBottom: 12,
+  },
+  userName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  userEmail: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginBottom: 8,
+  },
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F0FDFA',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 16,
+    marginTop: 8,
+  },
+  editButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.primary,
+  },
+  menuSection: {
+    paddingHorizontal: 20,
+    gap: 12,
+  },
   menuItem: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: SIZES.screenPadding, paddingVertical: SIZES.lg,
-    borderBottomWidth: 1, borderColor: COLORS.borderLight,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 16,
+    padding: 16,
+    gap: 12,
   },
   menuIcon: {
-    width: 44, height: 44, borderRadius: 22,
-    backgroundColor: COLORS.primaryLight, alignItems: 'center', justifyContent: 'center',
-    marginRight: SIZES.md,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  menuIconDanger: { backgroundColor: '#fef2f2' },
-  menuText: { flex: 1 },
-  menuLabel: { fontSize: SIZES.body, fontWeight: '700', color: COLORS.textPrimary },
-  menuDesc: { fontSize: SIZES.caption, color: COLORS.textSecondary, marginTop: 2 },
-  version: { textAlign: 'center', fontSize: SIZES.caption, color: COLORS.textMuted, marginTop: 24, paddingBottom: 20 },
+  menuContent: {
+    flex: 1,
+  },
+  menuTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 2,
+  },
+  menuSubtitle: {
+    fontSize: 11,
+    color: '#6B7280',
+  },
+  logoutIcon: {
+    backgroundColor: '#EF4444',
+  },
+  logoutText: {
+    color: '#EF4444',
+  },
 });
 
 export default ProfileScreen;

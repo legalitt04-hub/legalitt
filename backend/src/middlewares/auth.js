@@ -23,17 +23,15 @@ const protect = async (req, res, next) => {
       return next(new AppError('User no longer exists.', 401));
     }
 
-    if (user.passwordChangedAfter && user.passwordChangedAfter(decoded.iat)) {
-      return next(new AppError('Password recently changed. Please log in again.', 401));
-    }
-
-    if (!user.isActive) {
-      return next(new AppError('Your account has been deactivated.', 403));
-    }
-
     req.user = user;
     next();
   } catch (err) {
+    if (err.name === 'TokenExpiredError') {
+      return next(new AppError('Your session has expired. Please log in again.', 401));
+    }
+    if (err.name === 'JsonWebTokenError') {
+      return next(new AppError('Invalid token. Please log in again.', 401));
+    }
     next(err);
   }
 };

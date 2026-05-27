@@ -1,22 +1,19 @@
-// services/notifications.js
-let admin;
-const getAdmin = () => {
-  if (!admin && process.env.FIREBASE_SERVICE_ACCOUNT_PATH) {
-    try {
-      admin = require('firebase-admin');
-      const serviceAccount = require(process.env.FIREBASE_SERVICE_ACCOUNT_PATH);
-      if (!admin.apps.length) {
-        admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
-      }
-    } catch (e) { /* Firebase not configured */ }
-  }
-  return admin;
+const logger = require('../utils/logger');
+
+// Firebase notifications disabled for local development
+// Enable after adding correct Firebase Admin SDK credentials
+
+exports.sendPushNotification = async (token, title, body, data = {}) => {
+  logger.info(`[DEV] Push notification skipped: ${title} - ${body}`);
+  return { success: true, dev: true };
 };
 
-exports.send = async (fcmToken, { title, body, data = {} }) => {
-  const fb = getAdmin();
-  if (!fb || !fcmToken) return;
-  try {
-    await fb.messaging().send({ token: fcmToken, notification: { title, body }, data });
-  } catch (e) { /* Silently skip push notification failures */ }
+exports.sendToMultiple = async (tokens, title, body, data = {}) => {
+  logger.info(`[DEV] Multi push notification skipped: ${title}`);
+  return { success: true, dev: true };
+};
+
+exports.subscribeToTopic = async (token, topic) => {
+  logger.info(`[DEV] Topic subscription skipped: ${topic}`);
+  return { success: true, dev: true };
 };

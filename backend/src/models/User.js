@@ -61,10 +61,37 @@ const userSchema = new mongoose.Schema({
   passwordResetToken: String,
   passwordResetExpires: Date,
   fcmToken: String, // Firebase push notification token
+  expoPushToken: String, // Expo push notification token
   lastSeen: {
     type: Date,
     default: Date.now,
   },
+  // New Profile Fields
+  personal: {
+    dateOfBirth: Date,
+    gender: { type: String, enum: ['male', 'female', 'other'] },
+  },
+  address: {
+    street: String,
+    city: String,
+    state: String,
+    pincode: String
+  },
+  preferences: {
+    language: { type: String, default: 'en' },
+    notifications: { type: Boolean, default: true },
+    darkMode: { type: Boolean, default: false }
+  },
+  emergency: {
+    contactName: String,
+    contactPhone: String,
+    relationship: String
+  },
+  profileVersion: { type: Number, default: 1 },
+  savedAdvocates: [{
+    type: mongoose.Schema.ObjectId,
+    ref: 'Advocate'
+  }],
 }, {
   timestamps: true,
   toJSON: { virtuals: true },
@@ -72,9 +99,7 @@ const userSchema = new mongoose.Schema({
 });
 
 // Indexes
-userSchema.index({ email: 1 });
 userSchema.index({ role: 1 });
-userSchema.index({ googleId: 1 }, { sparse: true });
 
 // Virtual: advocate profile link
 userSchema.virtual('advocateProfile', {

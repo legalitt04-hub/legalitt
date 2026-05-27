@@ -13,21 +13,20 @@ const start = async () => {
 
   const server = http.createServer(app);
 
-  // Init Socket.io (async — connects Redis adapter if REDIS_URL is set)
+  // Init Socket.io
   await initSocket(server);
 
-  server.listen(PORT, () => {
+  server.listen(PORT, '0.0.0.0', () => {
     logger.info(`Server running on port ${PORT} [${process.env.NODE_ENV}]`);
   });
 
-  // Graceful shutdown — critical for zero-downtime deploys on AWS/Render
+  // Graceful shutdown
   const shutdown = (signal) => {
     logger.info(`${signal} received — shutting down gracefully`);
     server.close(() => {
       logger.info('HTTP server closed');
       process.exit(0);
     });
-    // Force exit after 10s if connections don't close
     setTimeout(() => process.exit(1), 10000);
   };
 
@@ -35,11 +34,14 @@ const start = async () => {
   process.on('SIGINT',  () => shutdown('SIGINT'));
 
   process.on('unhandledRejection', (err) => {
+    console.error('❌ Unhandled rejection:', err);
     logger.error('Unhandled rejection:', err.message);
     shutdown('unhandledRejection');
   });
+  
   process.on('uncaughtException', (err) => {
-    logger.error('Uncaught exception:', err.message);
+    console.error('❌ Uncaught exception:', err);
+    logger.error('Uncaught exception:', err.stack);
     process.exit(1);
   });
 };

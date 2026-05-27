@@ -19,6 +19,7 @@ const advocateSchema = new mongoose.Schema({
       'Criminal Law', 'Civil Law', 'Family Law', 'Property Law', 'Corporate Law',
       'Labour Law', 'Constitutional Law', 'Tax Law', 'Consumer Law', 'Cyber Law',
       'Intellectual Property', 'Banking Law', 'Environmental Law', 'Human Rights',
+      'Immigration Law',
     ],
   }],
   experience: {

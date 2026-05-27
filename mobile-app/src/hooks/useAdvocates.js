@@ -92,7 +92,7 @@ export const useAdvocateProfile = (advocateId) => {
     setLoading(true);
     setError(null);
     try {
-      const { data } = await advocateAPI.getOne(advocateId);
+      const { data } = await advocateAPI.getAdvocate(advocateId);
       setAdvocate(data.data);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load profile');

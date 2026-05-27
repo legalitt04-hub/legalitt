@@ -1,256 +1,389 @@
+// screens/client/FilterScreen.jsx
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  TextInput, StatusBar,
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  SafeAreaView,
+  StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Button from '../../components/common/Button';
-import { COLORS, SIZES, SHADOWS } from '../../constants/theme';
+import { LinearGradient } from 'expo-linear-gradient';
+import Slider from '@react-native-community/slider';
+import { Picker } from '@react-native-picker/picker';
+import { COLORS } from '../../constants/theme';
 
-const SPECIALIZATIONS = [
-  'Criminal Law', 'Civil Law', 'Family Law', 'Property Law',
-  'Corporate Law', 'Labour Law', 'Tax Law', 'Consumer Law',
-];
-
-const LANGUAGES = ['Hindi', 'English', 'Marathi', 'Gujarati', 'Punjabi'];
-
-const FilterScreen = ({ navigation, route }) => {
-  const { onApply } = route.params || {};
+const FilterScreen = ({ navigation }) => {
   const [location, setLocation] = useState('');
-  const [selectedSpec, setSelectedSpec] = useState(null);
-  const [selectedLang, setSelectedLang] = useState(null);
-  const [feeLevel, setFeeLevel] = useState(1); // 0=low 1=medium 2=high
-  const [langOpen, setLangOpen] = useState(false);
+  const [problemArea, setProblemArea] = useState('Property Search Report');
+  const [language, setLanguage] = useState('Select');
+  const [feeRange, setFeeRange] = useState(50);
 
-  const FEE_LEVELS = [
-    { label: 'Low', value: 0, max: 500 },
-    { label: 'Medium', value: 1, max: 1000 },
-    { label: 'High', value: 2, max: 9999 },
+  const problemAreas = [
+    'Property Search Report',
+    'Criminal Defense',
+    'Civil Dispute',
   ];
-
-  const handleApply = () => {
-    const filters = {};
-    if (location.trim()) filters.city = location.trim();
-    if (selectedSpec) filters.specialization = selectedSpec;
-    if (selectedLang) filters.language = selectedLang;
-    if (feeLevel < 2) filters.maxFee = FEE_LEVELS[feeLevel].max;
-    onApply?.(filters);
-    navigation.goBack();
-  };
 
   const handleReset = () => {
     setLocation('');
-    setSelectedSpec(null);
-    setSelectedLang(null);
-    setFeeLevel(1);
-    onApply?.({});
+    setProblemArea('Property Search Report');
+    setLanguage('Select');
+    setFeeRange(50);
+  };
+
+  const handleApply = () => {
+    // TODO: Apply filters and navigate back with filter params
+    const filters = {
+      location,
+      problemArea,
+      language,
+      feeRange,
+    };
+    console.log('Applying filters:', filters);
     navigation.goBack();
   };
 
+  const getFeeLabel = (value) => {
+    if (value < 33) return 'Low';
+    if (value < 66) return 'Medium';
+    return 'High';
+  };
+
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={24} color={COLORS.textPrimary} />
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="chevron-back" size={24} color="#1F2937" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Filter</Text>
-        <View style={{ width: 40 }} />
+        <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Location */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="location" size={18} color={COLORS.textPrimary} />
-            <Text style={styles.sectionTitle}>Location</Text>
-          </View>
-          <View style={styles.searchBar}>
-            <Ionicons name="search-outline" size={16} color={COLORS.textMuted} style={{ marginRight: 8 }} />
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Location Field */}
+        <FilterField
+          icon="location-outline"
+          label="Location"
+        >
+          <View style={styles.searchInputWrapper}>
+            <Ionicons
+              name="search-outline"
+              size={14}
+              color="#9CA3AF"
+              style={styles.searchIcon}
+            />
             <TextInput
+              style={styles.searchInput}
+              placeholder="Search Location"
+              placeholderTextColor="#9CA3AF"
               value={location}
               onChangeText={setLocation}
-              placeholder="Search Location"
-              placeholderTextColor={COLORS.textMuted}
-              style={styles.searchInput}
             />
           </View>
-        </View>
+        </FilterField>
 
-        {/* Problem Area */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="hammer-outline" size={18} color={COLORS.textPrimary} />
-            <Text style={styles.sectionTitle}>Problem Area</Text>
-          </View>
+        {/* Problem Area Field */}
+        <FilterField
+          icon="scale-outline"
+          label="Problem Area"
+        >
           <View style={styles.radioGroup}>
-            {SPECIALIZATIONS.map((spec) => (
+            {problemAreas.map((problem) => (
               <TouchableOpacity
-                key={spec}
-                style={styles.radioItem}
-                onPress={() => setSelectedSpec(selectedSpec === spec ? null : spec)}
+                key={problem}
+                style={styles.radioOption}
+                onPress={() => setProblemArea(problem)}
+                activeOpacity={0.7}
               >
-                <View style={[styles.radio, selectedSpec === spec && styles.radioSelected]}>
-                  {selectedSpec === spec && <View style={styles.radioDot} />}
+                <View style={styles.radioCircle}>
+                  {problemArea === problem && (
+                    <View style={styles.radioCircleInner} />
+                  )}
                 </View>
-                <Text style={styles.radioLabel}>{spec}</Text>
+                <Text style={styles.radioLabel}>{problem}</Text>
               </TouchableOpacity>
             ))}
           </View>
-        </View>
+        </FilterField>
 
-        {/* Language */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="language-outline" size={18} color={COLORS.textPrimary} />
-            <Text style={styles.sectionTitle}>Language</Text>
+        {/* Language Field */}
+        <FilterField
+          icon="language-outline"
+          label="Language"
+        >
+          <View style={styles.pickerWrapper}>
+            <Picker
+              selectedValue={language}
+              onValueChange={(value) => setLanguage(value)}
+              style={styles.picker}
+            >
+              <Picker.Item label="Select" value="Select" />
+              <Picker.Item label="English" value="English" />
+              <Picker.Item label="Hindi" value="Hindi" />
+              <Picker.Item label="Marathi" value="Marathi" />
+              <Picker.Item label="Gujarati" value="Gujarati" />
+            </Picker>
           </View>
-          <TouchableOpacity style={styles.dropdown} onPress={() => setLangOpen(!langOpen)}>
-            <Text style={styles.dropdownText}>{selectedLang || 'Select'}</Text>
-            <Ionicons name="chevron-down" size={20} color={COLORS.textPrimary} />
-          </TouchableOpacity>
-          {langOpen && (
-            <View style={styles.dropdownMenu}>
-              {LANGUAGES.map((lang) => (
-                <TouchableOpacity
-                  key={lang}
-                  style={styles.dropdownItem}
-                  onPress={() => { setSelectedLang(lang); setLangOpen(false); }}
-                >
-                  <Text style={[styles.dropdownItemText, selectedLang === lang && { color: COLORS.primary, fontWeight: '700' }]}>{lang}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-        </View>
+        </FilterField>
 
-        {/* Fees Range */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={{ fontSize: 18 }}>₹</Text>
-            <Text style={styles.sectionTitle}>Fees Range</Text>
-          </View>
-
-          {/* Custom slider using 3 blocks */}
+        {/* Fees Range Field */}
+        <FilterField
+          icon="cash-outline"
+          label="Fees Range"
+        >
           <View style={styles.sliderContainer}>
-            <View style={styles.sliderTrack}>
-              <View style={[styles.sliderFill, { width: `${((feeLevel + 1) / 3) * 100}%` }]} />
-              {FEE_LEVELS.map((level) => (
-                <TouchableOpacity
-                  key={level.value}
-                  style={[
-                    styles.sliderThumb,
-                    { left: `${(level.value / 2) * 100}%` },
-                    feeLevel === level.value && styles.sliderThumbActive,
-                  ]}
-                  onPress={() => setFeeLevel(level.value)}
-                />
-              ))}
-            </View>
+            <Slider
+              style={styles.slider}
+              minimumValue={0}
+              maximumValue={100}
+              value={feeRange}
+              onValueChange={setFeeRange}
+              minimumTrackTintColor={COLORS.primary}
+              maximumTrackTintColor="#E5E7EB"
+              thumbTintColor={COLORS.primary}
+            />
             <View style={styles.sliderLabels}>
-              {FEE_LEVELS.map((level) => (
-                <Text key={level.value} style={[styles.sliderLabel, feeLevel === level.value && styles.sliderLabelActive]}>
-                  {level.label}
-                </Text>
-              ))}
+              <Text style={styles.sliderLabel}>Low</Text>
+              <Text style={styles.sliderLabel}>Medium</Text>
+              <Text style={styles.sliderLabel}>High</Text>
             </View>
+            <Text style={styles.sliderValue}>
+              Selected: {getFeeLabel(feeRange)}
+            </Text>
           </View>
-        </View>
+        </FilterField>
+
+        {/* Spacer */}
+        <View style={{ flex: 1, minHeight: 40 }} />
       </ScrollView>
 
-      {/* Action buttons */}
+      {/* Footer Buttons */}
       <View style={styles.footer}>
-        <TouchableOpacity
-          onPress={handleReset}
-          style={[fstyles.filterBtn, fstyles.filterBtnNavy]}
-        >
-          <Text style={fstyles.filterBtnNavyText}>Reset</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={handleApply}
-          style={[fstyles.filterBtn, fstyles.filterBtnApply]}
-        >
-          <Text style={fstyles.filterBtnApplyText}>Apply Filter</Text>
-        </TouchableOpacity>
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            style={styles.resetButton}
+            onPress={handleReset}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.resetButtonText}>Reset</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.applyButtonWrapper}
+            onPress={handleApply}
+            activeOpacity={0.9}
+          >
+            <LinearGradient
+              colors={[COLORS.primary, COLORS.primaryDark || '#0D9488']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.applyButton}
+            >
+              <Text style={styles.applyButtonText}>Apply Filter</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
+// Filter Field Component
+const FilterField = ({ icon, label, children }) => (
+  <View style={styles.field}>
+    <View style={styles.fieldHeader}>
+      <Ionicons name={icon} size={14} color={COLORS.primary} />
+      <Text style={styles.fieldLabel}>{label}</Text>
+    </View>
+    {children}
+  </View>
+);
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.backgroundGrey },
+  container: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: SIZES.screenPadding, paddingTop: 52, paddingBottom: 12,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderColor: COLORS.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
-  backBtn: { width: 40, padding: 4 },
-  headerTitle: { fontSize: SIZES.subtitle, fontWeight: '800', color: COLORS.textPrimary },
-  content: { padding: SIZES.screenPadding, paddingBottom: 120 },
-  section: { marginBottom: SIZES.xl },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: SIZES.md, gap: 8 },
-  sectionTitle: { fontSize: SIZES.body, fontWeight: '800', color: COLORS.textPrimary },
-  searchBar: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#fff', borderRadius: SIZES.radiusFull,
-    paddingHorizontal: SIZES.lg, height: 48,
-    borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.sm,
+  backButton: {
+    padding: 4,
   },
-  searchInput: { flex: 1, fontSize: SIZES.body, color: COLORS.textPrimary },
-  radioGroup: { backgroundColor: '#fff', borderRadius: SIZES.radiusMd, ...SHADOWS.sm },
-  radioItem: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: SIZES.lg, paddingVertical: SIZES.md,
-    borderBottomWidth: 1, borderColor: COLORS.borderLight,
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
   },
-  radio: {
-    width: 22, height: 22, borderRadius: 11, borderWidth: 2,
-    borderColor: COLORS.border, marginRight: SIZES.md,
-    alignItems: 'center', justifyContent: 'center',
+  scrollView: {
+    flex: 1,
   },
-  radioSelected: { borderColor: COLORS.primary },
-  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: COLORS.primary },
-  radioLabel: { fontSize: SIZES.body, color: COLORS.textPrimary },
-  dropdown: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: '#fff', borderRadius: SIZES.radiusMd, padding: SIZES.md,
-    borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.sm,
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 20,
   },
-  dropdownText: { fontSize: SIZES.body, color: COLORS.textPrimary },
-  dropdownMenu: { backgroundColor: '#fff', borderRadius: SIZES.radiusMd, ...SHADOWS.md, marginTop: 4 },
-  dropdownItem: { padding: SIZES.md, borderBottomWidth: 1, borderColor: COLORS.borderLight },
-  dropdownItemText: { fontSize: SIZES.body, color: COLORS.textSecondary },
-  sliderContainer: { paddingTop: 20 },
-  sliderTrack: {
-    height: 6, backgroundColor: COLORS.border, borderRadius: 3,
-    position: 'relative', marginHorizontal: 12,
+  field: {
+    marginBottom: 20,
   },
-  sliderFill: { position: 'absolute', height: '100%', backgroundColor: COLORS.primary, borderRadius: 3 },
-  sliderThumb: {
-    position: 'absolute', top: -9, marginLeft: -12,
-    width: 24, height: 24, borderRadius: 12,
-    backgroundColor: '#fff', borderWidth: 2, borderColor: COLORS.border,
-    ...SHADOWS.sm,
+  fieldHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
   },
-  sliderThumbActive: { borderColor: COLORS.primary, width: 28, height: 28, borderRadius: 14, top: -11, marginLeft: -14 },
-  sliderLabels: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 },
-  sliderLabel: { fontSize: SIZES.body, color: COLORS.textMuted, fontWeight: '500' },
-  sliderLabelActive: { color: COLORS.textPrimary, fontWeight: '800' },
+  fieldLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  searchInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 28,
+    paddingHorizontal: 16,
+    height: 44,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#1F2937',
+  },
+  radioGroup: {
+    gap: 8,
+  },
+  radioOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 12,
+    gap: 12,
+  },
+  radioCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioCircleInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: COLORS.primary,
+  },
+  radioLabel: {
+    fontSize: 14,
+    color: '#1F2937',
+  },
+  pickerWrapper: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    overflow: 'hidden',
+    height: 44,
+    justifyContent: 'center',
+  },
+  picker: {
+    height: 44,
+  },
+  sliderContainer: {
+    gap: 8,
+  },
+  slider: {
+    width: '100%',
+    height: 40,
+  },
+  sliderLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  sliderLabel: {
+    fontSize: 11,
+    color: '#6B7280',
+  },
+  sliderValue: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.primary,
+    textAlign: 'center',
+  },
   footer: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    flexDirection: 'row', backgroundColor: '#fff',
-    padding: SIZES.screenPadding, paddingBottom: 36,
-    borderTopWidth: 1, borderColor: COLORS.border,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 28,
+    padding: 6,
+    gap: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  resetButton: {
+    flex: 1,
+    backgroundColor: '#F0FDFA',
+    borderRadius: 22,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  resetButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.primary,
+  },
+  applyButtonWrapper: {
+    flex: 1,
+    borderRadius: 22,
+    overflow: 'hidden',
+  },
+  applyButton: {
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  applyButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });
 
-const fstyles = StyleSheet.create({
-  filterBtn: { flex: 1, height: 56, borderRadius: 32, alignItems: 'center', justifyContent: 'center' },
-  filterBtnNavy: { backgroundColor: '#1a2e6b', marginRight: 12 },
-  filterBtnNavyText: { color: '#fff', fontWeight: '700', fontSize: 16 },
-  filterBtnApply: { backgroundColor: '#fff', borderWidth: 1.5, borderColor: COLORS.primary },
-  filterBtnApplyText: { color: COLORS.primary, fontWeight: '700', fontSize: 16 },
-});
 export default FilterScreen;

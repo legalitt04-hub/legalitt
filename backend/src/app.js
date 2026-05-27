@@ -1,28 +1,29 @@
 require('dotenv').config();
-const express      = require('express');
-const helmet       = require('helmet');
-const cors         = require('cors');
-const morgan       = require('morgan');
-const rateLimit    = require('express-rate-limit');
+const express = require('express');
+const helmet = require('helmet');
+const cors = require('cors');
+const morgan = require('morgan');
+const rateLimit = require('express-rate-limit');
 const mongoSanitize = require('express-mongo-sanitize');
-const xssClean     = require('xss-clean');
-const compression  = require('compression');
+const xssClean = require('xss-clean');
+const compression = require('compression');
 
-const errorHandler        = require('./middlewares/errorHandler');
-const notFound            = require('./middlewares/notFound');
-const logger              = require('./utils/logger');
+const errorHandler = require('./middlewares/errorHandler');
+const notFound = require('./middlewares/notFound');
+const logger = require('./utils/logger');
 
-const authRoutes          = require('./routes/auth');
-const advocateRoutes      = require('./routes/advocates');
-const bookingRoutes       = require('./routes/bookings');
-const chatRoutes          = require('./routes/chats');
-const reviewRoutes        = require('./routes/reviews');
-const paymentRoutes       = require('./routes/payments');
-const aiRoutes            = require('./routes/ai');
-const uploadRoutes        = require('./routes/uploads');
-const adminRoutes         = require('./routes/admin');
-const notificationRoutes  = require('./routes/notifications');
-const walletRoutes        = require('./routes/wallet');
+const authRoutes = require('./routes/auth');
+const advocateRoutes = require('./routes/advocates');
+const bookingRoutes = require('./routes/bookings');
+const chatRoutes = require('./routes/chats');
+const reviewRoutes = require('./routes/reviews');
+const paymentRoutes = require('./routes/payments');
+const aiRoutes = require('./routes/ai');
+const uploadRoutes = require('./routes/uploads');
+const adminRoutes = require('./routes/admin');
+const notificationRoutes = require('./routes/notifications');
+const walletRoutes = require('./routes/wallet');
+const advocateDashboardRoutes = require('./routes/advocateDashboard');
 
 const app = express();
 
@@ -30,24 +31,43 @@ const app = express();
 app.set('trust proxy', 1);
 
 // Security headers
-app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https://res.cloudinary.com"],
+      connectSrc: ["'self'"],
+    },
+  },
+  referrerPolicy: { policy: 'same-origin' },
+}));
 
 // CORS
 const allowedOrigins = [
   process.env.FRONTEND_URL,
   'http://localhost:3000',
   'http://localhost:8081',
+  'http://localhost:19000',
+  'http://localhost:19006',
+  'http://localhost:8082',
   'exp://localhost:8081',
+  'exp://10.0.2.2:8081',
 ].filter(Boolean);
 
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+    // Allow if no origin (mobile) or if it's in allowed list
+    if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV === 'development') {
+      return cb(null, true);
+    }
     cb(new Error('Not allowed by CORS'));
   },
   credentials: true,
-  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
-  allowedHeaders: ['Content-Type','Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
 }));
 
 // Rate limiting
@@ -56,9 +76,9 @@ const mkLimiter = (max, windowMs = 15 * 60 * 1000) => rateLimit({
   standardHeaders: true, legacyHeaders: false,
   message: { success: false, message: 'Too many requests, please try again later.' },
 });
-app.use('/api/',      mkLimiter(parseInt(process.env.RATE_LIMIT_MAX) || 100));
-app.use('/api/auth/', mkLimiter(20));
-app.use('/api/ai/',   mkLimiter(10, 60 * 1000));
+app.use('/api/v1/', mkLimiter(parseInt(process.env.RATE_LIMIT_MAX) || 100));
+app.use('/api/v1/auth/', mkLimiter(20));
+app.use('/api/v1/ai/', mkLimiter(10, 60 * 1000));
 
 // Body parsing & sanitization
 app.use(express.json({ limit: '10kb' }));
@@ -66,6 +86,7 @@ app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.use(mongoSanitize());
 app.use(xssClean());
 app.use(compression());
+app.use('/uploads', express.static('uploads'));
 
 // Logging
 if (process.env.NODE_ENV === 'development') {
@@ -77,7 +98,13 @@ if (process.env.NODE_ENV === 'development') {
   }));
 }
 
-// Health check
+// Health check (Render hits / by default)
+app.get('/', (req, res) => res.json({
+  success: true, message: 'Legalitt API is running',
+  timestamp: new Date().toISOString(),
+  environment: process.env.NODE_ENV,
+}));
+
 app.get('/health', (req, res) => res.json({
   success: true, message: 'Legalitt API is running',
   timestamp: new Date().toISOString(),
@@ -85,17 +112,21 @@ app.get('/health', (req, res) => res.json({
 }));
 
 // Routes
-app.use('/api/auth',          authRoutes);
-app.use('/api/advocates',     advocateRoutes);
-app.use('/api/bookings',      bookingRoutes);
-app.use('/api/chats',         chatRoutes);
-app.use('/api/reviews',       reviewRoutes);
-app.use('/api/payments',      paymentRoutes);
-app.use('/api/ai',            aiRoutes);
-app.use('/api/uploads',       uploadRoutes);
-app.use('/api/admin',         adminRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/wallet',        walletRoutes);
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/advocates', advocateRoutes);
+app.use('/api/v1/bookings', bookingRoutes);
+app.use('/api/v1/chats', chatRoutes);
+app.use('/api/v1/reviews', reviewRoutes);
+app.use('/api/v1/payments', paymentRoutes);
+app.use('/api/v1/ai', aiRoutes);
+app.use('/api/v1/uploads', uploadRoutes);
+app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1/notifications', notificationRoutes);
+app.use('/api/v1/wallet', walletRoutes);
+app.use('/api/v1/advocate-dashboard', advocateDashboardRoutes);
+app.use('/api/v1/fir', require('./routes/firDrafts'));
+app.use('/api/v1/users', require('./routes/userProfile'));
+app.use('/api/v1/cases', require('./routes/cases'));
 
 app.use(notFound);
 app.use(errorHandler);

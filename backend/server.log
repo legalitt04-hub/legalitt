@@ -1,0 +1,10 @@
+
+> legalitt-backend@1.0.0 start
+> node src/server.js
+
+(node:31502) [MONGOOSE] Warning: Duplicate schema index on {"email":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:31502) [MONGOOSE] Warning: Duplicate schema index on {"googleId":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+[32minfo[39m: MongoDB connected: ac-z7rdjoj-shard-00-02.sjiugqg.mongodb.net {"service":"legalitt-api","timestamp":"2026-04-27 02:54:36"}
+[32minfo[39m: Socket.io initialized {"service":"legalitt-api","timestamp":"2026-04-27 02:54:36"}
+[32minfo[39m: Server running on port 5001 [development] {"service":"legalitt-api","timestamp":"2026-04-27 02:54:36"}

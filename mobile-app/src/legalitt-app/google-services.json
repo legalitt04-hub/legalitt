@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "145094326598",
+    "project_id": "legalitt-prod",
+    "storage_bucket": "legalitt-prod.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:145094326598:android:7e9582f0a847355da48d47",
+        "android_client_info": {
+          "package_name": "com.legalitt.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "145094326598-hiumgms8dbl83ajohvrp3dgejblhe0it.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.legalitt.app",
+            "certificate_hash": "ef73a7d7b183d0e47ad28ca652953f561fa279e2"
+          }
+        },
+        {
+          "client_id": "145094326598-95qo14kskqa4ddr6k57rrs9ebp1so35t.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAljzzravQi711Uwix0G-TvnMVtuJ4-Zp0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "145094326598-95qo14kskqa4ddr6k57rrs9ebp1so35t.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -48,6 +48,16 @@ const errorHandler = (err, req, res, next) => {
   if (err.name === 'JsonWebTokenError') error = handleJWTError();
   if (err.name === 'TokenExpiredError') error = handleJWTExpiredError();
 
+  // Sentry Integration Error Capture
+  if (process.env.SENTRY_DSN) {
+    try {
+      const Sentry = require('@sentry/node');
+      Sentry.captureException(err);
+    } catch (sentryErr) {
+      logger.error('Failed to report error to Sentry:', sentryErr);
+    }
+  }
+
   if (error.isOperational) {
     return res.status(error.statusCode).json({
       success: false,

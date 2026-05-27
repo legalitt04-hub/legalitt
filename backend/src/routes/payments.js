@@ -1,10 +1,13 @@
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
 const { protect, authorize } = require('../middlewares/auth');
 const razorpay = require('../services/razorpay');
 const Booking = require('../models/Booking');
 const { AppError } = require('../middlewares/errorHandler');
+const logger = require('../utils/logger');
 
+// ─── POST /api/v1/payments/create-order ──────────────────────────────────────
 router.post('/create-order', protect, authorize('client'), async (req, res, next) => {
   try {
     const { bookingId } = req.body;
@@ -12,6 +15,8 @@ router.post('/create-order', protect, authorize('client'), async (req, res, next
     if (!booking) return next(new AppError('Booking not found.', 404));
     if (booking.client.toString() !== req.user._id.toString())
       return next(new AppError('Not authorized.', 403));
+    if (booking.payment.status === 'paid')
+      return next(new AppError('This booking has already been paid.', 400));
 
     const order = await razorpay.createOrder(booking.payment.amount, `Booking ${bookingId}`);
     await Booking.findByIdAndUpdate(bookingId, { 'payment.razorpayOrderId': order.id });
@@ -28,4 +33,65 @@ router.post('/create-order', protect, authorize('client'), async (req, res, next
   } catch (err) { next(err); }
 });
 
+// ─── POST /api/v1/payments/verify-payment ─────────────────────────────────────
+// Called by mobile after Razorpay payment sheet succeeds.
+// Verifies HMAC SHA256 signature, then marks booking paid & confirmed.
+router.post('/verify-payment', protect, authorize('client'), async (req, res, next) => {
+  try {
+    const {
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+      bookingId,
+    } = req.body;
+
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !bookingId) {
+      return next(new AppError('Missing payment verification fields.', 400));
+    }
+
+    // ── 1. HMAC SHA256 signature verification ──────────────────────────────
+    const expectedSig = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .digest('hex');
+
+    if (expectedSig !== razorpay_signature) {
+      logger.warn(`Payment signature mismatch for booking ${bookingId}`, {
+        userId: req.user._id,
+        orderId: razorpay_order_id,
+      });
+      return next(new AppError('Payment verification failed. Invalid signature.', 400));
+    }
+
+    // ── 2. Confirm booking is owned by this client ─────────────────────────
+    const booking = await Booking.findById(bookingId);
+    if (!booking) return next(new AppError('Booking not found.', 404));
+    if (booking.client.toString() !== req.user._id.toString())
+      return next(new AppError('Not authorized.', 403));
+    if (booking.payment.razorpayOrderId !== razorpay_order_id)
+      return next(new AppError('Order ID mismatch.', 400));
+
+    // ── 3. Mark booking as paid & confirmed ────────────────────────────────
+    const updated = await Booking.findByIdAndUpdate(
+      bookingId,
+      {
+        status: 'confirmed',
+        'payment.status': 'paid',
+        'payment.razorpayPaymentId': razorpay_payment_id,
+        'payment.paidAt': new Date(),
+      },
+      { new: true }
+    ).populate('advocate client');
+
+    logger.info(`Payment verified: booking=${bookingId}, payment=${razorpay_payment_id}`);
+
+    res.json({
+      success: true,
+      message: 'Payment verified. Booking confirmed.',
+      data: { booking: updated },
+    });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;
+

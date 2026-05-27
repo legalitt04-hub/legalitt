@@ -33,26 +33,62 @@ const HomeScreen = ({ navigation }) => {
   const [advocates, setAdvocates] = useState([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [userLocation, setUserLocation] = useState(null);
 
   const fetchNearby = async () => {
     try {
       setLoading(true);
+      
+      // Try to get user's current location
       const { status } = await Location.requestForegroundPermissionsAsync();
-      let params = { lat: 23.1815, lng: 79.9864 }; // Jabalpur default
+      
+      let params = { 
+        lat: 22.7196,  // Default to Indore (changed from Jabalpur)
+        lng: 75.8577 
+      };
+
       if (status === 'granted') {
-        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-        params = { lat: loc.coords.latitude, lng: loc.coords.longitude };
+        try {
+          const loc = await Location.getCurrentPositionAsync({ 
+            accuracy: Location.Accuracy.Balanced,
+            timeInterval: 5000,
+            distanceInterval: 10
+          });
+          
+          params = { 
+            lat: loc.coords.latitude, 
+            lng: loc.coords.longitude 
+          };
+          
+          setUserLocation({
+            latitude: loc.coords.latitude,
+            longitude: loc.coords.longitude
+          });
+          
+          console.log('✅ Got user location:', params);
+        } catch (locationError) {
+          console.log('⚠️ Could not get location, using default:', locationError.message);
+        }
+      } else {
+        console.log('⚠️ Location permission denied, using default location');
       }
-      const { data } = await advocateAPI.getNearby(params);
-      setAdvocates(data.data || []);
-    } catch {
-      // Use fallback data
+
+      // Fetch advocates based on location
+      const response = await advocateAPI.getNearby(params);
+      console.log("✅ Advocates from API:", response.data);
+      setAdvocates(response.data.data || []);
+      
+    } catch (error) {
+      console.error('❌ Error fetching advocates:', error);
+      setAdvocates([]);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { fetchNearby(); }, []);
+  useEffect(() => { 
+    fetchNearby(); 
+  }, []);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -91,12 +127,18 @@ const HomeScreen = ({ navigation }) => {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />}
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh} 
+            colors={[COLORS.primary]} 
+          />
+        }
         contentContainerStyle={{ paddingBottom: 120 }}
       >
         {/* AI Banner */}
         <View style={styles.aiBanner}>
-          <LinearGradient colors={[COLORS.primaryLight, '#c8f0ec']} style={styles.aiBannerGrad}>
+          <LinearGradient colors={['#5EEAD4', '#c8f0ec']} style={styles.aiBannerGrad}>
             <View style={styles.aiBannerIcon}>
               <Text style={{ fontSize: 40 }}>🤖</Text>
             </View>
@@ -168,7 +210,9 @@ const HomeScreen = ({ navigation }) => {
               <Text style={{ fontSize: 48 }}>⚖️</Text>
               <Text style={styles.emptyText}>No advocates found nearby</Text>
               <TouchableOpacity onPress={() => navigation.navigate('Search')}>
-                <Text style={{ color: COLORS.primary, fontWeight: '600', marginTop: 8 }}>Search All Advocates</Text>
+                <Text style={{ color: COLORS.primary, fontWeight: '600', marginTop: 8 }}>
+                  Search All Advocates
+                </Text>
               </TouchableOpacity>
             </View>
           )}

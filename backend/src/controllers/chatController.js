@@ -10,7 +10,21 @@ exports.getMyChats = async (req, res, next) => {
       .populate('lastMessage')
       .populate('booking', 'date status payment.amount')
       .sort({ updatedAt: -1 }).lean();
-    res.json({ success: true, data: chats });
+
+    // Calculate unreadCount for each chat room
+    const chatsWithUnread = await Promise.all(chats.map(async (chat) => {
+      const unreadCount = await Message.countDocuments({
+        chat: chat._id,
+        sender: { $ne: req.user._id },
+        readAt: null
+      });
+      return {
+        ...chat,
+        unreadCount
+      };
+    }));
+
+    res.json({ success: true, data: chatsWithUnread });
   } catch (err) { next(err); }
 };
 

@@ -9,13 +9,20 @@ const Joi = require('joi');
 const registerSchema = Joi.object({
   name: Joi.string().min(2).max(100).required(),
   email: Joi.string().email().required(),
-  password: Joi.string().min(8).required(),
+  password: Joi.string()
+    .min(8)
+    .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[#?!@$%^&*-]).{8,}$/)
+    .required()
+    .messages({
+      'string.pattern.base': 'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character (#?!@$%^&*-)',
+    }),
   phone: Joi.string().pattern(/^\+?[1-9]\d{9,14}$/).optional(),
   role: Joi.string().valid('client', 'advocate').optional(),
+  captchaToken: Joi.string().required(),
 });
 
 const loginSchema = Joi.object({
-  email: Joi.string().email().required(),
+  email: Joi.string().required(), // Relax email validation to allow mobile number logins if desired, but still validate Joi requirements
   password: Joi.string().required(),
 });
 

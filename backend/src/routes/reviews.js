@@ -19,7 +19,25 @@ router.get('/', async (req, res, next) => {
 
 router.post('/', protect, authorize('client'), async (req, res, next) => {
   try {
-    const { bookingId, rating, comment } = req.body;
+    let { bookingId, rating, comment } = req.body;
+    
+    if (process.env.NODE_ENV === 'development' && (!bookingId || bookingId === 'mock')) {
+      const advocateId = req.body.advocateId;
+      if (!advocateId) return next(new AppError('advocateId is required for mock reviews.', 400));
+      
+      const booking = await Booking.create({
+        client: req.user._id,
+        advocate: advocateId,
+        date: new Date(),
+        timeSlot: { startTime: '10:00', endTime: '11:00' },
+        type: 'video',
+        issue: 'Mock Consultation for Review',
+        status: 'completed',
+        payment: { amount: 0, currency: 'INR', status: 'paid' },
+      });
+      bookingId = booking._id;
+    }
+
     const booking = await Booking.findById(bookingId);
     if (!booking) return next(new AppError('Booking not found.', 404));
     if (booking.client.toString() !== req.user._id.toString())

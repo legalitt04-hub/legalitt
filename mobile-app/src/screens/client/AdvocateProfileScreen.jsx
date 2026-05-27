@@ -1,298 +1,647 @@
-import React, { useState, useEffect } from 'react';
+// screens/client/AdvocateProfileScreen.jsx
+import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Image, StatusBar, Modal, ActivityIndicator,
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  SafeAreaView,
+  StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { advocateAPI } from '../../services/api';
-import Button from '../../components/common/Button';
-import { COLORS, SIZES, SHADOWS } from '../../constants/theme';
+import { COLORS } from '../../constants/theme';
 
-const TABS = ['Overview', 'Experience', 'Reviews'];
+const AdvocateProfileScreen = ({ navigation, route }) => {
+  const advocateId = route?.params?.id;
+  const [activeTab, setActiveTab] = useState('Overview');
 
-const AdvocateProfileScreen = ({ route, navigation }) => {
-  const { advocateId, openBooking } = route.params;
-  const [advocate, setAdvocate] = useState(null);
-  const [tab, setTab] = useState('Overview');
-  const [loading, setLoading] = useState(true);
-  const [bookingModal, setBookingModal] = useState(false);
+  // Mock data - replace with actual API data
+  const advocate = {
+    id: advocateId,
+    name: 'Ajay Chohan',
+    avatar: 'https://i.pravatar.cc/150?img=12',
+    title: 'Senior Advocate',
+    tags: ['Criminal', 'Civil', 'Property'],
+    rating: 4.9,
+    reviews: 559,
+    fee: 2000,
+    callRate: 600,
+    experience: 12,
+    city: 'Indore',
+    online: true,
+    verified: true,
+    available: true,
+  };
 
-  useEffect(() => {
-    advocateAPI.getOne(advocateId).then(({ data }) => {
-      setAdvocate(data.data);
-      if (openBooking) setBookingModal(true);
-    }).finally(() => setLoading(false));
-  }, [advocateId]);
+  const tabs = ['Overview', 'Experience', 'Reviews'];
 
-  if (loading) return <View style={styles.centered}><ActivityIndicator size="large" color={COLORS.primary} /></View>;
-  if (!advocate) return null;
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-  const user = advocate.user || {};
-  const specs = (advocate.specializations || []).join(' • ');
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="chevron-back" size={24} color="#1F2937" />
+        </TouchableOpacity>
 
-  const renderTabContent = () => {
-    if (tab === 'Overview') return (
-      <View style={styles.tabContent}>
-        <Text style={styles.bio}>{advocate.about || 'Experienced advocate with years of legal practice.'}</Text>
-        <Text style={styles.infoTitle}>{advocate.experience} Years Of Experience</Text>
-        <View style={styles.infoBox}>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Call Charges:</Text>
-            <Text style={styles.infoValue}>₹40/min</Text>
-          </View>
-          <View style={styles.infoItem}>
-            <Ionicons name="location-outline" size={14} color={COLORS.textSecondary} />
-            <Text style={styles.infoItemText}>{advocate.location?.address?.city}, {advocate.location?.address?.state}</Text>
-          </View>
-          <Text style={styles.availText}>{user.name} is Available To Take Your Call Just Click</Text>
-          <TouchableOpacity style={styles.msgBtn} onPress={() => navigation.navigate('Chat', { advocateId })}>
-            <Ionicons name="chatbubbles" size={18} color={COLORS.primary} />
-            <Text style={styles.msgBtnText}>Message</Text>
+        <View style={styles.headerIcons}>
+          <TouchableOpacity style={styles.iconButton}>
+            <Ionicons name="chatbubble-outline" size={14} color="#6B7280" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.iconButton}>
+            <Ionicons name="notifications-outline" size={14} color="#6B7280" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.iconButton}>
+            <Ionicons name="heart-outline" size={14} color="#6B7280" />
           </TouchableOpacity>
         </View>
       </View>
-    );
 
-    if (tab === 'Experience') return (
-      <View style={styles.tabContent}>
-        <Text style={styles.expHead}>Professional Background</Text>
-        {[`${advocate.experience}+ Years of Legal Practice`, '500+ Cases Handled', 'Representation in District & High Courts', 'Expertise in Property Title Verification'].map((item, i) => (
-          <View key={i} style={styles.bulletRow}>
-            <View style={styles.bullet} />
-            <Text style={styles.bulletText}>{item}</Text>
-          </View>
-        ))}
-        <Text style={styles.expHead}>Core Practice Areas</Text>
-        {(advocate.specializations || []).map((s, i) => (
-          <View key={i} style={styles.bulletRow}>
-            <View style={styles.bullet} />
-            <Text style={styles.bulletText}>{s}</Text>
-          </View>
-        ))}
-        <Text style={styles.expHead}>Languages</Text>
-        <Text style={styles.bio}>{(advocate.languages || ['Hindi', 'English']).join(', ')}</Text>
-      </View>
-    );
-
-    if (tab === 'Reviews') return (
-      <View style={styles.tabContent}>
-        <View style={styles.ratingOverview}>
-          <View>
-            <Text style={styles.bigRating}>{advocate.rating?.average || '4.9'}</Text>
-            <Text style={styles.ratingBase}>Based on {advocate.rating?.count || 559} reviews</Text>
-            <View style={styles.starsRow}>
-              {[1,2,3,4,5].map(i => <Ionicons key={i} name="star" size={18} color={COLORS.star} />)}
-            </View>
-          </View>
-          <View style={styles.ratingBars}>
-            {[5,4,3,2,1].map((star) => (
-              <View key={star} style={styles.ratingBarRow}>
-                <Text style={styles.ratingBarLabel}>{star}</Text>
-                <View style={styles.ratingBarBg}>
-                  <View style={[styles.ratingBarFill, { width: star === 5 ? '80%' : `${star * 10}%` }]} />
-                </View>
-              </View>
-            ))}
-          </View>
-        </View>
-        <Text style={styles.expHead}>Useful Reviews</Text>
-        {(advocate.reviews || []).map((r, i) => (
-          <View key={i} style={styles.reviewCard}>
-            <View style={styles.reviewHeader}>
-              <View style={styles.reviewAvatar}>
-                <Text style={{ color: '#fff', fontWeight: '700' }}>{(r.client?.name || 'U')[0]}</Text>
-              </View>
-              <Text style={styles.reviewName}>{r.client?.name || 'User'}</Text>
-            </View>
-            <View style={styles.starsRow}>
-              {Array.from({ length: r.rating || 5 }).map((_, i) => <Ionicons key={i} name="star" size={14} color={COLORS.star} />)}
-            </View>
-            <Text style={styles.reviewText}>{r.comment || 'Good'}</Text>
-            <Text style={styles.reviewDate}>{new Date(r.createdAt).toDateString()}</Text>
-          </View>
-        ))}
-        {(!advocate.reviews?.length) && <Text style={{ color: COLORS.textMuted, textAlign: 'center', marginTop: 20 }}>No reviews yet</Text>}
-      </View>
-    );
-  };
-
-  return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-
-      {/* Top bar */}
-      <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={24} color={COLORS.textPrimary} />
-        </TouchableOpacity>
-        <View style={styles.topBarIcons}>
-          <TouchableOpacity style={styles.iconBtn}><Ionicons name="chatbubble-outline" size={22} color={COLORS.textPrimary} /></TouchableOpacity>
-          <TouchableOpacity style={styles.iconBtn}><Ionicons name="notifications-outline" size={22} color={COLORS.textPrimary} /></TouchableOpacity>
-          <TouchableOpacity style={styles.iconBtn}><Ionicons name="heart-outline" size={22} color={COLORS.textPrimary} /></TouchableOpacity>
-        </View>
-      </View>
-
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
-        {/* Profile header */}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Profile Header */}
         <View style={styles.profileHeader}>
-          <View style={styles.profileAvatarWrap}>
-            {user.avatar ? (
-              <Image source={{ uri: user.avatar }} style={styles.profileAvatar} />
-            ) : (
-              <View style={[styles.profileAvatar, { backgroundColor: COLORS.primaryLight, alignItems: 'center', justifyContent: 'center' }]}>
-                <Text style={{ fontSize: 40, fontWeight: '700', color: COLORS.primary }}>{(user.name || 'A')[0]}</Text>
+          <View style={styles.avatarContainer}>
+            <Image source={{ uri: advocate.avatar }} style={styles.avatar} />
+            {advocate.online && (
+              <View style={styles.onlineBadge}>
+                <Text style={styles.onlineBadgeText}>● Online</Text>
               </View>
             )}
-            <View style={[styles.onlineDot2, { backgroundColor: advocate.isOnline ? COLORS.online : COLORS.offline }]} />
-            <View style={[styles.onlineBadge2, { backgroundColor: advocate.isOnline ? '#dcfce7' : '#f3f4f6' }]}>
-              <Text style={{ fontSize: 10, color: advocate.isOnline ? '#15803d' : COLORS.textMuted, fontWeight: '600' }}>
-                {advocate.isOnline ? 'Online' : 'Offline'}
-              </Text>
-            </View>
           </View>
 
           <View style={styles.profileInfo}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Text style={styles.profileName}>{user.name}</Text>
-              {advocate.isVerified && <Ionicons name="checkmark-circle" size={18} color="#2563eb" style={{ marginLeft: 4 }} />}
+            <View style={styles.nameRow}>
+              <Text style={styles.name}>{advocate.name}</Text>
+              {advocate.verified && (
+                <View style={styles.verifiedBadge}>
+                  <Ionicons name="checkmark" size={9} color="#FFFFFF" />
+                </View>
+              )}
             </View>
-            <Text style={styles.profileDesig}>Senior Advocate</Text>
-            <Text style={styles.profileSpecs}>{specs}</Text>
+
+            <Text style={styles.title}>{advocate.title}</Text>
+            <Text style={styles.tags}>{advocate.tags.join(' · ')}</Text>
+
             <View style={styles.ratingRow}>
-              <Ionicons name="star" size={14} color={COLORS.star} />
-              <Text style={styles.ratingTxt}>{advocate.rating?.average} ({advocate.rating?.count} review)</Text>
+              <Ionicons name="star" size={12} color="#FCD34D" />
+              <Text style={styles.ratingText}>{advocate.rating}</Text>
+              <Text style={styles.reviewsText}>({advocate.reviews} reviews)</Text>
             </View>
-            <Text style={styles.profileFee}>₹{advocate.consultationFee}/ Consultation</Text>
-            <TouchableOpacity style={styles.availBadge}>
-              <Ionicons name="checkmark-circle" size={14} color={COLORS.success} />
-              <Text style={styles.availBadgeText}>Available</Text>
-            </TouchableOpacity>
+
+            <Text style={styles.feeText}>
+              <Text style={styles.feeBold}>₹{advocate.fee}/</Text> Consultation
+            </Text>
+
+            {advocate.available && (
+              <View style={styles.availableBadge}>
+                <View style={styles.availableDot} />
+                <Text style={styles.availableText}>Available</Text>
+              </View>
+            )}
           </View>
         </View>
 
         {/* Tabs */}
-        <View style={styles.tabBar}>
-          {TABS.map((t) => (
-            <TouchableOpacity key={t} onPress={() => setTab(t)} style={styles.tabBtn}>
-              <Text style={[styles.tabTxt, tab === t && styles.tabTxtActive]}>{t}</Text>
-              {tab === t && <View style={styles.tabUnderline} />}
+        <View style={styles.tabsContainer}>
+          {tabs.map((tab) => (
+            <TouchableOpacity
+              key={tab}
+              style={[styles.tab, activeTab === tab && styles.tabActive]}
+              onPress={() => setActiveTab(tab)}
+            >
+              <Text
+                style={[styles.tabText, activeTab === tab && styles.tabTextActive]}
+              >
+                {tab}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        {renderTabContent()}
+        {/* Tab Content */}
+        <View style={styles.tabContent}>
+          {activeTab === 'Overview' && <OverviewTab advocate={advocate} />}
+          {activeTab === 'Experience' && <ExperienceTab />}
+          {activeTab === 'Reviews' && <ReviewsTab advocate={advocate} />}
+        </View>
+
+        {/* Bottom Padding */}
+        <View style={{ height: 20 }} />
       </ScrollView>
 
-      {/* Book consultation button */}
+      {/* Book Consultation Button */}
       <View style={styles.footer}>
-        <Button title="Book Consultation" onPress={() => setBookingModal(true)} />
-      </View>
-
-      {/* Booking modal */}
-      <Modal visible={bookingModal} transparent animationType="slide">
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setBookingModal(false)}>
-          <View style={styles.modalSheet}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Book Consultation To Start Chat</Text>
-              <TouchableOpacity onPress={() => setBookingModal(false)}>
-                <Ionicons name="close" size={24} color={COLORS.textPrimary} />
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.modalDesc}>To ensure serious inquiries and professional time commitment, consultation must be booked before messaging the advocate.</Text>
-            <View style={styles.modalPrice}>
-              <Text style={styles.modalPriceText}>₹{advocate.consultationFee}/<Text style={{ fontWeight: '400', color: COLORS.textSecondary }}> Consultation</Text></Text>
-            </View>
-            <Text style={styles.includesLabel}>Includes:</Text>
-            {['Direct in-app chat access', 'Document sharing', 'Case discussion', 'Secure communication'].map((item) => (
-              <View key={item} style={styles.includeRow}>
-                <Ionicons name="checkmark" size={16} color={COLORS.primary} />
-                <Text style={styles.includeText}>{item}</Text>
-              </View>
-            ))}
-            <View style={styles.modalBtns}>
-              <Button title="Cancel" variant="outline" onPress={() => setBookingModal(false)} style={{ flex: 1, marginRight: 12 }} />
-              <Button title="Book Consultation" onPress={() => {
-                setBookingModal(false);
-                navigation.navigate('Booking', { advocateId, advocateName: user.name, fee: advocate.consultationFee });
-              }} style={{ flex: 1 }} />
-            </View>
-          </View>
+        <TouchableOpacity
+          style={styles.bookButton}
+          onPress={() => navigation.navigate('Booking', { advocateId: advocate.id })}
+        >
+          <Text style={styles.bookButtonText}>Book Consultation</Text>
         </TouchableOpacity>
-      </Modal>
-    </View>
+      </View>
+    </SafeAreaView>
   );
 };
 
+// Overview Tab Component
+const OverviewTab = ({ advocate }) => (
+  <View style={styles.overviewContainer}>
+    <Text style={styles.description}>
+      {advocate.name} is a Senior Advocate with over {advocate.experience} years of
+      experience in Criminal, Civil, and Property law. Known for a strategic legal
+      approach, thorough case preparation, and client-focused guidance.
+    </Text>
+
+    <View style={styles.experienceSection}>
+      <Text style={styles.sectionTitle}>
+        {advocate.experience} Years Of Experience
+      </Text>
+
+      <View style={styles.callCard}>
+        <View style={styles.callCardRow}>
+          <Text style={styles.callCardLabel}>Call Charges:</Text>
+          <Text style={styles.callCardValue}>₹{advocate.callRate}/min</Text>
+        </View>
+
+        <Text style={styles.callCardCity}>● {advocate.city}</Text>
+        <Text style={styles.callCardInfo}>
+          {advocate.name} is available to take your call. Just click.
+        </Text>
+
+        <TouchableOpacity style={styles.messageButton}>
+          <Ionicons name="call-outline" size={14} color={COLORS.primary} />
+          <Text style={styles.messageButtonText}>Message</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  </View>
+);
+
+// Experience Tab Component
+const ExperienceTab = () => (
+  <View style={styles.experienceContainer}>
+    <Section
+      title="Professional Background"
+      items={[
+        '12+ Years of Legal Practice',
+        '500+ Criminal, Civil & Property Cases Handled',
+        'Representation in District & High Courts',
+        'Expertise in Property Title Verification & Legal Due Diligence',
+      ]}
+    />
+    <Section
+      title="Core Practice Areas"
+      items={[
+        'Criminal Defense & Bail Matters',
+        'Civil Disputes & Recovery Cases',
+        'Property Documentation & Title Clearance',
+        'Legal Advisory & Consultation Services',
+      ]}
+    />
+    <Section
+      title="Professional Approach"
+      items={[
+        'Strategic Case Preparation',
+        'Client-Focused Legal Guidance',
+        'Confidential & Ethical Practice',
+        'Transparent Consultation Process',
+      ]}
+    />
+  </View>
+);
+
+const Section = ({ title, items }) => (
+  <View style={styles.section}>
+    <Text style={styles.sectionTitle}>{title}</Text>
+    <View style={styles.sectionItems}>
+      {items.map((item, index) => (
+        <Text key={index} style={styles.sectionItem}>
+          • {item}
+        </Text>
+      ))}
+    </View>
+  </View>
+);
+
+// Reviews Tab Component
+const ReviewsTab = ({ advocate }) => (
+  <View style={styles.reviewsContainer}>
+    {/* Rating Summary */}
+    <View style={styles.ratingSummary}>
+      <View style={styles.ratingLeft}>
+        <Text style={styles.ratingBig}>{advocate.rating}</Text>
+        <Text style={styles.ratingSubtext}>Based on {advocate.reviews} reviews</Text>
+        <View style={styles.starsRow}>
+          {[1, 2, 3, 4, 5].map((i) => (
+            <Ionicons key={i} name="star" size={12} color="#10B981" />
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.ratingBars}>
+        {[
+          { stars: 5, percent: 88 },
+          { stars: 4, percent: 40 },
+          { stars: 3, percent: 15 },
+          { stars: 2, percent: 8 },
+          { stars: 1, percent: 3 },
+        ].map((item) => (
+          <View key={item.stars} style={styles.ratingBarRow}>
+            <Text style={styles.ratingBarLabel}>{item.stars}</Text>
+            <View style={styles.ratingBarTrack}>
+              <View
+                style={[styles.ratingBarFill, { width: `${item.percent}%` }]}
+              />
+            </View>
+          </View>
+        ))}
+      </View>
+    </View>
+
+    {/* Reviews List */}
+    <View style={styles.reviewsList}>
+      <Text style={styles.reviewsListTitle}>Useful Reviews</Text>
+
+      <View style={styles.reviewCard}>
+        <View style={styles.reviewHeader}>
+          <Image
+            source={{ uri: 'https://i.pravatar.cc/100?img=22' }}
+            style={styles.reviewAvatar}
+          />
+          <Text style={styles.reviewName}>Vaibhav Sharma</Text>
+        </View>
+        <Text style={styles.reviewText}>Good</Text>
+        <Text style={styles.reviewDate}>Sat, Jan 12, 2026 10:20 PM</Text>
+      </View>
+    </View>
+  </View>
+);
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SIZES.screenPadding, paddingTop: 52, paddingBottom: 8 },
-  backBtn: { padding: 4 },
-  topBarIcons: { flexDirection: 'row', gap: 4 },
-  iconBtn: { padding: 6 },
-  profileHeader: { flexDirection: 'row', padding: SIZES.screenPadding },
-  profileAvatarWrap: { position: 'relative', marginRight: SIZES.md },
-  profileAvatar: { width: 100, height: 120, borderRadius: SIZES.radiusMd },
-  onlineDot2: { position: 'absolute', bottom: 36, left: 6, width: 10, height: 10, borderRadius: 5, borderWidth: 2, borderColor: '#fff' },
-  onlineBadge2: { position: 'absolute', bottom: 12, left: 0, right: 0, borderRadius: 4, paddingVertical: 2, alignItems: 'center' },
-  profileInfo: { flex: 1, justifyContent: 'center' },
-  profileName: { fontSize: SIZES.subtitle, fontWeight: '800', color: COLORS.textPrimary },
-  profileDesig: { fontSize: SIZES.caption, color: COLORS.textSecondary, marginTop: 2 },
-  profileSpecs: { fontSize: SIZES.caption, color: COLORS.textSecondary, marginTop: 2 },
-  ratingRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-  ratingTxt: { fontSize: SIZES.caption, color: COLORS.textSecondary, marginLeft: 4 },
-  profileFee: { fontSize: SIZES.subtitle, fontWeight: '700', color: COLORS.textPrimary, marginTop: 4 },
-  availBadge: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: COLORS.success, borderRadius: SIZES.radiusFull, paddingHorizontal: 10, paddingVertical: 4, alignSelf: 'flex-start', marginTop: 6 },
-  availBadgeText: { fontSize: SIZES.caption, color: COLORS.success, marginLeft: 4, fontWeight: '600' },
-  tabBar: { flexDirection: 'row', borderBottomWidth: 1, borderColor: COLORS.border, marginHorizontal: SIZES.screenPadding },
-  tabBtn: { flex: 1, paddingVertical: 12, alignItems: 'center' },
-  tabTxt: { fontSize: SIZES.body, color: COLORS.textSecondary, fontWeight: '500' },
-  tabTxtActive: { color: COLORS.textPrimary, fontWeight: '700' },
-  tabUnderline: { position: 'absolute', bottom: 0, left: '20%', right: '20%', height: 2.5, backgroundColor: COLORS.textPrimary, borderRadius: 2 },
-  tabContent: { padding: SIZES.screenPadding },
-  bio: { fontSize: SIZES.body, color: COLORS.textSecondary, lineHeight: 22 },
-  infoTitle: { fontSize: SIZES.body, fontWeight: '700', color: COLORS.textPrimary, marginTop: 16, marginBottom: 8 },
-  infoBox: { borderWidth: 1, borderColor: COLORS.border, borderRadius: SIZES.radiusMd, padding: SIZES.md },
-  infoRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  infoLabel: { fontSize: SIZES.body, color: COLORS.textSecondary },
-  infoValue: { fontSize: SIZES.body, fontWeight: '700', color: COLORS.textPrimary },
-  infoItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  infoItemText: { fontSize: SIZES.caption, color: COLORS.textSecondary, marginLeft: 4 },
-  availText: { fontSize: SIZES.caption, color: COLORS.textSecondary, marginBottom: 8 },
-  msgBtn: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: COLORS.border, borderRadius: SIZES.radiusFull, paddingHorizontal: 16, paddingVertical: 8, alignSelf: 'flex-start' },
-  msgBtnText: { marginLeft: 6, color: COLORS.primary, fontWeight: '600' },
-  expHead: { fontSize: SIZES.body, fontWeight: '700', color: COLORS.textPrimary, marginTop: 16, marginBottom: 8 },
-  bulletRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6 },
-  bullet: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.primary, marginTop: 6, marginRight: 10 },
-  bulletText: { flex: 1, fontSize: SIZES.body, color: COLORS.textSecondary, lineHeight: 22 },
-  ratingOverview: { flexDirection: 'row', marginBottom: 20 },
-  bigRating: { fontSize: 48, fontWeight: '900', color: COLORS.textPrimary },
-  ratingBase: { fontSize: SIZES.caption, color: COLORS.textSecondary },
-  starsRow: { flexDirection: 'row', marginTop: 4 },
-  ratingBars: { flex: 1, marginLeft: 20 },
-  ratingBarRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
-  ratingBarLabel: { fontSize: SIZES.caption, color: COLORS.textSecondary, width: 12, marginRight: 6 },
-  ratingBarBg: { flex: 1, height: 8, backgroundColor: COLORS.border, borderRadius: 4, overflow: 'hidden' },
-  ratingBarFill: { height: '100%', backgroundColor: COLORS.success, borderRadius: 4 },
-  reviewCard: { borderWidth: 1, borderColor: COLORS.border, borderRadius: SIZES.radiusMd, padding: SIZES.md, marginBottom: SIZES.md },
-  reviewHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  reviewAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', marginRight: 8 },
-  reviewName: { fontWeight: '700', fontSize: SIZES.body, color: COLORS.textPrimary },
-  reviewText: { fontSize: SIZES.body, color: COLORS.textSecondary, marginTop: 6, lineHeight: 20 },
-  reviewDate: { fontSize: SIZES.caption, color: COLORS.textMuted, marginTop: 4 },
-  footer: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', padding: SIZES.screenPadding, paddingBottom: 32, borderTopWidth: 1, borderColor: COLORS.border },
-  modalOverlay: { flex: 1, backgroundColor: COLORS.overlay, justifyContent: 'flex-end' },
-  modalSheet: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: SIZES.screenPadding, paddingBottom: 40 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  modalTitle: { fontSize: SIZES.subtitle, fontWeight: '700', color: COLORS.textPrimary, flex: 1, marginRight: 8 },
-  modalDesc: { fontSize: SIZES.caption, color: COLORS.textSecondary, lineHeight: 20, marginBottom: 16 },
-  modalPrice: { borderBottomWidth: 1, borderColor: COLORS.border, paddingBottom: 12, marginBottom: 12 },
-  modalPriceText: { fontSize: SIZES.subtitle, fontWeight: '700', color: COLORS.textPrimary },
-  includesLabel: { fontSize: SIZES.body, color: COLORS.textSecondary, marginBottom: 8 },
-  includeRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
-  includeText: { marginLeft: 8, fontSize: SIZES.body, color: COLORS.textPrimary },
-  modalBtns: { flexDirection: 'row', marginTop: 20 },
+  container: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  backButton: {
+    padding: 4,
+  },
+  headerIcons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  iconButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 20,
+  },
+  profileHeader: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    gap: 12,
+  },
+  avatarContainer: {
+    position: 'relative',
+  },
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 16,
+  },
+  onlineBadge: {
+    position: 'absolute',
+    bottom: -4,
+    left: '50%',
+    transform: [{ translateX: -28 }],
+    backgroundColor: '#10B981',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  onlineBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  profileInfo: {
+    flex: 1,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 2,
+  },
+  name: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  verifiedBadge: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  title: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginBottom: 2,
+  },
+  tags: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginBottom: 4,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 4,
+  },
+  ratingText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  reviewsText: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  feeText: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginBottom: 8,
+  },
+  feeBold: {
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  availableBadge: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#D1FAE5',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  availableDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#10B981',
+  },
+  availableText: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: '#10B981',
+  },
+  tabsContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  tab: {
+    flex: 1,
+    paddingBottom: 8,
+    alignItems: 'center',
+  },
+  tabActive: {
+    borderBottomWidth: 2,
+    borderBottomColor: COLORS.primary,
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6B7280',
+  },
+  tabTextActive: {
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+  tabContent: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+  },
+  overviewContainer: {
+    gap: 16,
+  },
+  description: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#6B7280',
+  },
+  experienceSection: {
+    gap: 8,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 8,
+  },
+  callCard: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 12,
+  },
+  callCardRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  callCardLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  callCardValue: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.primary,
+  },
+  callCardCity: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginBottom: 2,
+  },
+  callCardInfo: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginBottom: 12,
+  },
+  messageButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#F0FDFA',
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  messageButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.primary,
+  },
+  experienceContainer: {
+    gap: 12,
+  },
+  section: {
+    marginBottom: 12,
+  },
+  sectionItems: {
+    gap: 4,
+  },
+  sectionItem: {
+    fontSize: 12,
+    color: '#6B7280',
+    lineHeight: 18,
+  },
+  reviewsContainer: {
+    gap: 16,
+  },
+  ratingSummary: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  ratingLeft: {
+    alignItems: 'flex-start',
+  },
+  ratingBig: {
+    fontSize: 36,
+    fontWeight: '700',
+    color: '#1F2937',
+  },
+  ratingSubtext: {
+    fontSize: 10,
+    color: '#6B7280',
+    marginBottom: 4,
+  },
+  starsRow: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  ratingBars: {
+    flex: 1,
+    gap: 4,
+  },
+  ratingBarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  ratingBarLabel: {
+    fontSize: 10,
+    color: '#6B7280',
+    width: 8,
+  },
+  ratingBarTrack: {
+    flex: 1,
+    height: 6,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  ratingBarFill: {
+    height: '100%',
+    backgroundColor: '#10B981',
+  },
+  reviewsList: {
+    gap: 8,
+  },
+  reviewsListTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  reviewCard: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 12,
+  },
+  reviewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  reviewAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+  },
+  reviewName: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  reviewText: {
+    fontSize: 12,
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  reviewDate: {
+    fontSize: 10,
+    color: '#6B7280',
+  },
+  footer: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  bookButton: {
+    backgroundColor: COLORS.primary,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  bookButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
 });
 
 export default AdvocateProfileScreen;

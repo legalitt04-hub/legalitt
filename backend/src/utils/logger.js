@@ -26,11 +26,9 @@ const logger = winston.createLogger({
   ],
 });
 
-// Console output in development
-if (process.env.NODE_ENV !== 'production') {
-  logger.add(new winston.transports.Console({
-    format: combine(colorize(), simple()),
-  }));
-}
+// Always log to console so PaaS like Render can capture it
+logger.add(new winston.transports.Console({
+  format: combine(colorize(), simple()),
+}));
 
 module.exports = logger;
