@@ -137,6 +137,9 @@ exports.googleAuth = async (req, res, next) => {
     let user = await User.findOne({ $or: [{ googleId }, { email }] });
 
     if (!user) {
+      if (safeRole === 'advocate') {
+        return next(new AppError('Advocates must register via the standard process first. Email not found.', 403));
+      }
       user = await User.create({
         name,
         email,

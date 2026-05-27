@@ -8,17 +8,7 @@ const generateOTP = () => Math.floor(1000 + Math.random() * 9000).toString();
 // ─── Email sender: Resend (primary) or Nodemailer SMTP (fallback) ─────────────
 
 const sendEmail = async ({ to, subject, text, html }) => {
-  // 1️⃣ Try Resend first (fastest, most reliable)
-  if (process.env.RESEND_API_KEY) {
-    const { Resend } = require('resend');
-    const resend = new Resend(process.env.RESEND_API_KEY);
-    const from = process.env.RESEND_FROM || 'Legalitt <onboarding@resend.dev>';
-    const result = await resend.emails.send({ from, to, subject, text, html });
-    if (result.error) throw new Error(result.error.message);
-    return { provider: 'resend', id: result.data?.id };
-  }
-
-  // 2️⃣ Fall back to Nodemailer SMTP
+  // 1️⃣ Try SMTP first (Gmail App Password — works for ALL email addresses, no domain needed)
   if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
     const nodemailer = require('nodemailer');
     const transporter = nodemailer.createTransport({
@@ -32,8 +22,18 @@ const sendEmail = async ({ to, subject, text, html }) => {
     return { provider: 'smtp', id: info.messageId };
   }
 
+  // 2️⃣ Fall back to Resend (requires verified domain for sending to arbitrary emails)
+  if (process.env.RESEND_API_KEY) {
+    const { Resend } = require('resend');
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    const from = process.env.RESEND_FROM || 'Legalitt <onboarding@resend.dev>';
+    const result = await resend.emails.send({ from, to, subject, text, html });
+    if (result.error) throw new Error(result.error.message);
+    return { provider: 'resend', id: result.data?.id };
+  }
+
   // 3️⃣ No email provider configured
-  throw new Error('No email provider configured (RESEND_API_KEY or SMTP_*)');
+  throw new Error('No email provider configured (SMTP_* or RESEND_API_KEY)');
 };
 
 /**
