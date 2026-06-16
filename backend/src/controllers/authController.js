@@ -112,9 +112,9 @@ exports.login = async (req, res, next) => {
 // ─── Google OAuth ─────────────────────────────────────────────────────────────
 exports.googleAuth = async (req, res, next) => {
   try {
-    const { idToken, role } = req.body;
+    const { idToken, accessToken, role } = req.body;
     let payload;
-    if (idToken.startsWith('mock_') && process.env.NODE_ENV !== 'production') {
+    if (idToken && idToken.startsWith('mock_') && process.env.NODE_ENV !== 'production') {
       const parts = idToken.split(':');
       payload = {
         sub: parts[1] || 'mock_google_id_99',
@@ -122,12 +122,20 @@ exports.googleAuth = async (req, res, next) => {
         name: parts[3] || 'Mock Google User',
         picture: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb',
       };
-    } else {
+    } else if (accessToken) {
+      const axios = require('axios');
+      const response = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      payload = response.data;
+    } else if (idToken) {
       const ticket = await googleClient.verifyIdToken({
         idToken,
         audience: process.env.GOOGLE_CLIENT_ID,
       });
       payload = ticket.getPayload();
+    } else {
+      return next(new AppError('No Google token provided.', 400));
     }
 
     const { sub: googleId, email, name, picture } = payload;

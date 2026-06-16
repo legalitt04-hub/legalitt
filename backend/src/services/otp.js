@@ -8,7 +8,7 @@ const generateOTP = () => Math.floor(1000 + Math.random() * 9000).toString();
 // ─── Email sender: Resend (primary) or Nodemailer SMTP (fallback) ─────────────
 
 const sendEmail = async ({ to, subject, text, html }) => {
-  // 1️⃣ Try SMTP first (Gmail App Password — works for ALL email addresses, no domain needed)
+  // 1️⃣ Try SMTP first (works for ALL email addresses, no domain needed)
   if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
     const nodemailer = require('nodemailer');
     const transporter = nodemailer.createTransport({
@@ -22,7 +22,7 @@ const sendEmail = async ({ to, subject, text, html }) => {
     return { provider: 'smtp', id: info.messageId };
   }
 
-  // 2️⃣ Fall back to Resend (requires verified domain for sending to arbitrary emails)
+  // 2️⃣ Fall back to Resend
   if (process.env.RESEND_API_KEY) {
     const { Resend } = require('resend');
     const resend = new Resend(process.env.RESEND_API_KEY);

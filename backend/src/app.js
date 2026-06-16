@@ -127,6 +127,7 @@ app.use('/api/v1/advocate-dashboard', advocateDashboardRoutes);
 app.use('/api/v1/fir', require('./routes/firDrafts'));
 app.use('/api/v1/users', require('./routes/userProfile'));
 app.use('/api/v1/cases', require('./routes/cases'));
+app.use('/api/v1/settings', require('./routes/settings'));
 
 app.use(notFound);
 app.use(errorHandler);

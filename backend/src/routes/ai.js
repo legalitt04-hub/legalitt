@@ -52,11 +52,13 @@ router.post('/chat', protect, aiRateLimiter, async (req, res, next) => {
     const userMessage = messages[messages.length - 1].content;
     const systemMsg = 'You are a helpful legal assistant specializing in Indian law. Provide clear, practical guidance. Always add a disclaimer that this is not legal advice.';
 
+    const contextMessages = messages.slice(-5);
+    if (contextMessages.length > 0) {
+      contextMessages[0].content = systemMsg + '\n\n' + contextMessages[0].content;
+    }
+
     // Call AI
-    const rawReply = await callAI([
-      { role: 'user', content: systemMsg },
-      ...messages.slice(-5), // last 5 for context
-    ]);
+    const rawReply = await callAI(contextMessages);
 
     const replyWithDisclaimer = rawReply + DISCLAIMER;
 
@@ -131,14 +133,19 @@ router.get('/stream', protect, aiRateLimiter, async (req, res, next) => {
     const systemMsg = 'You are a helpful legal assistant specializing in Indian law. Provide clear, practical guidance. Always add a disclaimer that this is not legal advice.';
     
     let fullReply = '';
-    const messages = [{ role: 'user', content: message }];
+    
+    let contextMessages = [];
+    if (conversationId) {
+      const chat = await ChatHistory.findById(conversationId);
+      if (chat && chat.messages) {
+        contextMessages = chat.messages.slice(-4).map(m => ({ role: m.role, content: m.content }));
+      }
+    }
+    contextMessages.push({ role: 'user', content: message });
+    contextMessages[0].content = systemMsg + '\n\n' + contextMessages[0].content;
 
     // Stream from AI
-    await callAI([
-      { role: 'user', content: systemMsg },
-      ...messages
-    ], (chunk) => {
-      fullText = chunk;
+    await callAI(contextMessages, (chunk) => {
       fullReply += chunk;
       res.write(`data: ${JSON.stringify({ chunk })}\n\n`);
     });
