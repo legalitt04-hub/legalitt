@@ -198,6 +198,7 @@ async function loadRevenueChart(container, period = 'monthly') {
           borderWidth: 0,
           borderRadius: 7,
           hoverBackgroundColor: '#0D9488',
+          maxBarThickness: 60,
         }],
       },
       options: {
