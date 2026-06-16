@@ -1,6 +1,8 @@
 // ─── API Client ────────────────────────────────────────────────────────────────
-// Use local backend to avoid CORS issues from localhost:4000
-const BASE_URL = 'http://localhost:5001/api/v1';
+const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const BASE_URL = isLocalhost 
+  ? 'http://localhost:5001/api/v1' 
+  : 'https://legalitt-growth.onrender.com/api/v1';
 
 export function getToken()     { return localStorage.getItem('legalitt_admin_token'); }
 export function setToken(t)    { localStorage.setItem('legalitt_admin_token', t); }
