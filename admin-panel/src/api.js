@@ -1,8 +1,10 @@
 // ─── API Client ────────────────────────────────────────────────────────────────
+// On Vercel: use relative path (proxied to Render via vercel.json rewrites → no CORS)
+// On localhost: use local backend directly
 const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-const BASE_URL = isLocalhost 
-  ? 'http://localhost:5001/api/v1' 
-  : 'https://legalitt-growth.onrender.com/api/v1';
+const BASE_URL = isLocalhost
+  ? 'http://localhost:5001/api/v1'
+  : '/api/v1';
 
 export function getToken()     { return localStorage.getItem('legalitt_admin_token'); }
 export function setToken(t)    { localStorage.setItem('legalitt_admin_token', t); }
