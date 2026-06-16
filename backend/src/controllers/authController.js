@@ -71,7 +71,7 @@ exports.register = async (req, res, next) => {
     // Prevent privilege escalation
     const safeRole = ['client', 'advocate'].includes(role) ? role : 'client';
 
-    const existing = await User.findOne({ email: email.toLowerCase() });
+    const existing = await User.findOne({ email: email.toLowerCase().trim() });
     if (existing) return next(new AppError('Email already registered.', 400));
 
     const user = await User.create({ name, email, password, phone, role: safeRole });
@@ -92,7 +92,7 @@ exports.login = async (req, res, next) => {
       return next(new AppError('Email and password are required.', 400));
     }
 
-    const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
+    const user = await User.findOne({ email: email.toLowerCase().trim() }).select('+password');
     if (!user || !user.password) {
       return next(new AppError('Incorrect password or username.', 401));
     }
