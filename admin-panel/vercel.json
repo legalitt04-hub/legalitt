@@ -1,8 +1,18 @@
 {
-  "rewrites": [
+  "version": 2,
+  "functions": {
+    "api/v1/[...path].js": {
+      "runtime": "@vercel/node@3.x"
+    }
+  },
+  "routes": [
     {
-      "source": "/api/v1/:path*",
-      "destination": "https://legalitt-growth.onrender.com/api/v1/:path*"
+      "src": "/api/v1/(.*)",
+      "dest": "/api/v1/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
     }
   ]
 }
