@@ -177,14 +177,14 @@ const Users = () => {
             <div className="p-6">
               <div className="flex items-center gap-4 mb-6">
                 <div className="w-16 h-16 rounded-full bg-slate-800 overflow-hidden flex items-center justify-center border-2 border-slate-700">
-                  {selectedUser.avatar ? <img src={selectedUser.avatar} className="w-full h-full object-cover" /> : <span className="text-xl font-bold text-slate-300">{selectedUser.name?.charAt(0) || '?'}</span>}
+                  {selectedUser.user?.avatar ? <img src={selectedUser.user.avatar} className="w-full h-full object-cover" /> : <span className="text-xl font-bold text-slate-300">{selectedUser.user?.name?.charAt(0) || '?'}</span>}
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-white">{selectedUser.name}</h2>
-                  <p className="text-sm text-slate-400">{selectedUser.email}</p>
+                  <h2 className="text-xl font-bold text-white">{selectedUser.user?.name}</h2>
+                  <p className="text-sm text-slate-400">{selectedUser.user?.email}</p>
                   <div className="mt-1 flex items-center gap-2">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${selectedUser.role === 'advocate' ? 'bg-amber-500/10 text-amber-400' : 'bg-teal-500/10 text-teal-400'}`}>{selectedUser.role}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${selectedUser.isActive ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>{selectedUser.isActive ? 'Active' : 'Banned'}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${selectedUser.user?.role === 'advocate' ? 'bg-amber-500/10 text-amber-400' : 'bg-teal-500/10 text-teal-400'}`}>{selectedUser.user?.role}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${selectedUser.user?.isActive ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>{selectedUser.user?.isActive ? 'Active' : 'Banned'}</span>
                   </div>
                 </div>
               </div>
@@ -193,17 +193,17 @@ const Users = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-slate-950/50 p-3 rounded-lg border border-slate-800">
                     <p className="text-xs text-slate-500 uppercase">Phone</p>
-                    <p className="text-sm font-medium text-white mt-1">{selectedUser.phone || 'Not provided'}</p>
+                    <p className="text-sm font-medium text-white mt-1">{selectedUser.user?.phone || 'Not provided'}</p>
                   </div>
                   <div className="bg-slate-950/50 p-3 rounded-lg border border-slate-800">
                     <p className="text-xs text-slate-500 uppercase">Joined</p>
-                    <p className="text-sm font-medium text-white mt-1">{new Date(selectedUser.createdAt).toLocaleString('en-IN')}</p>
+                    <p className="text-sm font-medium text-white mt-1">{new Date(selectedUser.user?.createdAt).toLocaleString('en-IN')}</p>
                   </div>
                 </div>
-                {selectedUser.isEmailVerified !== undefined && (
+                {selectedUser.user?.isEmailVerified !== undefined && (
                   <div className="bg-slate-950/50 p-3 rounded-lg border border-slate-800">
                     <p className="text-xs text-slate-500 uppercase">Email Verified</p>
-                    <p className={`text-sm font-medium mt-1 ${selectedUser.isEmailVerified ? 'text-green-400' : 'text-amber-400'}`}>{selectedUser.isEmailVerified ? 'Yes' : 'No'}</p>
+                    <p className={`text-sm font-medium mt-1 ${selectedUser.user?.isEmailVerified ? 'text-green-400' : 'text-amber-400'}`}>{selectedUser.user?.isEmailVerified ? 'Yes' : 'No'}</p>
                   </div>
                 )}
               </div>
@@ -211,10 +211,10 @@ const Users = () => {
               <div className="mt-8 flex justify-end gap-3">
                 <Button onClick={() => setSelectedUser(null)} variant="outline" className="bg-slate-800 border-slate-700 text-white hover:bg-slate-700">Close</Button>
                 <Button onClick={() => {
-                  toggleUserStatus(selectedUser._id, selectedUser.isActive);
+                  toggleUserStatus(selectedUser.user?._id, selectedUser.user?.isActive);
                   setSelectedUser(null);
-                }} className={`${selectedUser.isActive ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'} text-white`}>
-                  {selectedUser.isActive ? 'Ban User' : 'Activate User'}
+                }} className={`${selectedUser.user?.isActive ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'} text-white`}>
+                  {selectedUser.user?.isActive ? 'Ban User' : 'Activate User'}
                 </Button>
               </div>
             </div>

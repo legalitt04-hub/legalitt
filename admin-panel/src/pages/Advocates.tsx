@@ -162,22 +162,22 @@ const Advocates = () => {
             <div className="p-6">
               <div className="flex items-start gap-4 mb-6">
                 <div className="w-20 h-20 rounded-full bg-slate-800 overflow-hidden flex items-center justify-center border-2 border-slate-700 flex-shrink-0">
-                  {selectedAdv.user?.avatar ? <img src={selectedAdv.user.avatar} className="w-full h-full object-cover" /> : <span className="text-2xl font-bold text-slate-300">{selectedAdv.user?.name?.charAt(0) || '?'}</span>}
+                  {selectedAdv.advocate.user?.avatar ? <img src={selectedAdv.advocate.user.avatar} className="w-full h-full object-cover" /> : <span className="text-2xl font-bold text-slate-300">{selectedAdv.advocate.user?.name?.charAt(0) || '?'}</span>}
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-                    {selectedAdv.user?.name}
-                    {selectedAdv.verificationStatus === 'approved' && <ShieldCheck className="w-5 h-5 text-teal-500" />}
+                    {selectedAdv.advocate.user?.name}
+                    {selectedAdv.advocate.verificationStatus === 'approved' && <ShieldCheck className="w-5 h-5 text-teal-500" />}
                   </h2>
-                  <p className="text-sm text-slate-400 mt-1">{selectedAdv.user?.email}</p>
-                  <p className="text-sm text-slate-400">{selectedAdv.user?.phone || 'No phone'}</p>
+                  <p className="text-sm text-slate-400 mt-1">{selectedAdv.advocate.user?.email}</p>
+                  <p className="text-sm text-slate-400">{selectedAdv.advocate.user?.phone || 'No phone'}</p>
                   
                   <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${selectedAdv.verificationStatus === 'approved' ? 'bg-green-500/10 text-green-400' : 'bg-amber-500/10 text-amber-400'}`}>
-                      Verification: {selectedAdv.verificationStatus}
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${selectedAdv.advocate.verificationStatus === 'approved' ? 'bg-green-500/10 text-green-400' : 'bg-amber-500/10 text-amber-400'}`}>
+                      Verification: {selectedAdv.advocate.verificationStatus}
                     </span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${selectedAdv.user?.isActive ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
-                      {selectedAdv.user?.isActive ? 'Account Active' : 'Account Suspended'}
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${selectedAdv.advocate.user?.isActive ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                      {selectedAdv.advocate.user?.isActive ? 'Account Active' : 'Account Suspended'}
                     </span>
                   </div>
                 </div>
@@ -187,26 +187,26 @@ const Advocates = () => {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   <div className="bg-slate-950/50 p-3 rounded-lg border border-slate-800">
                     <p className="text-xs text-slate-500 uppercase">Bar Council No.</p>
-                    <p className="text-sm font-medium text-white mt-1 font-mono">{selectedAdv.barCouncilNumber || 'N/A'}</p>
+                    <p className="text-sm font-medium text-white mt-1 font-mono">{selectedAdv.advocate.barCouncilNumber || 'N/A'}</p>
                   </div>
                   <div className="bg-slate-950/50 p-3 rounded-lg border border-slate-800">
                     <p className="text-xs text-slate-500 uppercase">Experience</p>
-                    <p className="text-sm font-medium text-white mt-1">{selectedAdv.experience ? `${selectedAdv.experience} Years` : 'N/A'}</p>
+                    <p className="text-sm font-medium text-white mt-1">{selectedAdv.advocate.experience ? `${selectedAdv.advocate.experience} Years` : 'N/A'}</p>
                   </div>
                   <div className="bg-slate-950/50 p-3 rounded-lg border border-slate-800">
                     <p className="text-xs text-slate-500 uppercase">Consultation Fee</p>
-                    <p className="text-sm font-medium text-white mt-1">₹{selectedAdv.consultationFee || 0}</p>
+                    <p className="text-sm font-medium text-white mt-1">₹{selectedAdv.advocate.consultationFee || 0}</p>
                   </div>
                   <div className="bg-slate-950/50 p-3 rounded-lg border border-slate-800">
                     <p className="text-xs text-slate-500 uppercase">Rating</p>
-                    <p className="text-sm font-medium text-amber-400 mt-1 flex items-center">⭐ {selectedAdv.rating?.average?.toFixed(1) || '0.0'} <span className="text-slate-500 text-xs ml-1">({selectedAdv.rating?.count || 0})</span></p>
+                    <p className="text-sm font-medium text-amber-400 mt-1 flex items-center">⭐ {selectedAdv.advocate.rating?.average?.toFixed(1) || '0.0'} <span className="text-slate-500 text-xs ml-1">({selectedAdv.advocate.rating?.count || 0})</span></p>
                   </div>
                 </div>
 
                 <div className="bg-slate-950/50 p-4 rounded-lg border border-slate-800">
                   <p className="text-xs text-slate-500 uppercase mb-2">Specializations</p>
                   <div className="flex flex-wrap gap-2">
-                    {selectedAdv.specializations?.length ? selectedAdv.specializations.map((spec: string) => (
+                    {selectedAdv.advocate.specializations?.length ? selectedAdv.advocate.specializations.map((spec: string) => (
                       <span key={spec} className="px-2 py-1 bg-slate-800 rounded-md text-sm text-slate-300">{spec}</span>
                     )) : <span className="text-sm text-slate-500">None provided</span>}
                   </div>
@@ -214,16 +214,16 @@ const Advocates = () => {
 
                 <div className="bg-slate-950/50 p-4 rounded-lg border border-slate-800">
                   <p className="text-xs text-slate-500 uppercase mb-2">Bio / About</p>
-                  <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">{selectedAdv.about || 'No bio provided.'}</p>
+                  <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">{selectedAdv.advocate.about || 'No bio provided.'}</p>
                 </div>
               </div>
 
               <div className="mt-8 flex justify-end gap-3 border-t border-slate-800 pt-4">
                 <Button onClick={() => setSelectedAdv(null)} variant="outline" className="bg-slate-800 border-slate-700 text-white hover:bg-slate-700">Close</Button>
                 <Button onClick={() => {
-                  toggleUserStatus(selectedAdv.user._id, selectedAdv.user.isActive);
-                }} className={`${selectedAdv.user?.isActive ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'} text-white`}>
-                  {selectedAdv.user?.isActive ? 'Suspend Advocate' : 'Activate Advocate'}
+                  toggleUserStatus(selectedAdv.advocate.user._id, selectedAdv.advocate.user.isActive);
+                }} className={`${selectedAdv.advocate.user?.isActive ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'} text-white`}>
+                  {selectedAdv.advocate.user?.isActive ? 'Suspend Advocate' : 'Activate Advocate'}
                 </Button>
               </div>
             </div>

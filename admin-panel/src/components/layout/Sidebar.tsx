@@ -15,7 +15,7 @@ import { cn } from '../../lib/utils';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Overview', path: '/' },
-  { icon: Users, label: 'Clients', path: '/users' },
+  { icon: Users, label: 'Users', path: '/users' },
   { icon: UserCheck, label: 'Advocates', path: '/advocates' },
   { icon: ShieldCheck, label: 'Verification', path: '/verification' },
   { icon: CreditCard, label: 'Earnings', path: '/earnings' },
