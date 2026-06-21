@@ -4,7 +4,6 @@ const helmet = require('helmet');
 const cors = require('cors');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
-const RedisStore = require('rate-limit-redis');
 const mongoSanitize = require('express-mongo-sanitize');
 const xssClean = require('xss-clean');
 const compression = require('compression');
@@ -82,17 +81,6 @@ const mkLimiter = (max, windowMs = 15 * 60 * 1000) => rateLimit({
   windowMs, max,
   standardHeaders: true, legacyHeaders: false,
   message: { success: false, message: 'Too many requests, please try again later.' },
-  store: new RedisStore({
-    sendCommand: async (...args) => {
-      const client = await getRedisClient();
-      if (!client) throw new Error('Redis not connected');
-      // rate-limit-redis uses standard redis commands
-      // ioredis uses call() for arbitrary commands, or we can spread args
-      return client.call(...args);
-    },
-    // Optional: a prefix can be added
-    prefix: 'rl:',
-  }),
 });
 app.use('/api/v1/', mkLimiter(parseInt(process.env.RATE_LIMIT_MAX) || 100));
 app.use('/api/v1/auth/', mkLimiter(20));
