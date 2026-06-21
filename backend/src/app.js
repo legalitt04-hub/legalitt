@@ -4,6 +4,7 @@ const helmet = require('helmet');
 const cors = require('cors');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
+const RedisStore = require('rate-limit-redis');
 const mongoSanitize = require('express-mongo-sanitize');
 const xssClean = require('xss-clean');
 const compression = require('compression');
@@ -11,6 +12,7 @@ const compression = require('compression');
 const errorHandler = require('./middlewares/errorHandler');
 const notFound = require('./middlewares/notFound');
 const logger = require('./utils/logger');
+const { getClient: getRedisClient } = require('./config/redis');
 
 const authRoutes = require('./routes/auth');
 const advocateRoutes = require('./routes/advocates');
@@ -60,7 +62,12 @@ const allowedOrigins = [
 app.use(cors({
   origin: (origin, cb) => {
     // Allow if no origin (mobile) or if it's in allowed list or is a Vercel preview
-    if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV === 'development' || origin.endsWith('.vercel.app')) {
+    if (
+      !origin || 
+      allowedOrigins.includes(origin) || 
+      origin.endsWith('.vercel.app') ||
+      (process.env.NODE_ENV !== 'production' || process.env.ALLOW_DEV_ORIGINS === 'true')
+    ) {
       return cb(null, true);
     }
     cb(new Error('Not allowed by CORS'));
@@ -70,11 +77,22 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
 }));
 
-// Rate limiting
+// Rate limiting using RedisStore
 const mkLimiter = (max, windowMs = 15 * 60 * 1000) => rateLimit({
   windowMs, max,
   standardHeaders: true, legacyHeaders: false,
   message: { success: false, message: 'Too many requests, please try again later.' },
+  store: new RedisStore({
+    sendCommand: async (...args) => {
+      const client = await getRedisClient();
+      if (!client) throw new Error('Redis not connected');
+      // rate-limit-redis uses standard redis commands
+      // ioredis uses call() for arbitrary commands, or we can spread args
+      return client.call(...args);
+    },
+    // Optional: a prefix can be added
+    prefix: 'rl:',
+  }),
 });
 app.use('/api/v1/', mkLimiter(parseInt(process.env.RATE_LIMIT_MAX) || 100));
 app.use('/api/v1/auth/', mkLimiter(20));

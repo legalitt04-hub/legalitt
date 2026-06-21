@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const logger = require('../utils/logger');
 
 const connectDB = async () => {
+  mongoose.set('strictQuery', true);
   try {
     const conn = await mongoose.connect(process.env.MONGODB_URI, {
       autoIndex: process.env.NODE_ENV !== 'production', // Disable auto-index in prod

@@ -35,7 +35,12 @@ const initSocket = async (server) => {
           "exp://localhost:8081",
           "http://10.0.2.2:5001"
         ].filter(Boolean);
-        if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV === 'development') {
+        if (
+          !origin || 
+          allowedOrigins.includes(origin) || 
+          origin.endsWith('.vercel.app') ||
+          (process.env.NODE_ENV !== 'production' || process.env.ALLOW_DEV_ORIGINS === 'true')
+        ) {
           return cb(null, true);
         }
         cb(new Error("Not allowed by CORS"));
