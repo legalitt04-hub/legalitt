@@ -75,11 +75,7 @@ const Earnings = () => {
 
   return (
     <div className="space-y-8 pb-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Earnings & Payments</h1>
-          <p className="text-slate-400">View platform revenue and top earning advocates.</p>
-        </div>
+      <div className="flex flex-col md:flex-row md:items-center justify-end gap-4">
         <div className="flex items-center gap-3">
           <Button onClick={handleExport} variant="outline" className="bg-slate-900 border-slate-800 text-slate-300 hover:text-white">
             <Download className="w-4 h-4 mr-2" />

@@ -45,13 +45,6 @@ const Verification = () => {
 
   return (
     <div className="space-y-8 pb-8 relative">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Verifications</h1>
-          <p className="text-slate-400">Review and approve pending advocate applications.</p>
-        </div>
-      </div>
-
       {/* Top Cards (Legacy Replication) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 rounded-2xl flex items-center gap-4">

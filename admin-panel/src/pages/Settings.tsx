@@ -70,11 +70,7 @@ const Settings = () => {
   return (
     <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 pb-8">
       <div className="xl:col-span-2 space-y-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Platform Settings</h1>
-            <p className="text-slate-400">Manage global Legalitt platform configurations.</p>
-          </div>
+        <div className="flex flex-col md:flex-row md:items-center justify-end gap-4">
           <div className="flex items-center gap-3">
             {feedback && <span className={`text-sm ${feedback.includes('Error') ? 'text-red-400' : 'text-green-400'}`}>{feedback}</span>}
             <Button onClick={handleSave} disabled={saving} className="bg-teal-500 hover:bg-teal-400 text-slate-950 font-medium">

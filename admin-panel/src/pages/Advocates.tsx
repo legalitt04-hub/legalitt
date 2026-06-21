@@ -56,13 +56,6 @@ const Advocates = () => {
 
   return (
     <div className="space-y-8 pb-8 relative">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Advocate Management</h1>
-          <p className="text-slate-400">View and manage advocate profiles.</p>
-        </div>
-      </div>
-
       <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-sm overflow-hidden flex flex-col min-h-[600px]">
         <div className="p-4 border-b border-slate-800 flex flex-col md:flex-row items-center gap-4 justify-between">
           <div className="relative flex-1 max-w-md w-full">
