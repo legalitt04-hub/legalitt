@@ -29,7 +29,8 @@ const Login = () => {
       });
       
       if (response.data.success) {
-        login(response.data.token);
+        // The backend returns the tokens inside the data object
+        login(response.data.data.accessToken);
         navigate('/');
       } else {
         setError(response.data.message || 'Login failed');
