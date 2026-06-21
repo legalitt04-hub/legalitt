@@ -11,14 +11,7 @@ const Header = () => {
           <Menu className="w-5 h-5" />
         </button>
         
-        {/* Search */}
-        <div className="max-w-md w-full relative hidden md:block">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-          <Input 
-            placeholder="Search advocates, clients, or bookings..." 
-            className="w-full bg-slate-900/50 border-slate-800 pl-10 h-10 rounded-xl focus-visible:ring-teal-500/50"
-          />
-        </div>
+
       </div>
 
       <div className="flex items-center gap-6">
