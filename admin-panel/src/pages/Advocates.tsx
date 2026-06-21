@@ -128,7 +128,7 @@ const Advocates = () => {
                     </td>
                     <td className="p-4 text-sm text-slate-300">{adv.barCouncilNumber || '—'}</td>
                     <td className="p-4 text-sm text-slate-400 max-w-[200px] truncate">{(adv.specializations || []).slice(0, 2).join(', ') || '—'}</td>
-                    <td className="p-4 text-sm text-slate-300">{adv.experienceYears ? `${adv.experienceYears} yrs` : '—'}</td>
+                    <td className="p-4 text-sm text-slate-300">{adv.experience ? `${adv.experience} yrs` : '—'}</td>
                     <td className="p-4 text-sm font-bold text-slate-200">₹{adv.consultationFee || 0}</td>
                     <td className="p-4 text-sm text-slate-300 flex flex-col">
                       <span className="flex items-center text-amber-400 font-medium">⭐ {adv.rating?.average?.toFixed(1) || '0.0'}</span>
@@ -191,7 +191,7 @@ const Advocates = () => {
                   </div>
                   <div className="bg-slate-950/50 p-3 rounded-lg border border-slate-800">
                     <p className="text-xs text-slate-500 uppercase">Experience</p>
-                    <p className="text-sm font-medium text-white mt-1">{selectedAdv.experienceYears ? `${selectedAdv.experienceYears} Years` : 'N/A'}</p>
+                    <p className="text-sm font-medium text-white mt-1">{selectedAdv.experience ? `${selectedAdv.experience} Years` : 'N/A'}</p>
                   </div>
                   <div className="bg-slate-950/50 p-3 rounded-lg border border-slate-800">
                     <p className="text-xs text-slate-500 uppercase">Consultation Fee</p>
@@ -214,7 +214,7 @@ const Advocates = () => {
 
                 <div className="bg-slate-950/50 p-4 rounded-lg border border-slate-800">
                   <p className="text-xs text-slate-500 uppercase mb-2">Bio / About</p>
-                  <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">{selectedAdv.bio || 'No bio provided.'}</p>
+                  <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">{selectedAdv.about || 'No bio provided.'}</p>
                 </div>
               </div>
 

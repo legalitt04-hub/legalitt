@@ -142,10 +142,10 @@ const Verification = () => {
                       {adv.barCouncilNumber || '—'}
                     </td>
                     <td className="p-4 text-sm text-slate-300">
-                      {adv.experienceYears ? `${adv.experienceYears} Years` : '—'}
+                      {adv.experience ? `${adv.experience} Years` : '—'}
                     </td>
                     <td className="p-4">
-                      {adv.documents && adv.documents.length > 0 ? (
+                      {adv.documents && Object.keys(adv.documents).length > 0 ? (
                         <div className="flex gap-2">
                           <Button onClick={() => setSelectedDocs(adv)} variant="outline" size="sm" className="bg-slate-900 border-teal-500/20 text-teal-400 hover:text-teal-300 hover:bg-teal-500/10">
                             <Eye className="w-4 h-4 mr-1" /> View Docs
@@ -185,19 +185,19 @@ const Verification = () => {
               <p className="text-sm text-slate-400 mb-6">Submitted by {selectedDocs.user?.name}</p>
               
               <div className="space-y-3 max-h-[60vh] overflow-y-auto hidden-scrollbar">
-                {selectedDocs.documents.map((doc: any, i: number) => (
+                {selectedDocs.documents && Object.entries(selectedDocs.documents).map(([key, url]: [string, any], i: number) => (
                   <div key={i} className="flex items-center justify-between p-4 bg-slate-950/50 border border-slate-800 rounded-xl">
                     <div className="flex items-center gap-3 overflow-hidden">
                       <div className="w-10 h-10 rounded-lg bg-teal-500/10 flex items-center justify-center flex-shrink-0">
                         <FileText className="w-5 h-5 text-teal-500" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-white truncate">{doc.type || `Document ${i+1}`}</p>
-                        <p className="text-xs text-slate-400 truncate">{doc.url || 'No URL available'}</p>
+                        <p className="text-sm font-medium text-white truncate">{key}</p>
+                        <p className="text-xs text-slate-400 truncate">{url || 'No URL available'}</p>
                       </div>
                     </div>
-                    {doc.url && (
-                      <a href={doc.url} target="_blank" rel="noopener noreferrer" className="text-teal-400 hover:text-teal-300 text-sm ml-4 whitespace-nowrap">
+                    {url && (
+                      <a href={url} target="_blank" rel="noopener noreferrer" className="text-teal-400 hover:text-teal-300 text-sm ml-4 whitespace-nowrap">
                         Open ↗
                       </a>
                     )}
