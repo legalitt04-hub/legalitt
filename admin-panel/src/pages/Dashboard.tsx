@@ -27,10 +27,26 @@ const Dashboard = () => {
 
         setStats(statsRes.data.data);
         
-        const formattedRev = revRes.data.data.map((d: any) => ({
-          name: `${d._id.year}-${String(d._id.month).padStart(2,'0')}`,
-          revenue: d.revenue
-        }));
+        // Pad to always show last 6 months
+        const last6Months = [];
+        for (let i = 5; i >= 0; i--) {
+          const d = new Date();
+          d.setMonth(d.getMonth() - i);
+          last6Months.push({ month: d.getMonth() + 1, year: d.getFullYear() });
+        }
+        
+        const revMap: any = {};
+        revRes.data.data.forEach((d: any) => {
+          revMap[`${d._id.month}/${d._id.year}`] = d.revenue;
+        });
+
+        const formattedRev = last6Months.map(m => {
+          const key = `${m.month}/${m.year}`;
+          return {
+            name: `${m.year}-${String(m.month).padStart(2,'0')}`,
+            revenue: revMap[key] || 0
+          };
+        });
         setRevenueData(formattedRev);
 
         // Format activity data

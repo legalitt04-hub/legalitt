@@ -20,11 +20,28 @@ const Earnings = () => {
         
         setData(earnRes.data.data);
 
-        const formattedRev = revRes.data.data.map((d: any) => ({
-          name: `${d._id.month}/${d._id.year}`,
-          revenue: d.revenue,
-          bookings: d.count
-        }));
+        // Pad to always show last 6 months
+        const last6Months = [];
+        for (let i = 5; i >= 0; i--) {
+          const d = new Date();
+          d.setMonth(d.getMonth() - i);
+          last6Months.push({ month: d.getMonth() + 1, year: d.getFullYear() });
+        }
+        
+        const revMap: any = {};
+        revRes.data.data.forEach((d: any) => {
+          revMap[`${d._id.month}/${d._id.year}`] = { revenue: d.revenue, bookings: d.count };
+        });
+
+        const formattedRev = last6Months.map(m => {
+          const key = `${m.month}/${m.year}`;
+          const existing = revMap[key] || { revenue: 0, bookings: 0 };
+          return {
+            name: `${m.month}/${m.year}`,
+            revenue: existing.revenue,
+            bookings: existing.bookings
+          };
+        });
         setRevenueData(formattedRev);
       } catch (err) {
         console.error('Failed to load earnings', err);
