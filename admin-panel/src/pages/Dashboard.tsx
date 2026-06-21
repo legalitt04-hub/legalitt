@@ -180,7 +180,7 @@ const Dashboard = () => {
           </div>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={revenueData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <AreaChart data={revenueData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#14B8A6" stopOpacity={0.8}/>
@@ -189,7 +189,7 @@ const Dashboard = () => {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
                 <XAxis dataKey="name" stroke="#64748B" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="#64748B" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `₹${value}`} />
+                <YAxis stroke="#64748B" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `₹${value}`} width={80} />
                 <Tooltip contentStyle={{ backgroundColor: '#0F172A', borderColor: '#1E293B', borderRadius: '12px' }} itemStyle={{ color: '#fff' }} />
                 <Area type="monotone" dataKey="revenue" stroke="#14B8A6" strokeWidth={0} fillOpacity={1} fill="url(#colorRev)" />
               </AreaChart>
@@ -206,10 +206,10 @@ const Dashboard = () => {
           </div>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={activityData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <LineChart data={activityData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
                 <XAxis dataKey="name" stroke="#64748B" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="#64748B" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis stroke="#64748B" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} width={40} />
                 <Tooltip contentStyle={{ backgroundColor: '#0F172A', borderColor: '#1E293B', borderRadius: '12px' }} />
                 <Line type="monotone" dataKey="registrations" stroke="#14B8A6" strokeWidth={3} dot={{ r: 4, fill: '#14B8A6' }} />
                 <Line type="monotone" dataKey="bookings" stroke="#F59E0B" strokeWidth={3} dot={{ r: 4, fill: '#F59E0B' }} />
