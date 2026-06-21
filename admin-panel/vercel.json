@@ -1,17 +1,8 @@
 {
   "version": 2,
-  "functions": {
-    "api/v1/[...path].js": {
-      "runtime": "@vercel/node@3.x"
-    }
-  },
   "rewrites": [
     {
-      "source": "/api/v1/(.*)",
-      "destination": "/api/v1/$1"
-    },
-    {
-      "source": "/(.*)",
+      "source": "/((?!api/.*).*)",
       "destination": "/index.html"
     }
   ]
