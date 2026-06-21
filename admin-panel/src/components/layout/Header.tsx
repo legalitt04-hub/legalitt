@@ -22,7 +22,7 @@ const Header = () => {
         </button>
 
         {/* Profile */}
-        <div className="flex items-center gap-3 pl-6 border-l border-slate-800">
+        <div className="flex items-center gap-3 pl-6">
           <div className="hidden md:block text-right">
             <p className="text-sm font-medium text-white">Super Admin</p>
             <p className="text-xs text-slate-400">Headquarters</p>
