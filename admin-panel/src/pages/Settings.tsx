@@ -4,6 +4,7 @@ import { Settings as SettingsIcon, Save, Megaphone, Activity } from 'lucide-reac
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import api from '../lib/api';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const Settings = () => {
   const [settings, setSettings] = useState<any>({
@@ -68,7 +69,12 @@ const Settings = () => {
   if (loading) return <div className="text-white text-center py-20">Loading Settings...</div>;
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 pb-8">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="grid grid-cols-1 xl:grid-cols-3 gap-8 pb-8"
+    >
       <div className="xl:col-span-2 space-y-8">
         <div className="flex flex-col md:flex-row md:items-center justify-end gap-4">
           <div className="flex items-center gap-3">
@@ -80,7 +86,8 @@ const Settings = () => {
         </div>
 
         {/* Financial & Bookings */}
-        <Card className="bg-slate-900/50 border-slate-800 p-8 backdrop-blur-sm space-y-8">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <Card className="bg-slate-900/50 border-slate-800 p-8 backdrop-blur-sm space-y-8">
           <div>
             <h3 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
               <SettingsIcon className="w-5 h-5 text-teal-500" />
@@ -117,9 +124,11 @@ const Settings = () => {
             </div>
           </div>
         </Card>
+        </motion.div>
 
         {/* Feature Flags */}
-        <Card className="bg-slate-900/50 border-slate-800 p-8 backdrop-blur-sm">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+          <Card className="bg-slate-900/50 border-slate-800 p-8 backdrop-blur-sm">
           <h3 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
             <SettingsIcon className="w-5 h-5 text-teal-500" />
             Feature Flags
@@ -154,9 +163,11 @@ const Settings = () => {
             </div>
           </div>
         </Card>
+        </motion.div>
 
         {/* Announcement Banner */}
-        <Card className="bg-slate-900/50 border-slate-800 p-8 backdrop-blur-sm">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+          <Card className="bg-slate-900/50 border-slate-800 p-8 backdrop-blur-sm">
           <h3 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
             <Megaphone className="w-5 h-5 text-teal-500" />
             Announcement Banner
@@ -188,10 +199,16 @@ const Settings = () => {
             <Button onClick={handleSave} disabled={saving} className="w-full bg-slate-800 hover:bg-slate-700 text-white">Publish Announcement</Button>
           </div>
         </Card>
+        </motion.div>
       </div>
 
       {/* Activity Logs Sidebar */}
-      <div className="xl:col-span-1">
+      <motion.div 
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.4, delay: 0.4 }}
+        className="xl:col-span-1"
+      >
         <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-sm flex flex-col h-full max-h-[calc(100vh-120px)] sticky top-24">
           <div className="p-4 border-b border-slate-800 flex items-center justify-between">
             <h3 className="font-bold text-white flex items-center gap-2">
@@ -218,8 +235,8 @@ const Settings = () => {
             )}
           </div>
         </Card>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
 

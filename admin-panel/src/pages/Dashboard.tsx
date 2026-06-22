@@ -88,12 +88,23 @@ const Dashboard = () => {
   const memPc = health ? Math.round((health.memory.heapUsed / health.memory.heapTotal) * 100) : 0;
 
   return (
-    <div className="space-y-8 pb-8">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="space-y-8 pb-8"
+    >
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ staggerChildren: 0.1 }}
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+      >
         
         {/* Total Clients */}
-        <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 shadow-2xl overflow-hidden rounded-2xl flex items-center gap-4">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 shadow-2xl overflow-hidden rounded-2xl flex items-center gap-4 h-full">
           <div className="w-16 h-16 rounded-2xl bg-teal-500/10 flex items-center justify-center flex-shrink-0">
             <Users className="w-8 h-8 text-teal-500" />
           </div>
@@ -105,10 +116,13 @@ const Dashboard = () => {
               {Math.abs(stats?.userGrowth || 0)}% this month
             </div>
           </div>
+          </div>
         </Card>
+        </motion.div>
 
         {/* Verified Advocates */}
-        <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 shadow-2xl overflow-hidden rounded-2xl flex items-center gap-4">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 shadow-2xl overflow-hidden rounded-2xl flex items-center gap-4 h-full">
           <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center flex-shrink-0">
             <UserCheck className="w-8 h-8 text-amber-500" />
           </div>
@@ -119,10 +133,13 @@ const Dashboard = () => {
               Active on platform
             </div>
           </div>
+          </div>
         </Card>
+        </motion.div>
 
         {/* Total Revenue */}
-        <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 shadow-2xl overflow-hidden rounded-2xl flex items-center gap-4">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 shadow-2xl overflow-hidden rounded-2xl flex items-center gap-4 h-full">
           <div className="w-16 h-16 rounded-2xl bg-green-500/10 flex items-center justify-center flex-shrink-0">
             <CreditCard className="w-8 h-8 text-green-500" />
           </div>
@@ -133,10 +150,13 @@ const Dashboard = () => {
               All time
             </div>
           </div>
+          </div>
         </Card>
+        </motion.div>
 
         {/* Total Bookings */}
-        <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 shadow-2xl overflow-hidden rounded-2xl flex items-center gap-4">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 shadow-2xl overflow-hidden rounded-2xl flex items-center gap-4 h-full">
           <div className="w-16 h-16 rounded-2xl bg-blue-500/10 flex items-center justify-center flex-shrink-0">
             <CalendarCheck className="w-8 h-8 text-blue-500" />
           </div>
@@ -147,10 +167,13 @@ const Dashboard = () => {
               {stats?.completionRate || 0}% completion
             </div>
           </div>
+          </div>
         </Card>
+        </motion.div>
 
         {/* Pending Verifications */}
-        <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 shadow-2xl overflow-hidden rounded-2xl flex items-center gap-4">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 shadow-2xl overflow-hidden rounded-2xl flex items-center gap-4 h-full">
           <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center flex-shrink-0">
             <AlertTriangle className="w-8 h-8 text-red-500" />
           </div>
@@ -161,10 +184,13 @@ const Dashboard = () => {
               {stats?.pendingVerifications > 0 ? '⚠️ Needs attention' : '✓ All clear'}
             </div>
           </div>
+          </div>
         </Card>
+        </motion.div>
 
         {/* New Users This Month */}
-        <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 shadow-2xl overflow-hidden rounded-2xl flex items-center gap-4">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 shadow-2xl overflow-hidden rounded-2xl flex items-center gap-4 h-full">
           <div className="w-16 h-16 rounded-2xl bg-purple-500/10 flex items-center justify-center flex-shrink-0">
             <Activity className="w-8 h-8 text-purple-500" />
           </div>
@@ -175,11 +201,18 @@ const Dashboard = () => {
               {stats?.newBookingsThisMonth || 0} bookings
             </div>
           </div>
+          </div>
         </Card>
-      </div>
+        </motion.div>
+      </motion.div>
 
       {/* Analytics Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }} 
+        animate={{ opacity: 1, y: 0 }} 
+        transition={{ duration: 0.4, delay: 0.2 }}
+        className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+      >
         <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 rounded-2xl h-[400px]">
           <div className="flex justify-between items-center mb-6">
             <div>
@@ -226,10 +259,15 @@ const Dashboard = () => {
             </ResponsiveContainer>
           </div>
         </Card>
-      </div>
+      </motion.div>
 
       {/* Bottom Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }} 
+        animate={{ opacity: 1, y: 0 }} 
+        transition={{ duration: 0.4, delay: 0.3 }}
+        className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+      >
         {/* Recent Registrations Feed */}
         <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 rounded-2xl flex flex-col">
           <div className="flex justify-between items-center mb-6">
@@ -326,8 +364,8 @@ const Dashboard = () => {
             <div className="flex-1 flex items-center justify-center text-slate-500 text-sm">Loading metrics...</div>
           )}
         </Card>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
 

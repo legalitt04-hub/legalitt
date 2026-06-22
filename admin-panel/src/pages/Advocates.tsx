@@ -4,6 +4,7 @@ import { UserCheck, Search, Filter, Ban, ShieldCheck, X } from 'lucide-react';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import api from '../lib/api';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const Advocates = () => {
   const [advocates, setAdvocates] = useState<any[]>([]);
@@ -29,8 +30,7 @@ const Advocates = () => {
       }
     };
     
-    const delay = setTimeout(fetchAdvocates, 500);
-    return () => clearTimeout(delay);
+    fetchAdvocates();
   }, [search, verificationFilter]);
 
   const toggleUserStatus = async (id: string, currentStatus: boolean) => {
@@ -55,7 +55,12 @@ const Advocates = () => {
   };
 
   return (
-    <div className="space-y-8 pb-8 relative">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="space-y-8 pb-8 relative"
+    >
       <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-sm overflow-hidden flex flex-col min-h-[600px]">
         <div className="p-4 border-b border-slate-800 flex flex-col md:flex-row items-center gap-4 justify-between">
           <div className="relative flex-1 max-w-md w-full">
@@ -108,37 +113,46 @@ const Advocates = () => {
                 </tr>
               </thead>
               <tbody>
-                {advocates.map((adv: any) => (
-                  <tr key={adv._id} className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors">
-                    <td className="p-4 flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center overflow-hidden flex-shrink-0">
-                        {adv.user?.avatar ? <img src={adv.user.avatar} className="w-full h-full object-cover" /> : <span className="text-slate-300 font-medium text-sm">{adv.user?.name?.charAt(0) || '?'}</span>}
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-white">{adv.user?.name || 'Unknown'}</p>
-                        <p className="text-xs text-slate-400">{adv.user?.email}</p>
-                      </div>
-                    </td>
-                    <td className="p-4 text-sm text-slate-300">{adv.barCouncilNumber || '—'}</td>
-                    <td className="p-4 text-sm text-slate-400 max-w-[200px] truncate">{(adv.specializations || []).slice(0, 2).join(', ') || '—'}</td>
-                    <td className="p-4 text-sm text-slate-300">{adv.experience ? `${adv.experience} yrs` : '—'}</td>
-                    <td className="p-4 text-sm font-bold text-slate-200">₹{adv.consultationFee || 0}</td>
-                    <td className="p-4 text-sm text-slate-300 flex flex-col">
-                      <span className="flex items-center text-amber-400 font-medium">⭐ {adv.rating?.average?.toFixed(1) || '0.0'}</span>
-                      <span className="text-xs text-slate-500">({adv.rating?.count || 0})</span>
-                    </td>
-                    <td className="p-4">
-                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${adv.verificationStatus === 'approved' ? 'bg-green-500/10 text-green-400' : adv.verificationStatus === 'pending' || adv.verificationStatus === 'under_review' ? 'bg-amber-500/10 text-amber-400' : 'bg-red-500/10 text-red-400'}`}>
-                        {adv.verificationStatus}
-                      </span>
-                    </td>
-                    <td className="p-4 text-right">
-                      <Button onClick={() => handleView(adv._id)} variant="outline" size="sm" className="bg-slate-900 border-teal-500/20 text-teal-400 hover:text-teal-300 hover:bg-teal-500/10 h-8 px-3">
-                        View
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
+                <AnimatePresence>
+                  {advocates.map((adv: any, index: number) => (
+                    <motion.tr 
+                      key={adv._id} 
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      transition={{ duration: 0.3, delay: index * 0.05 }}
+                      className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors"
+                    >
+                      <td className="p-4 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center overflow-hidden flex-shrink-0">
+                          {adv.user?.avatar ? <img src={adv.user.avatar} className="w-full h-full object-cover" /> : <span className="text-slate-300 font-medium text-sm">{adv.user?.name?.charAt(0) || '?'}</span>}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-white">{adv.user?.name || 'Unknown'}</p>
+                          <p className="text-xs text-slate-400">{adv.user?.email}</p>
+                        </div>
+                      </td>
+                      <td className="p-4 text-sm text-slate-300">{adv.barCouncilNumber || '—'}</td>
+                      <td className="p-4 text-sm text-slate-400 max-w-[200px] truncate">{(adv.specializations || []).slice(0, 2).join(', ') || '—'}</td>
+                      <td className="p-4 text-sm text-slate-300">{adv.experience ? `${adv.experience} yrs` : '—'}</td>
+                      <td className="p-4 text-sm font-bold text-slate-200">₹{adv.consultationFee || 0}</td>
+                      <td className="p-4 text-sm text-slate-300 flex flex-col">
+                        <span className="flex items-center text-amber-400 font-medium">⭐ {adv.rating?.average?.toFixed(1) || '0.0'}</span>
+                        <span className="text-xs text-slate-500">({adv.rating?.count || 0})</span>
+                      </td>
+                      <td className="p-4">
+                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${adv.verificationStatus === 'approved' ? 'bg-green-500/10 text-green-400' : adv.verificationStatus === 'pending' || adv.verificationStatus === 'under_review' ? 'bg-amber-500/10 text-amber-400' : 'bg-red-500/10 text-red-400'}`}>
+                          {adv.verificationStatus}
+                        </span>
+                      </td>
+                      <td className="p-4 text-right">
+                        <Button onClick={() => handleView(adv._id)} variant="outline" size="sm" className="bg-slate-900 border-teal-500/20 text-teal-400 hover:text-teal-300 hover:bg-teal-500/10 h-8 px-3">
+                          View
+                        </Button>
+                      </td>
+                    </motion.tr>
+                  ))}
+                </AnimatePresence>
               </tbody>
             </table>
           </div>
@@ -147,83 +161,98 @@ const Advocates = () => {
 
       {/* Advocate Details Modal */}
       {selectedAdv && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <Card className="w-full max-w-2xl bg-slate-900 border-slate-700 shadow-2xl relative max-h-[90vh] overflow-y-auto hidden-scrollbar">
-            <button onClick={() => setSelectedAdv(null)} className="absolute top-4 right-4 text-slate-400 hover:text-white bg-slate-800 rounded-full p-1 z-10">
-              <X className="w-5 h-5" />
-            </button>
-            <div className="p-6">
-              <div className="flex items-start gap-4 mb-6">
-                <div className="w-20 h-20 rounded-full bg-slate-800 overflow-hidden flex items-center justify-center border-2 border-slate-700 flex-shrink-0">
-                  {selectedAdv.advocate.user?.avatar ? <img src={selectedAdv.advocate.user.avatar} className="w-full h-full object-cover" /> : <span className="text-2xl font-bold text-slate-300">{selectedAdv.advocate.user?.name?.charAt(0) || '?'}</span>}
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-                    {selectedAdv.advocate.user?.name}
-                    {selectedAdv.advocate.verificationStatus === 'approved' && <ShieldCheck className="w-5 h-5 text-teal-500" />}
-                  </h2>
-                  <p className="text-sm text-slate-400 mt-1">{selectedAdv.advocate.user?.email}</p>
-                  <p className="text-sm text-slate-400">{selectedAdv.advocate.user?.phone || 'No phone'}</p>
+        <AnimatePresence>
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="w-full max-w-2xl"
+            >
+              <Card className="w-full bg-slate-900 border-slate-700 shadow-2xl relative max-h-[90vh] overflow-y-auto hidden-scrollbar">
+                <button onClick={() => setSelectedAdv(null)} className="absolute top-4 right-4 text-slate-400 hover:text-white bg-slate-800 rounded-full p-1 z-10">
+                  <X className="w-5 h-5" />
+                </button>
+                <div className="p-6">
+                  <div className="flex items-start gap-4 mb-6">
+                    <div className="w-20 h-20 rounded-full bg-slate-800 overflow-hidden flex items-center justify-center border-2 border-slate-700 flex-shrink-0">
+                      {selectedAdv.advocate.user?.avatar ? <img src={selectedAdv.advocate.user.avatar} className="w-full h-full object-cover" /> : <span className="text-2xl font-bold text-slate-300">{selectedAdv.advocate.user?.name?.charAt(0) || '?'}</span>}
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                        {selectedAdv.advocate.user?.name}
+                        {selectedAdv.advocate.verificationStatus === 'approved' && <ShieldCheck className="w-5 h-5 text-teal-500" />}
+                      </h2>
+                      <p className="text-sm text-slate-400 mt-1">{selectedAdv.advocate.user?.email}</p>
+                      <p className="text-sm text-slate-400">{selectedAdv.advocate.user?.phone || 'No phone'}</p>
+                      
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${selectedAdv.advocate.verificationStatus === 'approved' ? 'bg-green-500/10 text-green-400' : 'bg-amber-500/10 text-amber-400'}`}>
+                          Verification: {selectedAdv.advocate.verificationStatus}
+                        </span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${selectedAdv.advocate.user?.isActive ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                          {selectedAdv.advocate.user?.isActive ? 'Account Active' : 'Account Suspended'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                   
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${selectedAdv.advocate.verificationStatus === 'approved' ? 'bg-green-500/10 text-green-400' : 'bg-amber-500/10 text-amber-400'}`}>
-                      Verification: {selectedAdv.advocate.verificationStatus}
-                    </span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${selectedAdv.advocate.user?.isActive ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
-                      {selectedAdv.advocate.user?.isActive ? 'Account Active' : 'Account Suspended'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <div className="bg-slate-950/50 p-3 rounded-lg border border-slate-800">
-                    <p className="text-xs text-slate-500 uppercase">Bar Council No.</p>
-                    <p className="text-sm font-medium text-white mt-1 font-mono">{selectedAdv.advocate.barCouncilNumber || 'N/A'}</p>
-                  </div>
-                  <div className="bg-slate-950/50 p-3 rounded-lg border border-slate-800">
-                    <p className="text-xs text-slate-500 uppercase">Experience</p>
-                    <p className="text-sm font-medium text-white mt-1">{selectedAdv.advocate.experience ? `${selectedAdv.advocate.experience} Years` : 'N/A'}</p>
-                  </div>
-                  <div className="bg-slate-950/50 p-3 rounded-lg border border-slate-800">
-                    <p className="text-xs text-slate-500 uppercase">Consultation Fee</p>
-                    <p className="text-sm font-medium text-white mt-1">₹{selectedAdv.advocate.consultationFee || 0}</p>
-                  </div>
-                  <div className="bg-slate-950/50 p-3 rounded-lg border border-slate-800">
-                    <p className="text-xs text-slate-500 uppercase">Rating</p>
-                    <p className="text-sm font-medium text-amber-400 mt-1 flex items-center">⭐ {selectedAdv.advocate.rating?.average?.toFixed(1) || '0.0'} <span className="text-slate-500 text-xs ml-1">({selectedAdv.advocate.rating?.count || 0})</span></p>
-                  </div>
-                </div>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      <div className="bg-slate-950/50 p-3 rounded-lg border border-slate-800">
+                        <p className="text-xs text-slate-500 uppercase">Bar Council No.</p>
+                        <p className="text-sm font-medium text-white mt-1 font-mono">{selectedAdv.advocate.barCouncilNumber || 'N/A'}</p>
+                      </div>
+                      <div className="bg-slate-950/50 p-3 rounded-lg border border-slate-800">
+                        <p className="text-xs text-slate-500 uppercase">Experience</p>
+                        <p className="text-sm font-medium text-white mt-1">{selectedAdv.advocate.experience ? `${selectedAdv.advocate.experience} Years` : 'N/A'}</p>
+                      </div>
+                      <div className="bg-slate-950/50 p-3 rounded-lg border border-slate-800">
+                        <p className="text-xs text-slate-500 uppercase">Consultation Fee</p>
+                        <p className="text-sm font-medium text-white mt-1">₹{selectedAdv.advocate.consultationFee || 0}</p>
+                      </div>
+                      <div className="bg-slate-950/50 p-3 rounded-lg border border-slate-800">
+                        <p className="text-xs text-slate-500 uppercase">Rating</p>
+                        <p className="text-sm font-medium text-amber-400 mt-1 flex items-center">⭐ {selectedAdv.advocate.rating?.average?.toFixed(1) || '0.0'} <span className="text-slate-500 text-xs ml-1">({selectedAdv.advocate.rating?.count || 0})</span></p>
+                      </div>
+                    </div>
 
-                <div className="bg-slate-950/50 p-4 rounded-lg border border-slate-800">
-                  <p className="text-xs text-slate-500 uppercase mb-2">Specializations</p>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedAdv.advocate.specializations?.length ? selectedAdv.advocate.specializations.map((spec: string) => (
-                      <span key={spec} className="px-2 py-1 bg-slate-800 rounded-md text-sm text-slate-300">{spec}</span>
-                    )) : <span className="text-sm text-slate-500">None provided</span>}
+                    <div className="bg-slate-950/50 p-4 rounded-lg border border-slate-800">
+                      <p className="text-xs text-slate-500 uppercase mb-2">Specializations</p>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedAdv.advocate.specializations?.length ? selectedAdv.advocate.specializations.map((spec: string) => (
+                          <span key={spec} className="px-2 py-1 bg-slate-800 rounded-md text-sm text-slate-300">{spec}</span>
+                        )) : <span className="text-sm text-slate-500">None provided</span>}
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-950/50 p-4 rounded-lg border border-slate-800">
+                      <p className="text-xs text-slate-500 uppercase mb-2">Bio / About</p>
+                      <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">{selectedAdv.advocate.about || 'No bio provided.'}</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-8 flex justify-end gap-3 border-t border-slate-800 pt-4">
+                    <Button onClick={() => setSelectedAdv(null)} variant="outline" className="bg-slate-800 border-slate-700 text-white hover:bg-slate-700">Close</Button>
+                    <Button onClick={() => {
+                      toggleUserStatus(selectedAdv.advocate.user._id, selectedAdv.advocate.user.isActive);
+                    }} className={`${selectedAdv.advocate.user?.isActive ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'} text-white`}>
+                      {selectedAdv.advocate.user?.isActive ? 'Suspend Advocate' : 'Activate Advocate'}
+                    </Button>
                   </div>
                 </div>
-
-                <div className="bg-slate-950/50 p-4 rounded-lg border border-slate-800">
-                  <p className="text-xs text-slate-500 uppercase mb-2">Bio / About</p>
-                  <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">{selectedAdv.advocate.about || 'No bio provided.'}</p>
-                </div>
-              </div>
-
-              <div className="mt-8 flex justify-end gap-3 border-t border-slate-800 pt-4">
-                <Button onClick={() => setSelectedAdv(null)} variant="outline" className="bg-slate-800 border-slate-700 text-white hover:bg-slate-700">Close</Button>
-                <Button onClick={() => {
-                  toggleUserStatus(selectedAdv.advocate.user._id, selectedAdv.advocate.user.isActive);
-                }} className={`${selectedAdv.advocate.user?.isActive ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'} text-white`}>
-                  {selectedAdv.advocate.user?.isActive ? 'Suspend Advocate' : 'Activate Advocate'}
-                </Button>
-              </div>
-            </div>
-          </Card>
-        </div>
+              </Card>
+            </motion.div>
+          </motion.div>
+        </AnimatePresence>
       )}
-    </div>
+    </motion.div>
   );
 };
 

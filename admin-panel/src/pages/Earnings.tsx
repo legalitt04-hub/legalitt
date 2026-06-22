@@ -4,6 +4,7 @@ import { CreditCard, Download, TrendingUp } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import api from '../lib/api';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const Earnings = () => {
   const [data, setData] = useState<any>(null);
@@ -74,7 +75,12 @@ const Earnings = () => {
   };
 
   return (
-    <div className="space-y-8 pb-8">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="space-y-8 pb-8"
+    >
       <div className="flex flex-col md:flex-row md:items-center justify-end gap-4">
         <div className="flex items-center gap-3">
           <Button onClick={handleExport} variant="outline" className="bg-slate-900 border-slate-800 text-slate-300 hover:text-white">
@@ -85,8 +91,14 @@ const Earnings = () => {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="bg-slate-900/50 border-slate-800 p-6 backdrop-blur-sm relative overflow-hidden group">
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ staggerChildren: 0.1 }}
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+      >
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <Card className="bg-slate-900/50 border-slate-800 p-6 backdrop-blur-sm relative overflow-hidden group h-full">
           <div className="absolute inset-0 bg-gradient-to-r from-teal-500 to-emerald-500 rounded-xl blur-xl opacity-0 group-hover:opacity-10 transition-opacity" />
           <h3 className="text-sm font-medium text-slate-400 mb-2">Total Platform Revenue</h3>
           <p className="text-3xl font-bold text-white">{formatCurrency(data?.totalRevenue)}</p>
@@ -124,10 +136,16 @@ const Earnings = () => {
             <span className="text-slate-500">This period</span>
           </div>
         </Card>
-      </div>
+        </motion.div>
+      </motion.div>
 
       {/* Chart */}
-      <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 rounded-2xl h-[400px]">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.2 }}
+      >
+        <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 rounded-2xl h-[400px]">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-lg font-bold text-white">Revenue Timeline</h3>
         </div>
@@ -152,9 +170,15 @@ const Earnings = () => {
           </ResponsiveContainer>
         </div>
       </Card>
+      </motion.div>
 
       {/* Top Advocates Table */}
-      <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-sm overflow-hidden">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.3 }}
+      >
+        <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-sm overflow-hidden">
         <div className="p-6 border-b border-slate-800">
           <h3 className="text-lg font-bold text-white">Top Earning Advocates</h3>
           <p className="text-sm text-slate-400">Ranked by total earnings from paid bookings</p>
@@ -182,44 +206,52 @@ const Earnings = () => {
                   </td>
                 </tr>
               ) : (
-                data.topAdvocates.map((adv: any, i: number) => (
-                  <tr key={adv._id || i} className="border-b border-slate-800 hover:bg-slate-800/30 transition-colors">
-                    <td className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="relative">
-                          <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center overflow-hidden border border-slate-700">
-                            {adv.user?.avatar ? <img src={adv.user.avatar} className="w-full h-full object-cover" /> : <span className="text-slate-300">{adv.user?.name?.charAt(0) || '?'}</span>}
+                <AnimatePresence>
+                  {data.topAdvocates.map((adv: any, i: number) => (
+                    <motion.tr 
+                      key={adv._id || i} 
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3, delay: i * 0.05 }}
+                      className="border-b border-slate-800 hover:bg-slate-800/30 transition-colors"
+                    >
+                      <td className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="relative">
+                            <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center overflow-hidden border border-slate-700">
+                              {adv.user?.avatar ? <img src={adv.user.avatar} className="w-full h-full object-cover" /> : <span className="text-slate-300">{adv.user?.name?.charAt(0) || '?'}</span>}
+                            </div>
+                            {i < 3 && <span className="absolute -top-1 -right-1 text-xs">{['🥇','🥈','🥉'][i]}</span>}
                           </div>
-                          {i < 3 && <span className="absolute -top-1 -right-1 text-xs">{['🥇','🥈','🥉'][i]}</span>}
+                          <div>
+                            <p className="text-sm font-medium text-white">{adv.user?.name || 'Unknown'}</p>
+                            <p className="text-xs text-slate-400">{adv.user?.email || ''}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-white">{adv.user?.name || 'Unknown'}</p>
-                          <p className="text-xs text-slate-400">{adv.user?.email || ''}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="p-4 text-xs text-slate-400">
-                      {(adv.advocate?.specializations || []).slice(0, 2).join(', ') || '—'}
-                    </td>
-                    <td className="p-4">
-                      <p className="font-bold text-teal-400">{formatCurrency(adv.totalEarned)}</p>
-                    </td>
-                    <td className="p-4">
-                      <span className="px-2 py-1 bg-slate-800 text-slate-300 rounded text-xs font-medium">
-                        {adv.bookingCount}
-                      </span>
-                    </td>
-                    <td className="p-4 text-sm font-medium text-slate-300">
-                      {formatCurrency(adv.avgAmount || Math.round(adv.totalEarned / (adv.bookingCount || 1)))}
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                      <td className="p-4 text-xs text-slate-400">
+                        {(adv.advocate?.specializations || []).slice(0, 2).join(', ') || '—'}
+                      </td>
+                      <td className="p-4">
+                        <p className="font-bold text-teal-400">{formatCurrency(adv.totalEarned)}</p>
+                      </td>
+                      <td className="p-4">
+                        <span className="px-2 py-1 bg-slate-800 text-slate-300 rounded text-xs font-medium">
+                          {adv.bookingCount}
+                        </span>
+                      </td>
+                      <td className="p-4 text-sm font-medium text-slate-300">
+                        {formatCurrency(adv.avgAmount || Math.round(adv.totalEarned / (adv.bookingCount || 1)))}
+                      </td>
+                    </motion.tr>
+                  ))}
+                </AnimatePresence>
               )}
             </tbody>
           </table>
-        </div>
-      </Card>
-    </div>
+        </Card>
+      </motion.div>
+    </motion.div>
   );
 };
 

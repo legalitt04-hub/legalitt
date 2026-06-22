@@ -3,6 +3,7 @@ import { Card } from '../components/ui/card';
 import { ShieldCheck, Check, X, Eye, FileText, Search, Clock, Search as SearchIcon } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import api from '../lib/api';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const Verification = () => {
   const [verifications, setVerifications] = useState<any[]>([]);
@@ -44,7 +45,12 @@ const Verification = () => {
   const approvedCount = allAdvocates.filter(a => a.verificationStatus === 'approved').length;
 
   return (
-    <div className="space-y-8 pb-8 relative">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="space-y-8 pb-8 relative"
+    >
       {/* Top Cards (Legacy Replication) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 rounded-2xl flex items-center gap-4">
@@ -87,8 +93,13 @@ const Verification = () => {
         </Card>
       </div>
 
-      <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-sm overflow-hidden flex flex-col min-h-[500px]">
-        <div className="p-4 border-b border-slate-800 flex justify-between items-center">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.1 }}
+      >
+        <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-sm overflow-hidden flex flex-col min-h-[500px]">
+          <div className="p-4 border-b border-slate-800 flex justify-between items-center">
           <div>
             <h3 className="text-lg font-bold text-white">Advocate Applications</h3>
             <p className="text-sm text-slate-400">Review credentials and approve or reject applications</p>
@@ -120,94 +131,119 @@ const Verification = () => {
                 </tr>
               </thead>
               <tbody>
-                {verifications.map((adv: any) => (
-                  <tr key={adv._id} className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors">
-                    <td className="p-4">
-                      <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 overflow-hidden flex items-center justify-center flex-shrink-0">
-                        {adv.user?.avatar ? <img src={adv.user.avatar} className="w-full h-full object-cover" /> : <span className="text-slate-300 font-medium text-sm">{adv.user?.name?.charAt(0) || '?'}</span>}
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <p className="text-sm font-medium text-white">{adv.user?.name || 'Unknown'}</p>
-                      <p className="text-xs text-slate-400">{adv.user?.email}</p>
-                    </td>
-                    <td className="p-4 text-sm font-mono text-slate-300">
-                      {adv.barCouncilNumber || '—'}
-                    </td>
-                    <td className="p-4 text-sm text-slate-300">
-                      {adv.experience ? `${adv.experience} Years` : '—'}
-                    </td>
-                    <td className="p-4">
-                      {adv.documents && Object.keys(adv.documents).length > 0 ? (
-                        <div className="flex gap-2">
-                          <Button onClick={() => setSelectedDocs(adv)} variant="outline" size="sm" className="bg-slate-900 border-teal-500/20 text-teal-400 hover:text-teal-300 hover:bg-teal-500/10">
-                            <Eye className="w-4 h-4 mr-1" /> View Docs
+                <AnimatePresence>
+                  {verifications.map((adv: any, index: number) => (
+                    <motion.tr 
+                      key={adv._id} 
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      transition={{ duration: 0.3, delay: index * 0.05 }}
+                      className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors"
+                    >
+                      <td className="p-4">
+                        <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 overflow-hidden flex items-center justify-center flex-shrink-0">
+                          {adv.user?.avatar ? <img src={adv.user.avatar} className="w-full h-full object-cover" /> : <span className="text-slate-300 font-medium text-sm">{adv.user?.name?.charAt(0) || '?'}</span>}
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <p className="text-sm font-medium text-white">{adv.user?.name || 'Unknown'}</p>
+                        <p className="text-xs text-slate-400">{adv.user?.email}</p>
+                      </td>
+                      <td className="p-4 text-sm font-mono text-slate-300">
+                        {adv.barCouncilNumber || '—'}
+                      </td>
+                      <td className="p-4 text-sm text-slate-300">
+                        {adv.experience ? `${adv.experience} Years` : '—'}
+                      </td>
+                      <td className="p-4">
+                        {adv.documents && Object.keys(adv.documents).length > 0 ? (
+                          <div className="flex gap-2">
+                            <Button onClick={() => setSelectedDocs(adv)} variant="outline" size="sm" className="bg-slate-900 border-teal-500/20 text-teal-400 hover:text-teal-300 hover:bg-teal-500/10">
+                              <Eye className="w-4 h-4 mr-1" /> View Docs
+                            </Button>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-500">No documents</span>
+                        )}
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button onClick={() => handleVerify(adv._id, 'approved')} size="sm" className="bg-teal-500 hover:bg-teal-400 text-slate-950 h-8">
+                            <Check className="w-4 h-4 mr-1" /> Approve
+                          </Button>
+                          <Button onClick={() => handleVerify(adv._id, 'rejected')} variant="outline" size="sm" className="bg-slate-900 border-red-500/20 text-red-400 hover:bg-red-500/10 h-8">
+                            <X className="w-4 h-4 mr-1" /> Reject
                           </Button>
                         </div>
-                      ) : (
-                        <span className="text-xs text-slate-500">No documents</span>
-                      )}
-                    </td>
-                    <td className="p-4">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button onClick={() => handleVerify(adv._id, 'approved')} size="sm" className="bg-teal-500 hover:bg-teal-400 text-slate-950 h-8">
-                          <Check className="w-4 h-4 mr-1" /> Approve
-                        </Button>
-                        <Button onClick={() => handleVerify(adv._id, 'rejected')} variant="outline" size="sm" className="bg-slate-900 border-red-500/20 text-red-400 hover:bg-red-500/10 h-8">
-                          <X className="w-4 h-4 mr-1" /> Reject
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                    </motion.tr>
+                  ))}
+                </AnimatePresence>
               </tbody>
             </table>
           </div>
         )}
-      </Card>
+        </Card>
+      </motion.div>
 
       {/* Document View Modal */}
-      {selectedDocs && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <Card className="w-full max-w-lg bg-slate-900 border-slate-700 shadow-2xl relative">
-            <button onClick={() => setSelectedDocs(null)} className="absolute top-4 right-4 text-slate-400 hover:text-white bg-slate-800 rounded-full p-1 z-10">
-              <X className="w-5 h-5" />
-            </button>
-            <div className="p-6">
-              <h2 className="text-xl font-bold text-white mb-2">Verification Documents</h2>
-              <p className="text-sm text-slate-400 mb-6">Submitted by {selectedDocs.user?.name}</p>
-              
-              <div className="space-y-3 max-h-[60vh] overflow-y-auto hidden-scrollbar">
-                {selectedDocs.documents && Object.entries(selectedDocs.documents).map(([key, url]: [string, any], i: number) => (
-                  <div key={i} className="flex items-center justify-between p-4 bg-slate-950/50 border border-slate-800 rounded-xl">
-                    <div className="flex items-center gap-3 overflow-hidden">
-                      <div className="w-10 h-10 rounded-lg bg-teal-500/10 flex items-center justify-center flex-shrink-0">
-                        <FileText className="w-5 h-5 text-teal-500" />
+      <AnimatePresence>
+        {selectedDocs && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="w-full max-w-lg"
+            >
+              <Card className="w-full bg-slate-900 border-slate-700 shadow-2xl relative">
+                <button onClick={() => setSelectedDocs(null)} className="absolute top-4 right-4 text-slate-400 hover:text-white bg-slate-800 rounded-full p-1 z-10">
+                  <X className="w-5 h-5" />
+                </button>
+                <div className="p-6">
+                  <h2 className="text-xl font-bold text-white mb-2">Verification Documents</h2>
+                  <p className="text-sm text-slate-400 mb-6">Submitted by {selectedDocs.user?.name}</p>
+                  
+                  <div className="space-y-3 max-h-[60vh] overflow-y-auto hidden-scrollbar">
+                    {selectedDocs.documents && Object.entries(selectedDocs.documents).map(([key, url]: [string, any], i: number) => (
+                      <div key={i} className="flex items-center justify-between p-4 bg-slate-950/50 border border-slate-800 rounded-xl">
+                        <div className="flex items-center gap-3 overflow-hidden">
+                          <div className="w-10 h-10 rounded-lg bg-teal-500/10 flex items-center justify-center flex-shrink-0">
+                            <FileText className="w-5 h-5 text-teal-500" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-white truncate">{key}</p>
+                            <p className="text-xs text-slate-400 truncate">{url || 'No URL available'}</p>
+                          </div>
+                        </div>
+                        {url && (
+                          <a href={url} target="_blank" rel="noopener noreferrer" className="text-teal-400 hover:text-teal-300 text-sm ml-4 whitespace-nowrap">
+                            Open ↗
+                          </a>
+                        )}
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-white truncate">{key}</p>
-                        <p className="text-xs text-slate-400 truncate">{url || 'No URL available'}</p>
-                      </div>
-                    </div>
-                    {url && (
-                      <a href={url} target="_blank" rel="noopener noreferrer" className="text-teal-400 hover:text-teal-300 text-sm ml-4 whitespace-nowrap">
-                        Open ↗
-                      </a>
-                    )}
+                    ))}
                   </div>
-                ))}
-              </div>
 
-              <div className="mt-6 flex justify-end">
-                <Button onClick={() => setSelectedDocs(null)} className="bg-slate-800 text-white hover:bg-slate-700 w-full">
-                  Close
-                </Button>
-              </div>
-            </div>
-          </Card>
-        </div>
-      )}
-    </div>
+                  <div className="mt-6 flex justify-end">
+                    <Button onClick={() => setSelectedDocs(null)} className="bg-slate-800 text-white hover:bg-slate-700 w-full">
+                      Close
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 };
 

@@ -22,4 +22,17 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// Add a response interceptor to handle 401 Unauthorized errors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      // Token is invalid or expired, clear it and redirect to login
+      localStorage.removeItem('adminToken');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default api;
