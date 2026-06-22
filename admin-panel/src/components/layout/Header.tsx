@@ -13,14 +13,21 @@ const getPageInfo = (pathname: string) => {
   return null;
 };
 
-const Header = () => {
+interface HeaderProps {
+  onMenuClick?: () => void;
+}
+
+const Header = ({ onMenuClick }: HeaderProps) => {
   const location = useLocation();
   const pageInfo = getPageInfo(location.pathname);
 
   return (
-    <header className="h-20 px-8 flex items-center justify-between bg-slate-950/50 backdrop-blur-xl sticky top-0 z-40">
+    <header className="h-20 px-4 md:px-8 flex items-center justify-between bg-slate-950/50 backdrop-blur-xl sticky top-0 z-40">
       <div className="flex items-center gap-4 flex-1">
-        <button className="lg:hidden p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800">
+        <button 
+          onClick={onMenuClick}
+          className="lg:hidden p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800"
+        >
           <Menu className="w-5 h-5" />
         </button>
         

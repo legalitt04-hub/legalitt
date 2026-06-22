@@ -99,43 +99,49 @@ const Earnings = () => {
       >
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <Card className="bg-slate-900/50 border-slate-800 p-6 backdrop-blur-sm relative overflow-hidden group h-full">
-          <div className="absolute inset-0 bg-gradient-to-r from-teal-500 to-emerald-500 rounded-xl blur-xl opacity-0 group-hover:opacity-10 transition-opacity" />
-          <h3 className="text-sm font-medium text-slate-400 mb-2">Total Platform Revenue</h3>
-          <p className="text-3xl font-bold text-white">{formatCurrency(data?.totalRevenue)}</p>
-          <div className="flex items-center gap-2 mt-4 text-sm">
-            <span className="flex items-center text-teal-400 font-medium bg-teal-400/10 px-2 py-1 rounded-lg">
-              <TrendingUp className="w-3 h-3 mr-1" /> All time
-            </span>
-            <span className="text-slate-500">{data?.totalBookings || 0} bookings</span>
-          </div>
-        </Card>
+            <div className="absolute inset-0 bg-gradient-to-r from-teal-500 to-emerald-500 rounded-xl blur-xl opacity-0 group-hover:opacity-10 transition-opacity" />
+            <h3 className="text-sm font-medium text-slate-400 mb-2">Total Platform Revenue</h3>
+            <p className="text-3xl font-bold text-white">{formatCurrency(data?.totalRevenue)}</p>
+            <div className="flex items-center gap-2 mt-4 text-sm">
+              <span className="flex items-center text-teal-400 font-medium bg-teal-400/10 px-2 py-1 rounded-lg">
+                <TrendingUp className="w-3 h-3 mr-1" /> All time
+              </span>
+              <span className="text-slate-500">{data?.totalBookings || 0} bookings</span>
+            </div>
+          </Card>
+        </motion.div>
 
-        <Card className="bg-slate-900/50 border-slate-800 p-6 backdrop-blur-sm relative overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl blur-xl opacity-0 group-hover:opacity-10 transition-opacity" />
-          <h3 className="text-sm font-medium text-slate-400 mb-2">This Month's Revenue</h3>
-          <p className="text-3xl font-bold text-teal-400">{formatCurrency(data?.thisMonthRevenue)}</p>
-          <div className="flex items-center gap-2 mt-4 text-sm">
-            <span className="text-slate-500">{data?.thisMonthBookings || 0} bookings paid</span>
-          </div>
-        </Card>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <Card className="bg-slate-900/50 border-slate-800 p-6 backdrop-blur-sm relative overflow-hidden group h-full">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl blur-xl opacity-0 group-hover:opacity-10 transition-opacity" />
+            <h3 className="text-sm font-medium text-slate-400 mb-2">This Month's Revenue</h3>
+            <p className="text-3xl font-bold text-teal-400">{formatCurrency(data?.thisMonthRevenue)}</p>
+            <div className="flex items-center gap-2 mt-4 text-sm">
+              <span className="text-slate-500">{data?.thisMonthBookings || 0} bookings paid</span>
+            </div>
+          </Card>
+        </motion.div>
 
-        <Card className="bg-slate-900/50 border-slate-800 p-6 backdrop-blur-sm relative overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl blur-xl opacity-0 group-hover:opacity-10 transition-opacity" />
-          <h3 className="text-sm font-medium text-slate-400 mb-2">Avg. Booking Value</h3>
-          <p className="text-3xl font-bold text-amber-500">{formatCurrency(avgBookingValue)}</p>
-          <div className="flex items-center gap-2 mt-4 text-sm">
-            <span className="text-slate-500">Per paid booking</span>
-          </div>
-        </Card>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <Card className="bg-slate-900/50 border-slate-800 p-6 backdrop-blur-sm relative overflow-hidden group h-full">
+            <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl blur-xl opacity-0 group-hover:opacity-10 transition-opacity" />
+            <h3 className="text-sm font-medium text-slate-400 mb-2">Avg. Booking Value</h3>
+            <p className="text-3xl font-bold text-amber-500">{formatCurrency(avgBookingValue)}</p>
+            <div className="flex items-center gap-2 mt-4 text-sm">
+              <span className="text-slate-500">Per paid booking</span>
+            </div>
+          </Card>
+        </motion.div>
 
-        <Card className="bg-slate-900/50 border-slate-800 p-6 backdrop-blur-sm relative overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-r from-amber-500 to-orange-500 rounded-xl blur-xl opacity-0 group-hover:opacity-10 transition-opacity" />
-          <h3 className="text-sm font-medium text-slate-400 mb-2">Top Advocates Tracked</h3>
-          <p className="text-3xl font-bold text-white">{data?.topAdvocates?.length || 0}</p>
-          <div className="flex items-center gap-2 mt-4 text-sm">
-            <span className="text-slate-500">This period</span>
-          </div>
-        </Card>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <Card className="bg-slate-900/50 border-slate-800 p-6 backdrop-blur-sm relative overflow-hidden group h-full">
+            <div className="absolute inset-0 bg-gradient-to-r from-amber-500 to-orange-500 rounded-xl blur-xl opacity-0 group-hover:opacity-10 transition-opacity" />
+            <h3 className="text-sm font-medium text-slate-400 mb-2">Top Advocates Tracked</h3>
+            <p className="text-3xl font-bold text-white">{data?.topAdvocates?.length || 0}</p>
+            <div className="flex items-center gap-2 mt-4 text-sm">
+              <span className="text-slate-500">This period</span>
+            </div>
+          </Card>
         </motion.div>
       </motion.div>
 
