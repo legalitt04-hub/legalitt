@@ -1,6 +1,5 @@
 import React from 'react';
 import { Search, Bell, Menu } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Input } from '../ui/input';
 import { useLocation } from 'react-router-dom';
 
@@ -39,18 +38,6 @@ const Header = () => {
           <Bell className="w-5 h-5" />
           <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-teal-500 rounded-full ring-2 ring-slate-950" />
         </button>
-
-        {/* Profile */}
-        <div className="flex items-center gap-3 pl-6">
-          <div className="hidden md:block text-right">
-            <p className="text-sm font-medium text-white">Super Admin</p>
-            <p className="text-xs text-slate-400">Headquarters</p>
-          </div>
-          <Avatar className="h-10 w-10 border border-slate-700 bg-slate-900 p-1">
-            <AvatarImage src="/assets/shield-logo.png" />
-            <AvatarFallback>AD</AvatarFallback>
-          </Avatar>
-        </div>
       </div>
     </header>
   );
