@@ -249,6 +249,7 @@ const Earnings = () => {
               )}
             </tbody>
           </table>
+        </div>
         </Card>
       </motion.div>
     </motion.div>

@@ -116,7 +116,6 @@ const Dashboard = () => {
               {Math.abs(stats?.userGrowth || 0)}% this month
             </div>
           </div>
-          </div>
         </Card>
         </motion.div>
 
@@ -132,7 +131,6 @@ const Dashboard = () => {
             <div className="mt-2 inline-flex items-center text-xs font-medium px-2 py-1 rounded-md bg-slate-800 text-slate-300">
               Active on platform
             </div>
-          </div>
           </div>
         </Card>
         </motion.div>
@@ -150,7 +148,6 @@ const Dashboard = () => {
               All time
             </div>
           </div>
-          </div>
         </Card>
         </motion.div>
 
@@ -166,7 +163,6 @@ const Dashboard = () => {
             <div className="mt-2 inline-flex items-center text-xs font-medium px-2 py-1 rounded-md bg-slate-800 text-slate-300">
               {stats?.completionRate || 0}% completion
             </div>
-          </div>
           </div>
         </Card>
         </motion.div>
@@ -184,7 +180,6 @@ const Dashboard = () => {
               {stats?.pendingVerifications > 0 ? '⚠️ Needs attention' : '✓ All clear'}
             </div>
           </div>
-          </div>
         </Card>
         </motion.div>
 
@@ -200,7 +195,6 @@ const Dashboard = () => {
             <div className="mt-2 inline-flex items-center text-xs font-medium px-2 py-1 rounded-md bg-green-500/10 text-green-400">
               {stats?.newBookingsThisMonth || 0} bookings
             </div>
-          </div>
           </div>
         </Card>
         </motion.div>
