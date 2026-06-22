@@ -56,7 +56,7 @@ const Earnings = () => {
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val || 0);
 
-  if (loading) return <div className="text-white text-center py-20">Loading Earnings...</div>;
+  if (loading) return <div className="flex justify-center items-center py-20"><div className="w-8 h-8 border-4 border-teal-500 border-t-transparent rounded-full animate-spin"></div></div>;
 
   const avgBookingValue = data?.totalBookings > 0 ? Math.round((data?.totalRevenue || 0) / data.totalBookings) : 0;
 

@@ -81,7 +81,7 @@ const Dashboard = () => {
   const formatNumber = (val: number) => new Intl.NumberFormat('en-IN').format(val || 0);
 
   if (loading) {
-    return <div className="text-white text-center py-20">Loading Dashboard...</div>;
+    return <div className="flex justify-center items-center py-20"><div className="w-8 h-8 border-4 border-teal-500 border-t-transparent rounded-full animate-spin"></div></div>;
   }
 
   const dbOk = health?.database?.status === 'connected';
