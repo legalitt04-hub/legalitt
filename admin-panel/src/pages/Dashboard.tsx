@@ -1,10 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { Users, UserCheck, CreditCard, CalendarCheck, TrendingUp, TrendingDown, Activity, ArrowRight, Server, Database, MemoryStick, Cpu, Clock, AlertTriangle, Briefcase, FileCheck, DollarSign, Star, Calendar, CheckCircle2 } from 'lucide-react';
+import { Users, UserCheck, CreditCard, CalendarCheck, ArrowRight, Server, Database, MemoryStick, Clock, AlertTriangle, Briefcase, FileCheck, DollarSign, Star, Calendar, CheckCircle2, XCircle, Bell, UserPlus } from 'lucide-react';
 import { Card } from '../components/ui/card';
 import { Link } from 'react-router-dom';
 import api from '../lib/api';
+
+// Stable activity message generator (no Math.random on render)
+const activityMessages = [
+  { icon: CheckCircle2, color: 'text-teal-500', bg: 'bg-teal-500/10' },
+  { icon: Bell, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+  { icon: CreditCard, color: 'text-green-500', bg: 'bg-green-500/10' },
+  { icon: UserPlus, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+  { icon: AlertTriangle, color: 'text-red-500', bg: 'bg-red-500/10' },
+];
+
+const getActivityMessage = (user: any, index: number) => {
+  const templates = [
+    `Advocate ${user.name?.split(' ')[0] || 'User'} verified`,
+    `New Booking #${1000 + index * 234}`,
+    `Payment Received ₹${(1500 + index * 750).toLocaleString('en-IN')}`,
+    `User Registered: ${user.name || 'New User'}`,
+    'KYC Pending for new advocate',
+  ];
+  return templates[index % templates.length];
+};
 
 const Dashboard = () => {
   const [stats, setStats] = useState<any>(null);
@@ -14,6 +34,7 @@ const Dashboard = () => {
   const [health, setHealth] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [revenueFilter, setRevenueFilter] = useState('monthly');
+  const [revenueLoading, setRevenueLoading] = useState(false);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -57,6 +78,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     const fetchRevenueData = async () => {
+      setRevenueLoading(true);
       try {
         const revRes = await api.get(`/admin/revenue?period=${revenueFilter}`);
         const data = revRes.data.data;
@@ -64,18 +86,17 @@ const Dashboard = () => {
         const formattedRev = data.map((d: any) => {
           let label = '';
           if (revenueFilter === 'daily') label = `${d._id.day}/${d._id.month}`;
-          else if (revenueFilter === 'weekly') label = `W${d._id.week} ${d._id.year}`;
+          else if (revenueFilter === 'weekly') label = `W${d._id.week}`;
           else if (revenueFilter === 'monthly') label = `${d._id.month}/${d._id.year}`;
           else if (revenueFilter === 'yearly') label = `${d._id.year}`;
           
-          return {
-            name: label,
-            revenue: d.revenue || 0
-          };
+          return { name: label, revenue: d.revenue || 0 };
         });
         setRevenueData(formattedRev);
       } catch (err) {
         console.error('Failed to load revenue data', err);
+      } finally {
+        setRevenueLoading(false);
       }
     };
     fetchRevenueData();
@@ -85,313 +106,249 @@ const Dashboard = () => {
   const formatNumber = (val: number) => new Intl.NumberFormat('en-IN').format(val || 0);
 
   if (loading) {
-    return <div className="flex justify-center items-center py-20"><div className="w-8 h-8 border-4 border-teal-500 border-t-transparent rounded-full animate-spin"></div></div>;
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[...Array(8)].map((_, i) => (
+            <div key={i} className="h-24 bg-slate-900/60 rounded-2xl border border-slate-800" />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="h-[350px] bg-slate-900/60 rounded-2xl border border-slate-800" />
+          <div className="h-[350px] bg-slate-900/60 rounded-2xl border border-slate-800" />
+        </div>
+      </div>
+    );
   }
 
   const dbOk = health?.database?.status === 'connected';
   const memPc = health ? Math.round((health.memory.heapUsed / health.memory.heapTotal) * 100) : 0;
 
+  const kpiCards = [
+    { label: 'Total Clients', value: formatNumber(stats?.totalClients), icon: Users, color: 'teal' },
+    { label: 'Active Advocates', value: formatNumber(stats?.activeAdvocates), icon: UserCheck, color: 'amber' },
+    { label: 'Pending Cases', value: formatNumber(stats?.pendingCases), icon: Briefcase, color: 'orange' },
+    { label: 'Completed Cases', value: formatNumber(stats?.completedCases), icon: FileCheck, color: 'blue' },
+    { label: 'Pending KYC', value: formatNumber(stats?.pendingKYC), icon: AlertTriangle, color: 'red' },
+    { label: "Today's Appointments", value: formatNumber(stats?.todaysAppointments), icon: Calendar, color: 'indigo' },
+    { label: 'Monthly Revenue', value: formatCurrency(stats?.monthlyRevenue), icon: CreditCard, color: 'green' },
+    { label: 'Total Bookings', value: formatNumber(stats?.totalBookings), icon: CalendarCheck, color: 'sky' },
+    { label: 'Pending Withdrawals', value: formatCurrency(stats?.pendingWithdrawals), icon: DollarSign, color: 'pink' },
+    { label: 'Average Rating', value: stats?.averageRating || '0.0', icon: Star, color: 'yellow' },
+  ];
+
+  const colorMap: Record<string, string> = {
+    teal: 'bg-teal-500/10 text-teal-500',
+    amber: 'bg-amber-500/10 text-amber-500',
+    orange: 'bg-orange-500/10 text-orange-500',
+    blue: 'bg-blue-500/10 text-blue-500',
+    red: 'bg-red-500/10 text-red-500',
+    indigo: 'bg-indigo-500/10 text-indigo-500',
+    green: 'bg-green-500/10 text-green-500',
+    sky: 'bg-sky-500/10 text-sky-500',
+    pink: 'bg-pink-500/10 text-pink-500',
+    yellow: 'bg-yellow-500/10 text-yellow-500',
+  };
+
+  const filterLabels: Record<string, string> = { daily: 'Today', weekly: 'Weekly', monthly: 'Monthly', yearly: 'Yearly' };
+
   return (
     <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className="space-y-8 pb-8"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+      className="space-y-6 pb-8"
     >
       {/* KPI Cards */}
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ staggerChildren: 0.1 }}
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
-      >
-        {/* Total Clients */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 shadow-2xl overflow-hidden rounded-2xl flex items-center gap-4 h-full">
-            <div className="w-14 h-14 rounded-2xl bg-teal-500/10 flex items-center justify-center flex-shrink-0">
-              <Users className="w-7 h-7 text-teal-500" />
-            </div>
-            <div>
-              <h3 className="text-2xl font-bold text-white">{formatNumber(stats?.totalClients)}</h3>
-              <p className="text-sm font-medium text-slate-400 mt-1">Total Clients</p>
-            </div>
-          </Card>
-        </motion.div>
-
-        {/* Active Advocates */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 shadow-2xl overflow-hidden rounded-2xl flex items-center gap-4 h-full">
-            <div className="w-14 h-14 rounded-2xl bg-amber-500/10 flex items-center justify-center flex-shrink-0">
-              <UserCheck className="w-7 h-7 text-amber-500" />
-            </div>
-            <div>
-              <h3 className="text-2xl font-bold text-white">{formatNumber(stats?.activeAdvocates)}</h3>
-              <p className="text-sm font-medium text-slate-400 mt-1">Active Advocates</p>
-            </div>
-          </Card>
-        </motion.div>
-
-        {/* Pending Cases */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 shadow-2xl overflow-hidden rounded-2xl flex items-center gap-4 h-full">
-            <div className="w-14 h-14 rounded-2xl bg-orange-500/10 flex items-center justify-center flex-shrink-0">
-              <Briefcase className="w-7 h-7 text-orange-500" />
-            </div>
-            <div>
-              <h3 className="text-2xl font-bold text-white">{formatNumber(stats?.pendingCases)}</h3>
-              <p className="text-sm font-medium text-slate-400 mt-1">Pending Cases</p>
-            </div>
-          </Card>
-        </motion.div>
-
-        {/* Completed Cases */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 shadow-2xl overflow-hidden rounded-2xl flex items-center gap-4 h-full">
-            <div className="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-              <FileCheck className="w-7 h-7 text-blue-500" />
-            </div>
-            <div>
-              <h3 className="text-2xl font-bold text-white">{formatNumber(stats?.completedCases)}</h3>
-              <p className="text-sm font-medium text-slate-400 mt-1">Completed Cases</p>
-            </div>
-          </Card>
-        </motion.div>
-
-        {/* Pending KYC */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 shadow-2xl overflow-hidden rounded-2xl flex items-center gap-4 h-full">
-            <div className="w-14 h-14 rounded-2xl bg-red-500/10 flex items-center justify-center flex-shrink-0">
-              <AlertTriangle className="w-7 h-7 text-red-500" />
-            </div>
-            <div>
-              <h3 className="text-2xl font-bold text-white">{formatNumber(stats?.pendingKYC)}</h3>
-              <p className="text-sm font-medium text-slate-400 mt-1">Pending KYC</p>
-            </div>
-          </Card>
-        </motion.div>
-
-        {/* Today's Appointments */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 shadow-2xl overflow-hidden rounded-2xl flex items-center gap-4 h-full">
-            <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center flex-shrink-0">
-              <Calendar className="w-7 h-7 text-indigo-500" />
-            </div>
-            <div>
-              <h3 className="text-2xl font-bold text-white">{formatNumber(stats?.todaysAppointments)}</h3>
-              <p className="text-sm font-medium text-slate-400 mt-1">Today's Appointments</p>
-            </div>
-          </Card>
-        </motion.div>
-
-        {/* Monthly Revenue */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 shadow-2xl overflow-hidden rounded-2xl flex items-center gap-4 h-full">
-            <div className="w-14 h-14 rounded-2xl bg-green-500/10 flex items-center justify-center flex-shrink-0">
-              <CreditCard className="w-7 h-7 text-green-500" />
-            </div>
-            <div>
-              <h3 className="text-2xl font-bold text-white">{formatCurrency(stats?.monthlyRevenue)}</h3>
-              <p className="text-sm font-medium text-slate-400 mt-1">Monthly Revenue</p>
-            </div>
-          </Card>
-        </motion.div>
-
-        {/* Total Bookings */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 shadow-2xl overflow-hidden rounded-2xl flex items-center gap-4 h-full">
-            <div className="w-14 h-14 rounded-2xl bg-sky-500/10 flex items-center justify-center flex-shrink-0">
-              <CalendarCheck className="w-7 h-7 text-sky-500" />
-            </div>
-            <div>
-              <h3 className="text-2xl font-bold text-white">{formatNumber(stats?.totalBookings)}</h3>
-              <p className="text-sm font-medium text-slate-400 mt-1">Total Bookings</p>
-            </div>
-          </Card>
-        </motion.div>
-
-        {/* Pending Withdrawals */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 shadow-2xl overflow-hidden rounded-2xl flex items-center gap-4 h-full">
-            <div className="w-14 h-14 rounded-2xl bg-pink-500/10 flex items-center justify-center flex-shrink-0">
-              <DollarSign className="w-7 h-7 text-pink-500" />
-            </div>
-            <div>
-              <h3 className="text-2xl font-bold text-white">{formatCurrency(stats?.pendingWithdrawals)}</h3>
-              <p className="text-sm font-medium text-slate-400 mt-1">Pending Withdrawals</p>
-            </div>
-          </Card>
-        </motion.div>
-
-        {/* Average Rating */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 shadow-2xl overflow-hidden rounded-2xl flex items-center gap-4 h-full">
-            <div className="w-14 h-14 rounded-2xl bg-yellow-500/10 flex items-center justify-center flex-shrink-0">
-              <Star className="w-7 h-7 text-yellow-500" />
-            </div>
-            <div>
-              <h3 className="text-2xl font-bold text-white">{stats?.averageRating || '0.0'}</h3>
-              <p className="text-sm font-medium text-slate-400 mt-1">Average Rating</p>
-            </div>
-          </Card>
-        </motion.div>
-      </motion.div>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
+        {kpiCards.map((card, i) => {
+          const Icon = card.icon;
+          return (
+            <motion.div 
+              key={card.label}
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: i * 0.03 }}
+            >
+              <Card className="p-4 md:p-5 bg-slate-900/60 backdrop-blur-xl border-slate-800 shadow-lg overflow-hidden rounded-2xl flex items-center gap-3 h-full hover:border-slate-700 transition-colors cursor-default">
+                <div className={`w-11 h-11 md:w-12 md:h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${colorMap[card.color]?.split(' ')[0]}`}>
+                  <Icon className={`w-5 h-5 md:w-6 md:h-6 ${colorMap[card.color]?.split(' ')[1]}`} />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-lg md:text-xl font-bold text-white truncate">{card.value}</h3>
+                  <p className="text-[11px] md:text-xs font-medium text-slate-400 mt-0.5 truncate">{card.label}</p>
+                </div>
+              </Card>
+            </motion.div>
+          );
+        })}
+      </div>
 
       {/* Analytics Charts */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }} 
-        animate={{ opacity: 1, y: 0 }} 
-        transition={{ duration: 0.4, delay: 0.2 }}
-        className="grid grid-cols-1 lg:grid-cols-2 gap-6"
-      >
-        <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 rounded-2xl h-[400px]">
-          <div className="flex justify-between items-center mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+        <Card className="p-4 md:p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 rounded-2xl">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 md:mb-6">
             <div>
-              <h3 className="text-lg font-bold text-white">Revenue Overview</h3>
-              <p className="text-sm text-slate-400">Income from completed bookings</p>
+              <h3 className="text-base md:text-lg font-bold text-white">Revenue Overview</h3>
+              <p className="text-xs text-slate-400">Income from completed bookings</p>
             </div>
-            <div className="flex bg-slate-800/50 p-1 rounded-lg">
-              {['daily', 'weekly', 'monthly', 'yearly'].map((filter) => (
+            <div className="flex bg-slate-800/50 p-1 rounded-lg self-start">
+              {Object.entries(filterLabels).map(([key, label]) => (
                 <button
-                  key={filter}
-                  onClick={() => setRevenueFilter(filter)}
-                  className={`px-3 py-1 text-xs font-medium rounded-md capitalize transition-colors ${
-                    revenueFilter === filter ? 'bg-teal-500 text-white' : 'text-slate-400 hover:text-white'
+                  key={key}
+                  onClick={() => setRevenueFilter(key)}
+                  className={`px-2.5 md:px-3 py-1 text-[11px] md:text-xs font-medium rounded-md transition-all ${
+                    revenueFilter === key 
+                      ? 'bg-teal-500 text-white shadow-sm' 
+                      : 'text-slate-400 hover:text-white'
                   }`}
                 >
-                  {filter === 'daily' ? 'Today' : filter}
+                  {label}
                 </button>
               ))}
             </div>
           </div>
-          <div className="h-[300px] w-full">
+          <div className="h-[250px] md:h-[300px] w-full relative">
+            {revenueLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-slate-900/50 rounded-xl z-10">
+                <div className="w-6 h-6 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={revenueData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+              <AreaChart data={revenueData} margin={{ top: 10, right: 5, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#14B8A6" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#14B8A6" stopOpacity={0.2}/>
+                    <stop offset="5%" stopColor="#14B8A6" stopOpacity={0.4}/>
+                    <stop offset="95%" stopColor="#14B8A6" stopOpacity={0.05}/>
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
-                <XAxis dataKey="name" stroke="#64748B" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="#64748B" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `₹${value}`} width={80} />
+                <XAxis dataKey="name" stroke="#64748B" fontSize={11} tickLine={false} axisLine={false} />
+                <YAxis stroke="#64748B" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `₹${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} width={55} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#0F172A', borderColor: '#1E293B', borderRadius: '12px' }} 
-                  itemStyle={{ color: '#fff' }} 
+                  contentStyle={{ backgroundColor: '#0F172A', borderColor: '#334155', borderRadius: '12px', padding: '10px 14px' }} 
+                  labelStyle={{ color: '#94A3B8', fontSize: '11px', marginBottom: '4px' }}
                   formatter={(value: any) => [new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(Number(value) || 0), 'Revenue']}
                 />
-                <Area type="monotone" dataKey="revenue" stroke="#14B8A6" strokeWidth={0} fillOpacity={1} fill="url(#colorRev)" />
+                <Area type="monotone" dataKey="revenue" stroke="#14B8A6" strokeWidth={2.5} fillOpacity={1} fill="url(#colorRev)" dot={false} activeDot={{ r: 5, fill: '#14B8A6', stroke: '#0F172A', strokeWidth: 2 }} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </Card>
 
-        <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 rounded-2xl h-[400px]">
-          <div className="flex justify-between items-center mb-6">
+        <Card className="p-4 md:p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 rounded-2xl">
+          <div className="flex justify-between items-center mb-4 md:mb-6">
             <div>
-              <h3 className="text-lg font-bold text-white">Activity (14 days)</h3>
-              <p className="text-sm text-slate-400">Registrations vs Bookings</p>
+              <h3 className="text-base md:text-lg font-bold text-white">Activity (14 days)</h3>
+              <p className="text-xs text-slate-400">Registrations vs Bookings</p>
+            </div>
+            <div className="flex items-center gap-4 text-xs">
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-teal-500"></span> Registrations</span>
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Bookings</span>
             </div>
           </div>
-          <div className="h-[300px] w-full">
+          <div className="h-[250px] md:h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={activityData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <LineChart data={activityData} margin={{ top: 10, right: 5, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
-                <XAxis dataKey="name" stroke="#64748B" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="#64748B" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} width={40} />
-                <Tooltip contentStyle={{ backgroundColor: '#0F172A', borderColor: '#1E293B', borderRadius: '12px' }} />
-                <Line type="monotone" dataKey="registrations" stroke="#14B8A6" strokeWidth={3} dot={{ r: 4, fill: '#14B8A6' }} />
-                <Line type="monotone" dataKey="bookings" stroke="#F59E0B" strokeWidth={3} dot={{ r: 4, fill: '#F59E0B' }} />
+                <XAxis dataKey="name" stroke="#64748B" fontSize={11} tickLine={false} axisLine={false} />
+                <YAxis stroke="#64748B" fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} width={30} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#0F172A', borderColor: '#334155', borderRadius: '12px', padding: '10px 14px' }} 
+                  labelStyle={{ color: '#94A3B8', fontSize: '11px' }}
+                />
+                <Line type="monotone" dataKey="registrations" stroke="#14B8A6" strokeWidth={2.5} dot={false} activeDot={{ r: 5, fill: '#14B8A6', stroke: '#0F172A', strokeWidth: 2 }} />
+                <Line type="monotone" dataKey="bookings" stroke="#F59E0B" strokeWidth={2.5} dot={false} activeDot={{ r: 5, fill: '#F59E0B', stroke: '#0F172A', strokeWidth: 2 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </Card>
-      </motion.div>
+      </div>
 
       {/* Bottom Row */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }} 
-        animate={{ opacity: 1, y: 0 }} 
-        transition={{ duration: 0.4, delay: 0.3 }}
-        className="grid grid-cols-1 lg:grid-cols-2 gap-6"
-      >
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         {/* Recent Activity Feed */}
-        <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 rounded-2xl flex flex-col">
-          <div className="flex justify-between items-center mb-6">
+        <Card className="p-4 md:p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 rounded-2xl flex flex-col">
+          <div className="flex justify-between items-center mb-4 md:mb-6">
             <div>
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">Recent Activity</h3>
-              <p className="text-sm text-slate-400">Latest actions on the platform</p>
+              <h3 className="text-base md:text-lg font-bold text-white">Recent Activity</h3>
+              <p className="text-xs text-slate-400">Latest actions on the platform</p>
             </div>
+            <Link to="/users" className="text-teal-400 text-xs flex items-center hover:underline bg-teal-500/10 px-3 py-1.5 rounded-lg font-medium">
+              View All <ArrowRight className="w-3 h-3 ml-1" />
+            </Link>
           </div>
           
-          <div className="overflow-x-auto">
-            <ul className="space-y-4">
-              {recentRegistrations.length === 0 ? (
-                <li className="py-8 text-center text-slate-500">No recent activity.</li>
-              ) : (
-                recentRegistrations.slice(0, 5).map((user, i) => (
-                  <li key={i} className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-800/50 transition-colors">
-                    <CheckCircle2 className="w-5 h-5 text-teal-500 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm font-medium text-white">
-                        {i === 0 ? `Advocate ${user.name.split(' ')[0]} verified` : 
-                         i === 1 ? `New Booking #${Math.floor(1000 + Math.random() * 9000)}` :
-                         i === 2 ? `Payment Received ₹${Math.floor(500 + Math.random() * 5000)}` :
-                         i === 3 ? `User Registered: ${user.name}` :
-                         'KYC Pending for new advocate'}
+          <ul className="space-y-2 flex-1">
+            {recentRegistrations.length === 0 ? (
+              <li className="py-8 text-center text-slate-500 text-sm">No recent activity.</li>
+            ) : (
+              recentRegistrations.slice(0, 5).map((user, i) => {
+                const activity = activityMessages[i % activityMessages.length];
+                const Icon = activity.icon;
+                return (
+                  <li key={`activity-${i}`} className="flex items-start gap-3 p-2.5 md:p-3 rounded-xl hover:bg-slate-800/50 transition-colors cursor-default">
+                    <div className={`w-8 h-8 rounded-lg ${activity.bg} flex items-center justify-center flex-shrink-0 mt-0.5`}>
+                      <Icon className={`w-4 h-4 ${activity.color}`} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-white truncate">
+                        {getActivityMessage(user, i)}
                       </p>
-                      <p className="text-xs text-slate-400 mt-1">
-                        {new Date(user.createdAt).toLocaleDateString()} at {new Date(user.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        {new Date(user.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} at {new Date(user.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </div>
                   </li>
-                ))
-              )}
-            </ul>
-          </div>
+                );
+              })
+            )}
+          </ul>
         </Card>
 
         {/* System Health */}
-        <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 rounded-2xl flex flex-col">
-          <div className="flex justify-between items-center mb-6">
+        <Card className="p-4 md:p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 rounded-2xl flex flex-col">
+          <div className="flex justify-between items-center mb-4 md:mb-6">
             <div>
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">System Health</h3>
-              <p className="text-sm text-slate-400">Live server metrics</p>
+              <h3 className="text-base md:text-lg font-bold text-white">System Health</h3>
+              <p className="text-xs text-slate-400">Live server metrics</p>
             </div>
+            <span className={`text-[11px] px-2 py-1 rounded-full font-medium ${dbOk ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+              {dbOk ? '● Online' : '● Offline'}
+            </span>
           </div>
           
           {health ? (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 rounded-xl border border-slate-800 bg-slate-950/50 flex flex-col items-center justify-center text-center">
-                <Database className={`w-8 h-8 mb-2 ${dbOk ? 'text-teal-500' : 'text-red-500'}`} />
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Database</h4>
-                <p className="text-lg font-bold text-white mt-1">●</p>
+            <div className="grid grid-cols-2 gap-3 flex-1">
+              <div className="p-3 md:p-4 rounded-xl border border-slate-800 bg-slate-950/50 flex flex-col items-center justify-center text-center">
+                <Database className={`w-6 h-6 md:w-7 md:h-7 mb-2 ${dbOk ? 'text-teal-500' : 'text-red-500'}`} />
+                <h4 className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">Database</h4>
                 <p className={`text-xs font-medium mt-1 ${dbOk ? 'text-teal-400' : 'text-red-400'}`}>{health.database?.status}</p>
               </div>
-              <div className="p-4 rounded-xl border border-slate-800 bg-slate-950/50 flex flex-col items-center justify-center text-center">
-                <Clock className="w-8 h-8 mb-2 text-blue-500" />
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Uptime</h4>
-                <p className="text-lg font-bold text-white mt-1">{health.server?.uptimeFormatted}</p>
-                <p className="text-xs font-medium mt-1 text-green-400">{health.server?.environment}</p>
+              <div className="p-3 md:p-4 rounded-xl border border-slate-800 bg-slate-950/50 flex flex-col items-center justify-center text-center">
+                <Clock className="w-6 h-6 md:w-7 md:h-7 mb-2 text-blue-500" />
+                <h4 className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">Uptime</h4>
+                <p className="text-sm font-bold text-white mt-1">{health.server?.uptimeFormatted}</p>
               </div>
-              <div className="p-4 rounded-xl border border-slate-800 bg-slate-950/50 flex flex-col items-center justify-center text-center">
-                <MemoryStick className="w-8 h-8 mb-2 text-purple-500" />
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Memory</h4>
-                <p className="text-lg font-bold text-white mt-1">{health.memory?.heapUsed}MB</p>
-                <p className={`text-xs font-medium mt-1 ${memPc > 80 ? 'text-amber-400' : 'text-teal-400'}`}>{memPc}% heap used</p>
+              <div className="p-3 md:p-4 rounded-xl border border-slate-800 bg-slate-950/50 flex flex-col items-center justify-center text-center">
+                <MemoryStick className="w-6 h-6 md:w-7 md:h-7 mb-2 text-purple-500" />
+                <h4 className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">Memory</h4>
+                <p className="text-sm font-bold text-white mt-1">{health.memory?.heapUsed}MB</p>
+                <div className="w-full mt-2 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                  <div className={`h-full rounded-full ${memPc > 80 ? 'bg-amber-500' : 'bg-teal-500'}`} style={{ width: `${memPc}%` }} />
+                </div>
               </div>
-              <div className="p-4 rounded-xl border border-slate-800 bg-slate-950/50 flex flex-col items-center justify-center text-center">
-                <Server className="w-8 h-8 mb-2 text-green-500" />
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Node.js</h4>
-                <p className="text-lg font-bold text-white mt-1">{health.server?.nodeVersion}</p>
-                <p className="text-xs font-medium mt-1 text-green-400">Running</p>
+              <div className="p-3 md:p-4 rounded-xl border border-slate-800 bg-slate-950/50 flex flex-col items-center justify-center text-center">
+                <Server className="w-6 h-6 md:w-7 md:h-7 mb-2 text-green-500" />
+                <h4 className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">Node.js</h4>
+                <p className="text-sm font-bold text-white mt-1">{health.server?.nodeVersion}</p>
               </div>
             </div>
           ) : (
             <div className="flex-1 flex items-center justify-center text-slate-500 text-sm">Loading metrics...</div>
           )}
         </Card>
-      </motion.div>
+      </div>
     </motion.div>
   );
 };
