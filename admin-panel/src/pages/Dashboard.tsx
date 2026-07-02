@@ -76,12 +76,37 @@ const Dashboard = () => {
         
         // If the platform is very new, provide realistic mock activity data for presentation
         if (!hasRealActivityData || (actRes.data.data.registrations?.length || 0) < 3) {
+          const statsData = statsRes.data.data || {};
+          const mockClients = statsData.totalClients ?? 245;
+          const mockBookings = statsData.totalBookings ?? 488;
+          
+          // Allocate roughly 30% of all-time stats to the last 14 days
+          const recentRegs = Math.ceil(mockClients * 0.3);
+          const recentBooks = Math.ceil(mockBookings * 0.3);
+          
+          const distribute = (total: number, count: number) => {
+            if (total <= 0) return Array(count).fill(0);
+            let arr = [];
+            let sum = 0;
+            for(let i=0; i<count; i++) {
+              const val = (i+1) + Math.random() * count; 
+              arr.push(val);
+              sum += val;
+            }
+            arr = arr.map(v => Math.round((v / sum) * total));
+            const newSum = arr.reduce((a,b)=>a+b, 0);
+            arr[count-1] += (total - newSum);
+            // Don't allow negative numbers from rounding
+            if(arr[count-1] < 0) arr[count-1] = 0;
+            return arr;
+          };
+
+          const regArray = distribute(recentRegs, 14);
+          const bookArray = distribute(recentBooks, 14);
+
           actFormatted.forEach((item, idx) => {
-            // Generate a realistic looking trend
-            const baseReg = 5 + Math.floor(Math.random() * 15) + (idx * 1.5);
-            const baseBook = 10 + Math.floor(Math.random() * 25) + (idx * 2.5);
-            item.registrations = Math.floor(baseReg);
-            item.bookings = Math.floor(baseBook);
+            item.registrations = regArray[idx];
+            item.bookings = bookArray[idx];
           });
         }
         
@@ -123,38 +148,55 @@ const Dashboard = () => {
           let count = 0;
           let interval = 0; // days between points
           let labelFormatter: (d: Date) => string;
-          let baseValue = 0;
-          let variance = 0;
+          
+          const monthlyRev = stats?.monthlyRevenue ?? 845000;
+          let targetTotalRevenue = 0;
           
           if (revenueFilter === 'daily') {
-            count = 14; interval = 1; baseValue = 25000; variance = 15000;
+            count = 14; interval = 1; 
+            targetTotalRevenue = Math.round(monthlyRev * 0.5); // 14 days is ~half a month
             labelFormatter = (d) => `${d.getDate()}/${d.getMonth()+1}`;
           } else if (revenueFilter === 'weekly') {
-            count = 12; interval = 7; baseValue = 180000; variance = 60000;
+            count = 12; interval = 7; 
+            targetTotalRevenue = monthlyRev * 3; // 12 weeks = ~3 months
             labelFormatter = (d) => {
-              // Approximate week number logic for mock data
               const start = new Date(d.getFullYear(), 0, 1);
               const days = Math.floor((d.getTime() - start.getTime()) / (24 * 60 * 60 * 1000));
               return `W${Math.ceil(days / 7)}`;
             };
           } else if (revenueFilter === 'monthly') {
-            count = 12; interval = 30; baseValue = 850000; variance = 350000;
+            count = 12; interval = 30; 
+            targetTotalRevenue = monthlyRev * 12; // 12 months = 1 year
             labelFormatter = (d) => `${d.getMonth()+1}/${d.getFullYear()}`;
           } else { // yearly
-            count = 4; interval = 365; baseValue = 9500000; variance = 4500000;
+            count = 4; interval = 365; 
+            targetTotalRevenue = monthlyRev * 48; // 4 years
             labelFormatter = (d) => `${d.getFullYear()}`;
           }
           
+          const distribute = (total: number, count: number) => {
+            if (total <= 0) return Array(count).fill(0);
+            let arr = [];
+            let sum = 0;
+            for(let i=0; i<count; i++) {
+              const val = (i+1) + Math.random() * count; 
+              arr.push(val);
+              sum += val;
+            }
+            arr = arr.map(v => Math.round((v / sum) * total));
+            const newSum = arr.reduce((a,b)=>a+b, 0);
+            arr[count-1] += (total - newSum);
+            if(arr[count-1] < 0) arr[count-1] = 0;
+            return arr;
+          };
+
+          const revArray = distribute(targetTotalRevenue, count);
+
           for (let i = count - 1; i >= 0; i--) {
             const d = new Date(now.getTime() - (i * interval * 24 * 60 * 60 * 1000));
-            // Create a general upward trend
-            const trend = 1 + ((count - 1 - i) * 0.15);
-            const randomVar = (Math.random() * variance) - (variance / 2);
-            const val = Math.max(5000, Math.floor((baseValue + randomVar) * trend));
-            
             formattedRev.push({
               name: labelFormatter(d),
-              revenue: val
+              revenue: revArray[count - 1 - i]
             });
           }
         }
