@@ -128,7 +128,52 @@ const Advocates = () => {
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto flex-1">
+            {/* Mobile Card View */}
+            <div className="md:hidden divide-y divide-slate-800/50 flex-1">
+              {advocates.map((adv: any) => (
+                <div key={adv._id} className="p-4 hover:bg-slate-800/20 transition-colors">
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center overflow-hidden flex-shrink-0 border border-slate-700">
+                        {adv.user?.avatar ? <img src={adv.user.avatar} className="w-full h-full object-cover" /> : <span className="text-slate-300 font-medium text-sm">{adv.user?.name?.charAt(0) || '?'}</span>}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-white truncate flex items-center gap-1.5">
+                          {adv.user?.name || 'Unknown'}
+                          {!adv.user?.isActive && <Ban className="w-3 h-3 text-red-500" />}
+                        </p>
+                        <p className="text-xs text-slate-400 truncate">{adv.user?.email}</p>
+                      </div>
+                    </div>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${adv.verificationStatus === 'approved' ? 'bg-green-500/10 text-green-400' : adv.verificationStatus === 'pending' || adv.verificationStatus === 'under_review' ? 'bg-amber-500/10 text-amber-400' : 'bg-red-500/10 text-red-400'}`}>
+                      {adv.verificationStatus.replace('_', ' ')}
+                    </span>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+                    <div>
+                      <p className="text-slate-500">Bar Council</p>
+                      <p className="text-slate-300 mt-0.5 font-mono">{adv.barCouncilNumber || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-500">Fee</p>
+                      <p className="text-amber-400 font-bold mt-0.5">₹{adv.consultationFee || 0}</p>
+                    </div>
+                  </div>
+                  
+                  <Button 
+                    onClick={() => handleView(adv._id)} 
+                    variant="outline" size="sm" 
+                    className="w-full bg-slate-900 border-amber-500/20 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 h-8 text-xs"
+                  >
+                    View Profile
+                  </Button>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto flex-1">
               <table className="w-full text-left border-collapse min-w-[1000px]">
                 <thead>
                   <tr className="border-b border-slate-800 text-slate-400 text-xs uppercase tracking-wider bg-slate-950/30">
