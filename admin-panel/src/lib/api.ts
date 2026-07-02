@@ -29,7 +29,9 @@ api.interceptors.response.use(
     if (error.response && error.response.status === 401) {
       // Token is invalid or expired, clear it and redirect to login
       localStorage.removeItem('adminToken');
-      window.location.href = '/login';
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
