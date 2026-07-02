@@ -44,19 +44,22 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center relative overflow-hidden">
-      {/* Background Orbs */}
-      <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-teal-500/20 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-blue-500/20 rounded-full blur-[120px] pointer-events-none" />
+      {/* Background Glows */}
+      <div className="absolute top-[-15%] left-[-10%] w-[500px] h-[500px] bg-amber-500/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-15%] right-[-10%] w-[500px] h-[500px] bg-teal-500/10 rounded-full blur-[120px] pointer-events-none" />
       
+      {/* Subtle Grid Pattern */}
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wMykiLz48L3N2Zz4=')] opacity-50" />
+
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
-        className="w-full max-w-md p-8 rounded-3xl bg-slate-900/50 backdrop-blur-2xl border border-slate-800 shadow-2xl shadow-black/50 z-10"
+        className="w-full max-w-md p-8 md:p-10 rounded-3xl bg-slate-900/60 backdrop-blur-2xl border border-slate-800/80 shadow-2xl shadow-black/60 z-10"
       >
         <div className="flex flex-col items-center mb-8">
           <div className="w-20 h-20 mb-6 relative">
-            <div className="absolute inset-0 bg-teal-500/20 blur-xl rounded-full"></div>
+            <div className="absolute inset-0 bg-amber-500/20 blur-xl rounded-full"></div>
             <img src="/assets/shield-logo.png" alt="Legalitt Shield" className="w-full h-full object-contain relative z-10" />
           </div>
           <h1 className="text-2xl font-bold text-white mb-2">Welcome Back</h1>
@@ -103,7 +106,7 @@ const Login = () => {
           <Button 
             type="submit" 
             disabled={loading}
-            className="w-full h-12 mt-6 bg-gradient-to-r from-teal-500 to-blue-500 hover:from-teal-400 hover:to-blue-400 text-white rounded-xl font-medium shadow-lg shadow-teal-500/25 transition-all duration-300 hover:shadow-teal-500/40"
+            className="w-full h-12 mt-6 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 rounded-xl font-bold shadow-lg shadow-amber-500/20 transition-all duration-300 hover:shadow-amber-500/30"
           >
             {loading ? (
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />

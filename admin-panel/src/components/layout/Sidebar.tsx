@@ -64,7 +64,7 @@ const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
               <img src="/assets/shield-logo.png" alt="Legalitt Shield" className="w-full h-full object-contain" />
             </div>
             <span className="text-2xl font-bold text-white tracking-tight">
-              Legal<span className="text-teal-400">itt</span>
+              Legal<span className="text-amber-500">itt</span>
             </span>
           </div>
 
@@ -87,10 +87,10 @@ const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
                     {isActive && (
                       <motion.div 
                         layoutId="activeTab" 
-                        className="absolute left-0 top-0 w-1 h-full bg-teal-500 rounded-r-full"
+                        className="absolute left-0 top-0 w-1 h-full bg-amber-500 rounded-r-full"
                       />
                     )}
-                    <item.icon className={cn("w-5 h-5", isActive ? "text-teal-400" : "group-hover:text-teal-400 transition-colors")} />
+                    <item.icon className={cn("w-5 h-5", isActive ? "text-amber-400" : "group-hover:text-amber-400 transition-colors")} />
                     <span className="font-medium">{item.label}</span>
                   </>
                 )}
@@ -102,8 +102,8 @@ const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
           <div className="p-4 mt-auto">
             <div className="p-4 rounded-xl bg-slate-800/30 border border-slate-700/50 backdrop-blur-sm">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-teal-500 flex items-center justify-center">
-                  <span className="font-bold text-white text-sm">AD</span>
+                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-amber-600 to-amber-500 flex items-center justify-center">
+                  <span className="font-bold text-slate-950 text-sm">AD</span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-white truncate">Admin User</p>

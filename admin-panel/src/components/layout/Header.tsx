@@ -24,7 +24,6 @@ const Header = ({ onMenuClick }: HeaderProps) => {
   const pageInfo = getPageInfo(location.pathname);
   const { logout } = useAuth();
   const [profileOpen, setProfileOpen] = useState(false);
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -68,24 +67,6 @@ const Header = ({ onMenuClick }: HeaderProps) => {
       </div>
 
       <div className="flex items-center gap-2 md:gap-4">
-        {/* Desktop Search Bar */}
-        <div className="hidden md:flex relative group w-56 lg:w-64">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 group-focus-within:text-teal-500 transition-colors" />
-          <Input 
-            placeholder="Search..." 
-            className="pl-9 h-9 bg-slate-900/50 border-slate-800 focus:border-teal-500/50 w-full text-sm"
-          />
-        </div>
-
-        {/* Mobile Search Toggle */}
-        <button 
-          onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
-          className="md:hidden p-2 text-slate-400 hover:text-white transition-colors rounded-lg hover:bg-slate-800 active:scale-95"
-          aria-label="Search"
-        >
-          <Search className="w-4 h-4" />
-        </button>
-
         {/* Notifications */}
         <button 
           className="relative p-2 text-slate-400 hover:text-white transition-colors rounded-lg hover:bg-slate-800 active:scale-95"
@@ -144,19 +125,6 @@ const Header = ({ onMenuClick }: HeaderProps) => {
         </div>
       </div>
 
-      {/* Mobile Search Drawer */}
-      {mobileSearchOpen && (
-        <div className="absolute top-full left-0 right-0 p-3 bg-slate-950/95 backdrop-blur-xl border-b border-slate-800 md:hidden z-50">
-          <div className="relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <Input 
-              placeholder="Search users, cases, advocates..." 
-              className="pl-9 h-10 bg-slate-900/50 border-slate-800 text-white w-full text-sm"
-              autoFocus
-            />
-          </div>
-        </div>
-      )}
     </header>
   );
 };

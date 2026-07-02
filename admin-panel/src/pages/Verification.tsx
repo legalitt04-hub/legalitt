@@ -1,26 +1,63 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card } from '../components/ui/card';
-import { ShieldCheck, Check, X, Eye, FileText, Clock, Search as SearchIcon } from 'lucide-react';
+import { ShieldCheck, Check, X, Eye, FileText, Clock, Search as SearchIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
 import api from '../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Verification = () => {
   const [verifications, setVerifications] = useState<any[]>([]);
-  const [allAdvocates, setAllAdvocates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDocs, setSelectedDocs] = useState<any>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState('pending');
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const limit = 20;
+
+  // Stats (simulated for now since API doesn't return count aggregations by default)
+  const [stats, setStats] = useState({ pending: 0, under_review: 0, approved: 0 });
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [statusFilter]);
 
   useEffect(() => {
     fetchVerifications();
-  }, []);
+  }, [page, statusFilter, debouncedSearch]);
 
   const fetchVerifications = async () => {
+    setLoading(true);
     try {
-      const res = await api.get('/admin/advocates?limit=100');
-      setAllAdvocates(res.data.data);
-      setVerifications(res.data.data.filter((v: any) => v.verificationStatus === 'pending' || v.verificationStatus === 'under_review'));
+      const queryParams = new URLSearchParams();
+      queryParams.append('limit', limit.toString());
+      queryParams.append('page', page.toString());
+      if (statusFilter) queryParams.append('verificationStatus', statusFilter);
+      if (debouncedSearch) queryParams.append('search', debouncedSearch);
+
+      const res = await api.get(`/admin/advocates?${queryParams.toString()}`);
+      setVerifications(res.data.data);
+      if (res.data.pagination) {
+        setTotalPages(res.data.pagination.pages);
+        setTotalItems(res.data.pagination.total);
+      }
+      
+      // Fetch stats only once or when needed (this is a bit hacky without a dedicated stats endpoint)
+      if (stats.pending === 0 && statusFilter === 'pending' && !debouncedSearch) {
+         setStats(prev => ({ ...prev, pending: res.data.pagination?.total || 0 }));
+      }
     } catch (err) {
       console.error('Failed to load verifications', err);
     } finally {
@@ -33,17 +70,17 @@ const Verification = () => {
     try {
       await api.patch(`/admin/advocates/${id}/verify`, { status, note: `Admin ${status}` });
       setVerifications(prev => prev.filter(v => v._id !== id));
-      setAllAdvocates(prev => prev.map(a => a._id === id ? { ...a, verificationStatus: status } : a));
+      setStats(prev => ({
+        ...prev,
+        [statusFilter]: Math.max(0, prev[statusFilter as keyof typeof prev] - 1),
+        approved: status === 'approved' ? prev.approved + 1 : prev.approved
+      }));
     } catch (err) {
       alert('Failed to update verification status');
     } finally {
       setActionLoading(null);
     }
-  }, []);
-
-  const pendingCount = allAdvocates.filter(a => a.verificationStatus === 'pending').length;
-  const underReviewCount = allAdvocates.filter(a => a.verificationStatus === 'under_review').length;
-  const approvedCount = allAdvocates.filter(a => a.verificationStatus === 'approved').length;
+  }, [statusFilter]);
 
   return (
     <motion.div 
@@ -52,49 +89,38 @@ const Verification = () => {
       transition={{ duration: 0.3 }}
       className="space-y-6 pb-8 relative"
     >
-      {/* Stats Cards */}
-      <div className="grid grid-cols-3 gap-3 md:gap-6">
-        <Card className="p-4 md:p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 rounded-2xl flex flex-col md:flex-row items-start md:items-center gap-3 md:gap-4">
-          <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-amber-500/10 flex items-center justify-center flex-shrink-0">
-            <Clock className="w-6 h-6 md:w-7 md:h-7 text-amber-500" />
+      {/* Applications List */}
+      <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-sm overflow-hidden flex flex-col min-h-[500px]">
+        <div className="p-3 md:p-4 border-b border-slate-800 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
+          <div className="flex-1 max-w-md relative">
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+            <Input 
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search advocates by name or email..." 
+              className="pl-9 h-9 bg-slate-950/50 border-slate-800 text-white w-full text-sm focus-visible:ring-teal-500"
+            />
           </div>
-          <div>
-            <h3 className="text-2xl md:text-3xl font-bold text-white">{pendingCount}</h3>
-            <p className="text-[11px] md:text-sm font-medium text-slate-400 mt-0.5">Pending</p>
+          <div className="flex bg-slate-950/50 rounded-lg p-1 border border-slate-800">
+            <button 
+              onClick={() => setStatusFilter('pending')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all flex-1 sm:flex-none ${statusFilter === 'pending' ? 'bg-amber-500/20 text-amber-400' : 'text-slate-400 hover:text-white'}`}
+            >
+              Pending
+            </button>
+            <button 
+              onClick={() => setStatusFilter('under_review')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all flex-1 sm:flex-none ${statusFilter === 'under_review' ? 'bg-blue-500/20 text-blue-400' : 'text-slate-400 hover:text-white'}`}
+            >
+              Reviewing
+            </button>
+            <button 
+              onClick={() => setStatusFilter('approved')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all flex-1 sm:flex-none ${statusFilter === 'approved' ? 'bg-green-500/20 text-green-400' : 'text-slate-400 hover:text-white'}`}
+            >
+              Approved
+            </button>
           </div>
-        </Card>
-
-        <Card className="p-4 md:p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 rounded-2xl flex flex-col md:flex-row items-start md:items-center gap-3 md:gap-4">
-          <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-            <SearchIcon className="w-6 h-6 md:w-7 md:h-7 text-blue-500" />
-          </div>
-          <div>
-            <h3 className="text-2xl md:text-3xl font-bold text-white">{underReviewCount}</h3>
-            <p className="text-[11px] md:text-sm font-medium text-slate-400 mt-0.5">Reviewing</p>
-          </div>
-        </Card>
-
-        <Card className="p-4 md:p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 rounded-2xl flex flex-col md:flex-row items-start md:items-center gap-3 md:gap-4">
-          <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-green-500/10 flex items-center justify-center flex-shrink-0">
-            <ShieldCheck className="w-6 h-6 md:w-7 md:h-7 text-green-500" />
-          </div>
-          <div>
-            <h3 className="text-2xl md:text-3xl font-bold text-white">{approvedCount}</h3>
-            <p className="text-[11px] md:text-sm font-medium text-slate-400 mt-0.5">Approved</p>
-          </div>
-        </Card>
-      </div>
-
-      {/* Applications */}
-      <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-sm overflow-hidden flex flex-col min-h-[400px]">
-        <div className="p-3 md:p-4 border-b border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-          <div>
-            <h3 className="text-base md:text-lg font-bold text-white">Advocate Applications</h3>
-            <p className="text-xs text-slate-400">Review credentials and approve or reject</p>
-          </div>
-          <span className="text-xs bg-slate-800 text-slate-300 px-3 py-1.5 rounded-lg font-medium">
-            {verifications.length} pending
-          </span>
         </div>
         
         {loading ? (
@@ -104,13 +130,13 @@ const Verification = () => {
         ) : verifications.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center p-10 text-slate-400">
             <div className="text-5xl mb-3">🎉</div>
-            <h3 className="text-base font-medium text-white mb-1">No pending applications!</h3>
+            <h3 className="text-base font-medium text-white mb-1">No {statusFilter.replace('_', ' ')} applications!</h3>
             <p className="text-sm text-center">You're all caught up.</p>
           </div>
         ) : (
           <>
             {/* Mobile Card View */}
-            <div className="md:hidden divide-y divide-slate-800/50">
+            <div className="md:hidden divide-y divide-slate-800/50 flex-1">
               {verifications.map((adv: any) => (
                 <div key={adv._id} className="p-4">
                   <div className="flex items-center gap-3 mb-3">
@@ -121,8 +147,8 @@ const Verification = () => {
                       <p className="text-sm font-medium text-white truncate">{adv.user?.name || 'Unknown'}</p>
                       <p className="text-xs text-slate-400 truncate">{adv.user?.email}</p>
                     </div>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${adv.verificationStatus === 'pending' ? 'bg-amber-500/10 text-amber-400' : 'bg-blue-500/10 text-blue-400'}`}>
-                      {adv.verificationStatus === 'pending' ? 'Pending' : 'Under Review'}
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${adv.verificationStatus === 'pending' ? 'bg-amber-500/10 text-amber-400' : adv.verificationStatus === 'approved' ? 'bg-green-500/10 text-green-400' : 'bg-blue-500/10 text-blue-400'}`}>
+                      {adv.verificationStatus.replace('_', ' ')}
                     </span>
                   </div>
                   
@@ -137,36 +163,41 @@ const Verification = () => {
                   </div>
 
                   <div className="flex gap-2">
-                    <Button 
-                      onClick={() => handleVerify(adv._id, 'approved')} 
-                      size="sm" 
-                      disabled={actionLoading === adv._id + 'approved'}
-                      className="flex-1 bg-teal-500 hover:bg-teal-400 text-slate-950 h-8 text-xs font-medium"
-                    >
-                      {actionLoading === adv._id + 'approved' ? (
-                        <div className="w-3.5 h-3.5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <><Check className="w-3.5 h-3.5 mr-1" /> Approve</>
-                      )}
-                    </Button>
-                    <Button 
-                      onClick={() => handleVerify(adv._id, 'rejected')} 
-                      variant="outline" size="sm" 
-                      disabled={actionLoading === adv._id + 'rejected'}
-                      className="flex-1 bg-slate-900 border-red-500/20 text-red-400 hover:bg-red-500/10 h-8 text-xs"
-                    >
-                      {actionLoading === adv._id + 'rejected' ? (
-                        <div className="w-3.5 h-3.5 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <><X className="w-3.5 h-3.5 mr-1" /> Reject</>
-                      )}
-                    </Button>
+                    {statusFilter !== 'approved' && (
+                      <>
+                        <Button 
+                          onClick={() => handleVerify(adv._id, 'approved')} 
+                          size="sm" 
+                          disabled={actionLoading === adv._id + 'approved'}
+                          className="flex-1 bg-teal-500 hover:bg-teal-400 text-slate-950 h-8 text-xs font-medium"
+                        >
+                          {actionLoading === adv._id + 'approved' ? (
+                            <div className="w-3.5 h-3.5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <><Check className="w-3.5 h-3.5 mr-1" /> Approve</>
+                          )}
+                        </Button>
+                        <Button 
+                          onClick={() => handleVerify(adv._id, 'rejected')} 
+                          variant="outline" size="sm" 
+                          disabled={actionLoading === adv._id + 'rejected'}
+                          className="flex-1 bg-slate-900 border-red-500/20 text-red-400 hover:bg-red-500/10 h-8 text-xs"
+                        >
+                          {actionLoading === adv._id + 'rejected' ? (
+                            <div className="w-3.5 h-3.5 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <><X className="w-3.5 h-3.5 mr-1" /> Reject</>
+                          )}
+                        </Button>
+                      </>
+                    )}
                     <Button 
                       onClick={() => setSelectedDocs(adv)} 
                       variant="outline" size="sm" 
-                      className="bg-slate-900 border-slate-700 text-slate-300 hover:text-white h-8 w-8 p-0 flex-shrink-0"
+                      className={`${statusFilter === 'approved' ? 'flex-1' : 'w-8'} bg-slate-900 border-slate-700 text-slate-300 hover:text-white h-8 p-0 flex-shrink-0 flex items-center justify-center`}
                     >
                       <Eye className="w-3.5 h-3.5" />
+                      {statusFilter === 'approved' && <span className="ml-2 text-xs">View Docs</span>}
                     </Button>
                   </div>
                 </div>
@@ -174,12 +205,13 @@ const Verification = () => {
             </div>
 
             {/* Desktop Table View */}
-            <div className="hidden md:block overflow-x-auto">
+            <div className="hidden md:block overflow-x-auto flex-1">
               <table className="w-full text-left border-collapse min-w-[700px]">
                 <thead>
                   <tr className="border-b border-slate-800 bg-slate-950/50 text-slate-400 text-[11px] uppercase tracking-wider">
                     <th className="p-4 font-medium w-12"></th>
-                    <th className="p-4 font-medium">Advocate Name</th>
+                    <th className="p-4 font-medium">Advocate Name & Email</th>
+                    <th className="p-4 font-medium">Phone</th>
                     <th className="p-4 font-medium text-center">Documents</th>
                     <th className="p-4 font-medium text-center">Status</th>
                     <th className="p-4 font-medium text-right">Actions</th>
@@ -198,7 +230,10 @@ const Verification = () => {
                       </td>
                       <td className="p-4">
                         <p className="text-sm font-medium text-white">{adv.user?.name || 'Unknown'}</p>
-                        <p className="text-xs text-slate-400">{adv.user?.email}</p>
+                        <p className="text-xs text-slate-400 truncate max-w-[200px]" title={adv.user?.email}>{adv.user?.email}</p>
+                      </td>
+                      <td className="p-4 text-sm text-slate-300">
+                        {adv.user?.phone || '—'}
                       </td>
                       <td className="p-4 text-center">
                         {adv.documents && Object.keys(adv.documents).length > 0 ? (
@@ -210,36 +245,40 @@ const Verification = () => {
                         )}
                       </td>
                       <td className="p-4 text-center">
-                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${adv.verificationStatus === 'pending' ? 'bg-amber-500/10 text-amber-400' : 'bg-blue-500/10 text-blue-400'}`}>
-                          {adv.verificationStatus === 'pending' ? 'Pending' : 'Under Review'}
+                        <span className={`text-[11px] px-2 py-1 rounded-full font-medium ${adv.verificationStatus === 'pending' ? 'bg-amber-500/10 text-amber-400' : adv.verificationStatus === 'approved' ? 'bg-green-500/10 text-green-400' : 'bg-blue-500/10 text-blue-400'}`}>
+                          {adv.verificationStatus.replace('_', ' ')}
                         </span>
                       </td>
                       <td className="p-4">
                         <div className="flex items-center justify-end gap-2">
-                          <Button 
-                            onClick={() => handleVerify(adv._id, 'approved')} 
-                            size="sm" 
-                            disabled={actionLoading === adv._id + 'approved'}
-                            className="bg-teal-500 hover:bg-teal-400 text-slate-950 h-8 text-xs"
-                          >
-                            {actionLoading === adv._id + 'approved' ? (
-                              <div className="w-3.5 h-3.5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
-                            ) : (
-                              <><Check className="w-3.5 h-3.5 mr-1" /> Approve</>
-                            )}
-                          </Button>
-                          <Button 
-                            onClick={() => handleVerify(adv._id, 'rejected')} 
-                            variant="outline" size="sm" 
-                            disabled={actionLoading === adv._id + 'rejected'}
-                            className="bg-slate-900 border-red-500/20 text-red-400 hover:bg-red-500/10 h-8 text-xs"
-                          >
-                            {actionLoading === adv._id + 'rejected' ? (
-                              <div className="w-3.5 h-3.5 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
-                            ) : (
-                              <><X className="w-3.5 h-3.5 mr-1" /> Reject</>
-                            )}
-                          </Button>
+                          {statusFilter !== 'approved' && (
+                            <>
+                              <Button 
+                                onClick={() => handleVerify(adv._id, 'approved')} 
+                                size="sm" 
+                                disabled={actionLoading === adv._id + 'approved'}
+                                className="bg-teal-500 hover:bg-teal-400 text-slate-950 h-8 text-xs"
+                              >
+                                {actionLoading === adv._id + 'approved' ? (
+                                  <div className="w-3.5 h-3.5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                  <><Check className="w-3.5 h-3.5 mr-1" /> Approve</>
+                                )}
+                              </Button>
+                              <Button 
+                                onClick={() => handleVerify(adv._id, 'rejected')} 
+                                variant="outline" size="sm" 
+                                disabled={actionLoading === adv._id + 'rejected'}
+                                className="bg-slate-900 border-red-500/20 text-red-400 hover:bg-red-500/10 h-8 text-xs"
+                              >
+                                {actionLoading === adv._id + 'rejected' ? (
+                                  <div className="w-3.5 h-3.5 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                  <><X className="w-3.5 h-3.5 mr-1" /> Reject</>
+                                )}
+                              </Button>
+                            </>
+                          )}
                           <Button 
                             onClick={() => setSelectedDocs(adv)} 
                             variant="outline" size="sm" 
@@ -254,6 +293,38 @@ const Verification = () => {
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination controls */}
+            {!loading && totalPages > 1 && (
+              <div className="p-3 border-t border-slate-800 flex items-center justify-between mt-auto">
+                <span className="text-xs text-slate-500">
+                  Showing {((page - 1) * limit) + 1} - {Math.min(page * limit, totalItems)} of {totalItems}
+                </span>
+                <div className="flex items-center gap-1">
+                  <Button
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    variant="outline"
+                    size="sm"
+                    className="h-8 bg-slate-950/50 border-slate-800 text-slate-400 hover:text-white"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  <div className="px-3 text-sm text-white font-medium">
+                    {page} <span className="text-slate-500 font-normal">/ {totalPages}</span>
+                  </div>
+                  <Button
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                    variant="outline"
+                    size="sm"
+                    className="h-8 bg-slate-950/50 border-slate-800 text-slate-400 hover:text-white"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </>
         )}
       </Card>

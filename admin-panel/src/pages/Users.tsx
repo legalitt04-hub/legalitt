@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card } from '../components/ui/card';
-import { Users as UsersIcon, Search, X, Edit, Lock, Unlock } from 'lucide-react';
+import { Users as UsersIcon, Search, X, Edit, Lock, Unlock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import api from '../lib/api';
@@ -15,29 +15,43 @@ const Users = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalUsers, setTotalUsers] = useState(0);
+  const limit = 20;
 
   // Debounce search input
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(search), 400);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1); // Reset page on new search
+    }, 400);
     return () => clearTimeout(timer);
   }, [search]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [roleFilter, statusFilter]);
 
   useEffect(() => {
     const fetchUsers = async () => {
       setLoading(true);
       try {
         const queryParams = new URLSearchParams();
-        queryParams.append('limit', '50');
+        queryParams.append('limit', limit.toString());
+        queryParams.append('page', page.toString());
         if (debouncedSearch) queryParams.append('search', debouncedSearch);
         if (roleFilter) queryParams.append('role', roleFilter);
+        if (statusFilter === 'active') queryParams.append('isActive', 'true');
+        if (statusFilter === 'banned') queryParams.append('isActive', 'false');
         
         const res = await api.get(`/admin/users?${queryParams.toString()}`);
-        let fetchedUsers = res.data.data;
-        
-        if (statusFilter === 'active') fetchedUsers = fetchedUsers.filter((u: any) => u.isActive);
-        if (statusFilter === 'banned') fetchedUsers = fetchedUsers.filter((u: any) => !u.isActive);
-
-        setUsers(fetchedUsers);
+        setUsers(res.data.data);
+        if (res.data.pagination) {
+          setTotalPages(res.data.pagination.pages);
+          setTotalUsers(res.data.pagination.total);
+        }
       } catch (err) {
         console.error('Failed to load users', err);
       } finally {
@@ -46,7 +60,7 @@ const Users = () => {
     };
     
     fetchUsers();
-  }, [debouncedSearch, roleFilter, statusFilter]);
+  }, [debouncedSearch, roleFilter, statusFilter, page]);
 
   const toggleUserStatus = useCallback(async (id: string, currentStatus: boolean) => {
     setActionLoading(id);
@@ -126,7 +140,7 @@ const Users = () => {
         ) : (
           <>
             {/* Mobile card view */}
-            <div className="md:hidden divide-y divide-slate-800/50">
+            <div className="md:hidden divide-y divide-slate-800/50 flex-1">
               {users.map((user) => (
                 <div key={user._id} className="p-4 hover:bg-slate-800/20 transition-colors">
                   <div className="flex items-center justify-between gap-3 mb-3">
@@ -185,16 +199,15 @@ const Users = () => {
             </div>
 
             {/* Desktop table view */}
-            <div className="hidden md:block overflow-x-auto">
+            <div className="hidden md:block overflow-x-auto flex-1">
               <table className="w-full text-left border-collapse whitespace-nowrap min-w-[1100px]">
                 <thead>
                   <tr className="border-b border-slate-800 text-slate-400 text-[11px] uppercase tracking-wider">
-                    <th className="p-3 lg:p-4 font-medium sticky left-0 bg-slate-900/95 backdrop-blur z-10 min-w-[180px]">User ID / Name</th>
-                    <th className="p-3 lg:p-4 font-medium">Phone / Gender</th>
+                    <th className="p-3 lg:p-4 font-medium sticky left-0 bg-slate-900/95 backdrop-blur z-10 min-w-[200px]">User Details</th>
+                    <th className="p-3 lg:p-4 font-medium">Contact Info</th>
                     <th className="p-3 lg:p-4 font-medium">City/State</th>
                     <th className="p-3 lg:p-4 font-medium text-center">Bookings / Cases</th>
                     <th className="p-3 lg:p-4 font-medium text-right">Total Spent</th>
-                    <th className="p-3 lg:p-4 font-medium">Source / Device</th>
                     <th className="p-3 lg:p-4 font-medium">Last Login</th>
                     <th className="p-3 lg:p-4 font-medium text-center">Status</th>
                     <th className="p-3 lg:p-4 font-medium text-right sticky right-0 bg-slate-900/95 backdrop-blur z-10 min-w-[120px]">Actions</th>
@@ -208,18 +221,20 @@ const Users = () => {
                     >
                       <td className="p-3 lg:p-4 sticky left-0 bg-slate-900/80 backdrop-blur z-10">
                         <div className="flex flex-col">
-                          <span className="text-[10px] font-mono text-slate-500 mb-0.5">#{user._id.slice(-6).toUpperCase()}</span>
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-7 h-7 rounded-full bg-slate-800 flex items-center justify-center overflow-hidden flex-shrink-0 border border-slate-700">
-                              {user.avatar ? <img src={user.avatar} className="w-full h-full object-cover" /> : <span className="text-slate-300 font-medium text-[10px]">{user.name?.charAt(0) || '?'}</span>}
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center overflow-hidden flex-shrink-0 border border-slate-700">
+                              {user.avatar ? <img src={user.avatar} className="w-full h-full object-cover" /> : <span className="text-slate-300 font-medium text-sm">{user.name?.charAt(0) || '?'}</span>}
                             </div>
-                            <p className="text-sm font-medium text-white truncate max-w-[110px]">{user.name}</p>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-white truncate max-w-[150px]">{user.name}</p>
+                              <p className="text-[10px] text-slate-500 font-mono mt-0.5 capitalize">{user.role}</p>
+                            </div>
                           </div>
                         </div>
                       </td>
                       <td className="p-3 lg:p-4">
-                        <p className="text-sm text-slate-300">{user.phone || '—'}</p>
-                        <p className="text-[11px] text-slate-500 mt-0.5 capitalize">{user.gender || 'N/A'}</p>
+                        <p className="text-sm text-slate-300 truncate max-w-[180px]" title={user.email}>{user.email}</p>
+                        <p className="text-[11px] text-slate-500 mt-0.5">{user.phone || 'No phone'}</p>
                       </td>
                       <td className="p-3 lg:p-4 text-sm text-slate-300">
                         {user.address?.city ? `${user.address.city}, ${user.address.state || ''}` : '—'}
@@ -239,10 +254,6 @@ const Users = () => {
                       </td>
                       <td className="p-3 lg:p-4 text-right text-sm font-medium text-teal-400">
                         ₹{(user.totalSpent || 0).toLocaleString('en-IN')}
-                      </td>
-                      <td className="p-3 lg:p-4">
-                        <p className="text-sm text-slate-300 capitalize">{user.registrationSource || 'Email'}</p>
-                        <p className="text-[11px] text-slate-500 mt-0.5 capitalize">{user.device || 'Android'}</p>
                       </td>
                       <td className="p-3 lg:p-4 text-sm text-slate-400">
                         {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '—'}
@@ -284,14 +295,39 @@ const Users = () => {
                 </tbody>
               </table>
             </div>
-          </>
-        )}
 
-        {/* User count footer */}
-        {!loading && users.length > 0 && (
-          <div className="p-3 border-t border-slate-800 text-xs text-slate-500 text-center">
-            Showing {users.length} user{users.length !== 1 ? 's' : ''}
-          </div>
+            {/* Pagination controls */}
+            {!loading && totalPages > 1 && (
+              <div className="p-3 border-t border-slate-800 flex items-center justify-between">
+                <span className="text-xs text-slate-500">
+                  Showing {((page - 1) * limit) + 1} - {Math.min(page * limit, totalUsers)} of {totalUsers}
+                </span>
+                <div className="flex items-center gap-1">
+                  <Button
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    variant="outline"
+                    size="sm"
+                    className="h-8 bg-slate-950/50 border-slate-800 text-slate-400 hover:text-white"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  <div className="px-3 text-sm text-white font-medium">
+                    {page} <span className="text-slate-500 font-normal">/ {totalPages}</span>
+                  </div>
+                  <Button
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                    variant="outline"
+                    size="sm"
+                    className="h-8 bg-slate-950/50 border-slate-800 text-slate-400 hover:text-white"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </Card>
 
