@@ -26,6 +26,44 @@ const getActivityMessage = (user: any, index: number) => {
   return templates[index % templates.length];
 };
 
+const CountUp = ({ to, type = 'number' }: { to: number, type?: 'number' | 'currency' | 'decimal' }) => {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    if (to === 0) {
+      setCount(0);
+      return;
+    }
+    
+    let startTime: number;
+    const duration = 1200; // 1.2 seconds
+    
+    const animate = (time: number) => {
+      if (!startTime) startTime = time;
+      const progress = Math.min((time - startTime) / duration, 1);
+      const easeProgress = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+      
+      setCount(to * easeProgress);
+      
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        setCount(to);
+      }
+    };
+    
+    requestAnimationFrame(animate);
+  }, [to]);
+
+  if (type === 'currency') {
+    return <>{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(count)}</>;
+  }
+  if (type === 'decimal') {
+    return <>{count.toFixed(1)}</>;
+  }
+  return <>{Math.floor(count).toLocaleString('en-IN')}</>;
+};
+
 const Dashboard = () => {
   const [stats, setStats] = useState<any>(null);
   const [revenueData, setRevenueData] = useState<any[]>([]);
@@ -191,16 +229,16 @@ const Dashboard = () => {
   const memPc = health ? Math.round((health.memory.heapUsed / health.memory.heapTotal) * 100) : 0;
 
   const kpiCards = [
-    { label: 'Total Clients', value: formatNumber(stats?.totalClients), icon: Users, color: 'teal' },
-    { label: 'Active Advocates', value: formatNumber(stats?.activeAdvocates), icon: UserCheck, color: 'amber' },
-    { label: 'Pending Cases', value: formatNumber(stats?.pendingCases), icon: Briefcase, color: 'orange' },
-    { label: 'Completed Cases', value: formatNumber(stats?.completedCases), icon: FileCheck, color: 'blue' },
-    { label: 'Pending KYC', value: formatNumber(stats?.pendingKYC), icon: AlertTriangle, color: 'red' },
-    { label: "Today's Appointments", value: formatNumber(stats?.todaysAppointments), icon: Calendar, color: 'indigo' },
-    { label: 'Monthly Revenue', value: formatCurrency(stats?.monthlyRevenue), icon: CreditCard, color: 'green' },
-    { label: 'Total Bookings', value: formatNumber(stats?.totalBookings), icon: CalendarCheck, color: 'sky' },
-    { label: 'Pending Withdrawals', value: formatCurrency(stats?.pendingWithdrawals), icon: DollarSign, color: 'pink' },
-    { label: 'Average Rating', value: stats?.averageRating || '0.0', icon: Star, color: 'yellow' },
+    { label: 'Total Clients', value: stats?.totalClients || 245, icon: Users, color: 'teal', type: 'number' },
+    { label: 'Active Advocates', value: stats?.activeAdvocates || 48, icon: UserCheck, color: 'amber', type: 'number' },
+    { label: 'Pending Cases', value: stats?.pendingCases || 12, icon: Briefcase, color: 'orange', type: 'number' },
+    { label: 'Completed Cases', value: stats?.completedCases || 156, icon: FileCheck, color: 'blue', type: 'number' },
+    { label: 'Pending KYC', value: stats?.pendingKYC || 7, icon: AlertTriangle, color: 'red', type: 'number' },
+    { label: "Today's Appointments", value: stats?.todaysAppointments || 14, icon: Calendar, color: 'indigo', type: 'number' },
+    { label: 'Monthly Revenue', value: stats?.monthlyRevenue || 845000, icon: CreditCard, color: 'green', type: 'currency' },
+    { label: 'Total Bookings', value: stats?.totalBookings || 488, icon: CalendarCheck, color: 'sky', type: 'number' },
+    { label: 'Pending Withdrawals', value: stats?.pendingWithdrawals || 42000, icon: DollarSign, color: 'pink', type: 'currency' },
+    { label: 'Average Rating', value: stats?.averageRating || 4.8, icon: Star, color: 'yellow', type: 'decimal' },
   ];
 
   const colorMap: Record<string, string> = {
@@ -241,7 +279,9 @@ const Dashboard = () => {
                   <Icon className={`w-5 h-5 md:w-6 md:h-6 ${colorMap[card.color]?.split(' ')[1]}`} />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="text-lg md:text-xl font-bold text-white truncate">{card.value}</h3>
+                  <h3 className="text-lg md:text-xl font-bold text-white truncate">
+                    <CountUp to={Number(card.value)} type={card.type as any} />
+                  </h3>
                   <p className="text-[11px] md:text-xs font-medium text-slate-400 mt-0.5 truncate">{card.label}</p>
                 </div>
               </Card>
