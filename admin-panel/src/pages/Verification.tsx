@@ -124,10 +124,9 @@ const Verification = () => {
                 <tr className="border-b border-slate-800 bg-slate-950/50 text-slate-400 text-xs uppercase tracking-wider">
                   <th className="p-4 font-medium w-12"></th>
                   <th className="p-4 font-medium">Advocate Name</th>
-                  <th className="p-4 font-medium">Bar Council No.</th>
-                  <th className="p-4 font-medium">Experience</th>
-                  <th className="p-4 font-medium">Documents</th>
-                  <th className="p-4 font-medium text-right">Actions</th>
+                  <th className="p-4 font-medium text-center">Documents</th>
+                  <th className="p-4 font-medium text-center">Status</th>
+                  <th className="p-4 font-medium text-right">Actions (Approve / Reject / View Details)</th>
                 </tr>
               </thead>
               <tbody>
@@ -150,22 +149,21 @@ const Verification = () => {
                         <p className="text-sm font-medium text-white">{adv.user?.name || 'Unknown'}</p>
                         <p className="text-xs text-slate-400">{adv.user?.email}</p>
                       </td>
-                      <td className="p-4 text-sm font-mono text-slate-300">
-                        {adv.barCouncilNumber || '—'}
+                      <td className="p-4 text-center">
+                        <div className="flex justify-center">
+                          {adv.documents && Object.keys(adv.documents).length > 0 ? (
+                            <div className="flex items-center gap-1 text-teal-400 bg-teal-500/10 px-2 py-1 rounded-full text-xs font-medium">
+                              <FileText className="w-3 h-3" /> Uploaded
+                            </div>
+                          ) : (
+                            <span className="text-xs text-slate-500">None</span>
+                          )}
+                        </div>
                       </td>
-                      <td className="p-4 text-sm text-slate-300">
-                        {adv.experience ? `${adv.experience} Years` : '—'}
-                      </td>
-                      <td className="p-4">
-                        {adv.documents && Object.keys(adv.documents).length > 0 ? (
-                          <div className="flex gap-2">
-                            <Button onClick={() => setSelectedDocs(adv)} variant="outline" size="sm" className="bg-slate-900 border-teal-500/20 text-teal-400 hover:text-teal-300 hover:bg-teal-500/10">
-                              <Eye className="w-4 h-4 mr-1" /> View Docs
-                            </Button>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-slate-500">No documents</span>
-                        )}
+                      <td className="p-4 text-center">
+                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${adv.verificationStatus === 'pending' ? 'bg-amber-500/10 text-amber-400' : 'bg-blue-500/10 text-blue-400'}`}>
+                          {adv.verificationStatus === 'pending' ? 'Pending' : 'Under Review'}
+                        </span>
                       </td>
                       <td className="p-4">
                         <div className="flex items-center justify-end gap-2">
@@ -174,6 +172,9 @@ const Verification = () => {
                           </Button>
                           <Button onClick={() => handleVerify(adv._id, 'rejected')} variant="outline" size="sm" className="bg-slate-900 border-red-500/20 text-red-400 hover:bg-red-500/10 h-8">
                             <X className="w-4 h-4 mr-1" /> Reject
+                          </Button>
+                          <Button onClick={() => setSelectedDocs(adv)} variant="outline" size="sm" className="bg-slate-900 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 h-8">
+                            <Eye className="w-4 h-4 mr-1" /> View Details
                           </Button>
                         </div>
                       </td>

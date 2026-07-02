@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '../components/ui/card';
-import { Users as UsersIcon, Search, Filter, Ban, Eye, X } from 'lucide-react';
+import { Users as UsersIcon, Search, Filter, Ban, Eye, X, Edit, Lock, Unlock } from 'lucide-react';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import api from '../lib/api';
@@ -109,17 +109,19 @@ const Users = () => {
             <p className="max-w-sm text-center">We couldn't find any users matching your criteria.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+          <div className="overflow-x-auto pb-4">
+            <table className="w-full text-left border-collapse whitespace-nowrap min-w-[1200px]">
               <thead>
                 <tr className="border-b border-slate-800 text-slate-400 text-xs uppercase tracking-wider">
-                  <th className="p-4 font-medium">User</th>
-                  <th className="p-4 font-medium">Role</th>
-                  <th className="p-4 font-medium">Phone</th>
-                  <th className="p-4 font-medium">Joined</th>
-                  <th className="p-4 font-medium">Last Seen</th>
-                  <th className="p-4 font-medium">Status</th>
-                  <th className="p-4 font-medium text-right">Actions</th>
+                  <th className="p-4 font-medium sticky left-0 bg-slate-900/90 backdrop-blur z-10 w-[200px]">User ID / Name</th>
+                  <th className="p-4 font-medium">Phone / Gender</th>
+                  <th className="p-4 font-medium">City/State</th>
+                  <th className="p-4 font-medium text-center">Totals (Bookings / Cases)</th>
+                  <th className="p-4 font-medium text-right">Total Spent</th>
+                  <th className="p-4 font-medium">Source / Device</th>
+                  <th className="p-4 font-medium">Last Login</th>
+                  <th className="p-4 font-medium text-center">Status</th>
+                  <th className="p-4 font-medium text-right sticky right-0 bg-slate-900/90 backdrop-blur z-10 w-[150px]">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -133,35 +135,61 @@ const Users = () => {
                       transition={{ duration: 0.3, delay: index * 0.05 }}
                       className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors"
                     >
-                      <td className="p-4 flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center overflow-hidden flex-shrink-0">
-                          {user.avatar ? <img src={user.avatar} className="w-full h-full object-cover" /> : <span className="text-slate-300 font-medium text-sm">{user.name?.charAt(0) || '?'}</span>}
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-white">{user.name}</p>
-                          <p className="text-xs text-slate-400">{user.email}</p>
+                      <td className="p-4 sticky left-0 bg-slate-900/50 backdrop-blur z-10">
+                        <div className="flex flex-col">
+                          <span className="text-xs font-mono text-slate-500 mb-1">#{user._id.slice(-6).toUpperCase()}</span>
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center overflow-hidden flex-shrink-0">
+                              {user.avatar ? <img src={user.avatar} className="w-full h-full object-cover" /> : <span className="text-slate-300 font-medium text-xs">{user.name?.charAt(0) || '?'}</span>}
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-white truncate max-w-[120px]">{user.name}</p>
+                            </div>
+                          </div>
                         </div>
                       </td>
                       <td className="p-4">
-                        <span className={`text-xs px-2 py-1 rounded-full ${user.role === 'advocate' ? 'bg-amber-500/10 text-amber-400' : user.role === 'admin' ? 'bg-purple-500/10 text-purple-400' : 'bg-teal-500/10 text-teal-400'}`}>
-                          {user.role}
-                        </span>
+                        <p className="text-sm text-slate-300">{user.phone || '—'}</p>
+                        <p className="text-xs text-slate-500 mt-1 capitalize">{user.gender || 'Not specified'}</p>
                       </td>
-                      <td className="p-4 text-sm text-slate-300">{user.phone || '—'}</td>
-                      <td className="p-4 text-sm text-slate-400">{new Date(user.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
-                      <td className="p-4 text-sm text-slate-400">{user.lastLogin ? new Date(user.lastLogin).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</td>
+                      <td className="p-4 text-sm text-slate-300">
+                        {user.address?.city ? `${user.address.city}, ${user.address.state || ''}` : '—'}
+                      </td>
+                      <td className="p-4 text-center">
+                        <div className="flex items-center justify-center gap-4">
+                          <div className="text-center">
+                            <span className="block text-sm font-bold text-white">{user.totalBookings || 0}</span>
+                            <span className="text-[10px] text-slate-500 uppercase tracking-wider">Bookings</span>
+                          </div>
+                          <div className="h-6 w-px bg-slate-700"></div>
+                          <div className="text-center">
+                            <span className="block text-sm font-bold text-white">{user.totalCases || 0}</span>
+                            <span className="text-[10px] text-slate-500 uppercase tracking-wider">Cases</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4 text-right text-sm font-medium text-teal-400">
+                        ₹{(user.totalSpent || 0).toLocaleString('en-IN')}
+                      </td>
                       <td className="p-4">
-                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${user.isActive ? 'text-green-400' : 'bg-red-500/10 text-red-400'}`}>
-                          {user.isActive ? 'Active' : 'Banned'}
+                        <p className="text-sm text-slate-300 capitalize">{user.registrationSource || 'Email'}</p>
+                        <p className="text-xs text-slate-500 mt-1 capitalize">{user.device || 'Android'}</p>
+                      </td>
+                      <td className="p-4 text-sm text-slate-400">
+                        {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+                      </td>
+                      <td className="p-4 text-center">
+                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${user.isActive ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                          {user.isActive ? 'Active' : 'Blocked'}
                         </span>
                       </td>
-                      <td className="p-4 text-right">
+                      <td className="p-4 text-right sticky right-0 bg-slate-900/50 backdrop-blur z-10">
                         <div className="flex items-center justify-end gap-2">
-                          <Button onClick={() => handleViewUser(user._id)} variant="outline" size="sm" className="bg-slate-900 border-teal-500/20 text-teal-400 hover:text-teal-300 hover:bg-teal-500/10 h-8 px-3">
-                            View
+                          <Button variant="outline" size="sm" className="bg-slate-900 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 h-8 px-2" title="Edit User">
+                            <Edit className="w-4 h-4" />
                           </Button>
-                          <Button onClick={() => toggleUserStatus(user._id, user.isActive)} variant="outline" size="sm" className={`border-red-500/20 hover:bg-red-500/10 h-8 px-3 ${user.isActive ? 'text-red-400 bg-slate-900' : 'text-green-400 bg-slate-900'}`}>
-                            {user.isActive ? 'Ban' : 'Activate'}
+                          <Button onClick={() => toggleUserStatus(user._id, user.isActive)} variant="outline" size="sm" className={`h-8 px-2 ${user.isActive ? 'bg-slate-900 border-red-500/20 text-red-400 hover:bg-red-500/10' : 'bg-slate-900 border-green-500/20 text-green-400 hover:bg-green-500/10'}`} title={user.isActive ? 'Block User' : 'Unblock User'}>
+                            {user.isActive ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
                           </Button>
                         </div>
                       </td>

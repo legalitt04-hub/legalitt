@@ -1,0 +1,7 @@
+node_modules
+mobile-app
+backend
+test-endpoints.js
+.git
+.github
+*.log

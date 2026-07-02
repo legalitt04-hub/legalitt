@@ -3,6 +3,7 @@ const Advocate = require('../models/Advocate');
 const Booking = require('../models/Booking');
 const Review = require('../models/Review');
 const Settings = require('../models/Settings');
+const Case = require('../models/Case');
 
 // ─── Dashboard Stats ───────────────────────────────────────────────────────────
 exports.getDashboardStats = async (req, res, next) => {
@@ -11,11 +12,15 @@ exports.getDashboardStats = async (req, res, next) => {
     const startOfMonth   = new Date(now.getFullYear(), now.getMonth(), 1);
     const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const endOfLastMonth   = new Date(now.getFullYear(), now.getMonth(), 0);
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
     const [
       totalClients, totalAdvocates, pendingVerifications,
       totalBookings, completedBookings, revenueData,
       newUsersThisMonth, newUsersLastMonth, newBookingsThisMonth,
+      pendingCases, completedCases, activeAdvocates,
+      todaysAppointments, averageRatingData, monthlyRevenueData
     ] = await Promise.all([
       User.countDocuments({ role: 'client', isActive: true }),
       Advocate.countDocuments({ isVerified: true }),
@@ -26,9 +31,22 @@ exports.getDashboardStats = async (req, res, next) => {
       User.countDocuments({ createdAt: { $gte: startOfMonth } }),
       User.countDocuments({ createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth } }),
       Booking.countDocuments({ createdAt: { $gte: startOfMonth } }),
+      
+      // New Queries for the updated Dashboard
+      Case.countDocuments({ status: 'pending' }),
+      Case.countDocuments({ status: 'completed' }),
+      User.countDocuments({ role: 'advocate', isActive: true }),
+      Booking.countDocuments({ date: { $gte: startOfToday, $lte: endOfToday } }),
+      Review.aggregate([{ $group: { _id: null, avg: { $avg: '$rating' } } }]),
+      Booking.aggregate([
+        { $match: { 'payment.status': 'paid', createdAt: { $gte: startOfMonth } } },
+        { $group: { _id: null, total: { $sum: '$payment.amount' } } }
+      ])
     ]);
 
     const totalRevenue = revenueData[0]?.total || 0;
+    const monthlyRevenue = monthlyRevenueData[0]?.total || 0;
+    const averageRating = averageRatingData[0]?.avg || 0;
     const userGrowth = newUsersLastMonth > 0
       ? (((newUsersThisMonth - newUsersLastMonth) / newUsersLastMonth) * 100).toFixed(1)
       : 100;
@@ -42,6 +60,16 @@ exports.getDashboardStats = async (req, res, next) => {
         userGrowth: parseFloat(userGrowth),
         completionRate: totalBookings > 0
           ? ((completedBookings / totalBookings) * 100).toFixed(1) : 0,
+        
+        // New fields
+        pendingCases,
+        completedCases,
+        activeAdvocates,
+        pendingKYC: pendingVerifications, 
+        todaysAppointments,
+        monthlyRevenue,
+        pendingWithdrawals: 0, 
+        averageRating: parseFloat(averageRating.toFixed(1))
       },
     });
   } catch (err) { next(err); }
@@ -60,6 +88,9 @@ exports.getRevenueAnalytics = async (req, res, next) => {
     } else if (period === 'weekly') {
       matchFrom = new Date(now.getTime() - 12 * 7 * 24 * 60 * 60 * 1000);
       groupBy = { year: { $year: '$createdAt' }, week: { $week: '$createdAt' } };
+    } else if (period === 'yearly') {
+      matchFrom = new Date(now.getFullYear() - 5, 0, 1);
+      groupBy = { year: { $year: '$createdAt' } };
     } else {
       matchFrom = new Date(now.getFullYear() - 1, now.getMonth() + 1, 1);
       groupBy = { year: { $year: '$createdAt' }, month: { $month: '$createdAt' } };
@@ -137,11 +168,57 @@ exports.getUsersList = async (req, res, next) => {
         { phone: { $regex: search, $options: 'i' } },
       ];
     }
-    const [users, total] = await Promise.all([
-      User.find(filter).select('-password -refreshTokens -passwordResetToken')
-        .sort({ createdAt: -1 }).skip((page - 1) * limit).limit(Number(limit)).lean(),
-      User.countDocuments(filter),
+    
+    const skip = (Number(page) - 1) * Number(limit);
+    
+    const users = await User.aggregate([
+      { $match: filter },
+      { $sort: { createdAt: -1 } },
+      { $skip: skip },
+      { $limit: Number(limit) },
+      {
+        $lookup: {
+          from: 'bookings',
+          localField: '_id',
+          foreignField: 'client',
+          as: 'bookings'
+        }
+      },
+      {
+        $lookup: {
+          from: 'cases',
+          localField: '_id',
+          foreignField: 'client',
+          as: 'cases'
+        }
+      },
+      {
+        $addFields: {
+          totalBookings: { $size: '$bookings' },
+          totalCases: { $size: '$cases' },
+          totalSpent: {
+            $sum: {
+              $map: {
+                input: {
+                  $filter: {
+                    input: '$bookings',
+                    as: 'b',
+                    cond: { $eq: ['$$b.payment.status', 'paid'] }
+                  }
+                },
+                as: 'b',
+                in: '$$b.payment.amount'
+              }
+            }
+          },
+          lastLogin: '$updatedAt'
+        }
+      },
+      { $project: { password: 0, refreshTokens: 0, passwordResetToken: 0, bookings: 0, cases: 0 } }
     ]);
+    
+    const total = await User.countDocuments(filter);
+    
     res.json({ success: true, data: users, pagination: { total, page: Number(page), limit: Number(limit), pages: Math.ceil(total / limit) } });
   } catch (err) { next(err); }
 };

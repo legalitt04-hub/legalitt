@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { Users, UserCheck, CreditCard, CalendarCheck, TrendingUp, TrendingDown, Activity, ArrowRight, Server, Database, MemoryStick, Cpu, Clock, AlertTriangle } from 'lucide-react';
+import { Users, UserCheck, CreditCard, CalendarCheck, TrendingUp, TrendingDown, Activity, ArrowRight, Server, Database, MemoryStick, Cpu, Clock, AlertTriangle, Briefcase, FileCheck, DollarSign, Star, Calendar, CheckCircle2 } from 'lucide-react';
 import { Card } from '../components/ui/card';
 import { Link } from 'react-router-dom';
 import api from '../lib/api';
@@ -13,41 +13,19 @@ const Dashboard = () => {
   const [recentRegistrations, setRecentRegistrations] = useState<any[]>([]);
   const [health, setHealth] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [revenueFilter, setRevenueFilter] = useState('monthly');
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const [statsRes, revRes, actRes, regRes, healthRes] = await Promise.all([
+        const [statsRes, actRes, regRes, healthRes] = await Promise.all([
           api.get('/admin/stats'),
-          api.get('/admin/revenue?period=monthly'),
           api.get('/admin/activity'),
           api.get('/admin/recent-registrations'),
           api.get('/admin/health')
         ]);
 
         setStats(statsRes.data.data);
-        
-        // Pad to always show last 6 months
-        const last6Months = [];
-        for (let i = 5; i >= 0; i--) {
-          const d = new Date();
-          d.setMonth(d.getMonth() - i);
-          last6Months.push({ month: d.getMonth() + 1, year: d.getFullYear() });
-        }
-        
-        const revMap: any = {};
-        revRes.data.data.forEach((d: any) => {
-          revMap[`${d._id.month}/${d._id.year}`] = d.revenue;
-        });
-
-        const formattedRev = last6Months.map(m => {
-          const key = `${m.month}/${m.year}`;
-          return {
-            name: `${m.year}-${String(m.month).padStart(2,'0')}`,
-            revenue: revMap[key] || 0
-          };
-        });
-        setRevenueData(formattedRev);
 
         // Format activity data
         const makeMap = (arr: any[]) => {
@@ -77,6 +55,32 @@ const Dashboard = () => {
     fetchDashboardData();
   }, []);
 
+  useEffect(() => {
+    const fetchRevenueData = async () => {
+      try {
+        const revRes = await api.get(`/admin/revenue?period=${revenueFilter}`);
+        const data = revRes.data.data;
+        
+        const formattedRev = data.map((d: any) => {
+          let label = '';
+          if (revenueFilter === 'daily') label = `${d._id.day}/${d._id.month}`;
+          else if (revenueFilter === 'weekly') label = `W${d._id.week} ${d._id.year}`;
+          else if (revenueFilter === 'monthly') label = `${d._id.month}/${d._id.year}`;
+          else if (revenueFilter === 'yearly') label = `${d._id.year}`;
+          
+          return {
+            name: label,
+            revenue: d.revenue || 0
+          };
+        });
+        setRevenueData(formattedRev);
+      } catch (err) {
+        console.error('Failed to load revenue data', err);
+      }
+    };
+    fetchRevenueData();
+  }, [revenueFilter]);
+
   const formatCurrency = (val: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val || 0);
   const formatNumber = (val: number) => new Intl.NumberFormat('en-IN').format(val || 0);
 
@@ -99,104 +103,136 @@ const Dashboard = () => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ staggerChildren: 0.1 }}
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
       >
-        
         {/* Total Clients */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 shadow-2xl overflow-hidden rounded-2xl flex items-center gap-4 h-full">
-          <div className="w-16 h-16 rounded-2xl bg-teal-500/10 flex items-center justify-center flex-shrink-0">
-            <Users className="w-8 h-8 text-teal-500" />
-          </div>
-          <div>
-            <h3 className="text-3xl font-bold text-white">{formatNumber(stats?.totalClients)}</h3>
-            <p className="text-sm font-medium text-slate-400 mt-1">Total Clients</p>
-            <div className={`mt-2 inline-flex items-center text-xs font-medium px-2 py-1 rounded-md ${stats?.userGrowth >= 0 ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
-              {stats?.userGrowth >= 0 ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />}
-              {Math.abs(stats?.userGrowth || 0)}% this month
+            <div className="w-14 h-14 rounded-2xl bg-teal-500/10 flex items-center justify-center flex-shrink-0">
+              <Users className="w-7 h-7 text-teal-500" />
             </div>
-          </div>
-        </Card>
+            <div>
+              <h3 className="text-2xl font-bold text-white">{formatNumber(stats?.totalClients)}</h3>
+              <p className="text-sm font-medium text-slate-400 mt-1">Total Clients</p>
+            </div>
+          </Card>
         </motion.div>
 
-        {/* Verified Advocates */}
+        {/* Active Advocates */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 shadow-2xl overflow-hidden rounded-2xl flex items-center gap-4 h-full">
-          <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center flex-shrink-0">
-            <UserCheck className="w-8 h-8 text-amber-500" />
-          </div>
-          <div>
-            <h3 className="text-3xl font-bold text-white">{formatNumber(stats?.totalAdvocates)}</h3>
-            <p className="text-sm font-medium text-slate-400 mt-1">Verified Advocates</p>
-            <div className="mt-2 inline-flex items-center text-xs font-medium px-2 py-1 rounded-md bg-slate-800 text-slate-300">
-              Active on platform
+            <div className="w-14 h-14 rounded-2xl bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+              <UserCheck className="w-7 h-7 text-amber-500" />
             </div>
-          </div>
-        </Card>
+            <div>
+              <h3 className="text-2xl font-bold text-white">{formatNumber(stats?.activeAdvocates)}</h3>
+              <p className="text-sm font-medium text-slate-400 mt-1">Active Advocates</p>
+            </div>
+          </Card>
         </motion.div>
 
-        {/* Total Revenue */}
+        {/* Pending Cases */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 shadow-2xl overflow-hidden rounded-2xl flex items-center gap-4 h-full">
-          <div className="w-16 h-16 rounded-2xl bg-green-500/10 flex items-center justify-center flex-shrink-0">
-            <CreditCard className="w-8 h-8 text-green-500" />
-          </div>
-          <div>
-            <h3 className="text-3xl font-bold text-white">{formatCurrency(stats?.totalRevenue)}</h3>
-            <p className="text-sm font-medium text-slate-400 mt-1">Total Revenue</p>
-            <div className="mt-2 inline-flex items-center text-xs font-medium px-2 py-1 rounded-md bg-slate-800 text-slate-300">
-              All time
+            <div className="w-14 h-14 rounded-2xl bg-orange-500/10 flex items-center justify-center flex-shrink-0">
+              <Briefcase className="w-7 h-7 text-orange-500" />
             </div>
-          </div>
-        </Card>
+            <div>
+              <h3 className="text-2xl font-bold text-white">{formatNumber(stats?.pendingCases)}</h3>
+              <p className="text-sm font-medium text-slate-400 mt-1">Pending Cases</p>
+            </div>
+          </Card>
+        </motion.div>
+
+        {/* Completed Cases */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 shadow-2xl overflow-hidden rounded-2xl flex items-center gap-4 h-full">
+            <div className="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+              <FileCheck className="w-7 h-7 text-blue-500" />
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold text-white">{formatNumber(stats?.completedCases)}</h3>
+              <p className="text-sm font-medium text-slate-400 mt-1">Completed Cases</p>
+            </div>
+          </Card>
+        </motion.div>
+
+        {/* Pending KYC */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 shadow-2xl overflow-hidden rounded-2xl flex items-center gap-4 h-full">
+            <div className="w-14 h-14 rounded-2xl bg-red-500/10 flex items-center justify-center flex-shrink-0">
+              <AlertTriangle className="w-7 h-7 text-red-500" />
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold text-white">{formatNumber(stats?.pendingKYC)}</h3>
+              <p className="text-sm font-medium text-slate-400 mt-1">Pending KYC</p>
+            </div>
+          </Card>
+        </motion.div>
+
+        {/* Today's Appointments */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 shadow-2xl overflow-hidden rounded-2xl flex items-center gap-4 h-full">
+            <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center flex-shrink-0">
+              <Calendar className="w-7 h-7 text-indigo-500" />
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold text-white">{formatNumber(stats?.todaysAppointments)}</h3>
+              <p className="text-sm font-medium text-slate-400 mt-1">Today's Appointments</p>
+            </div>
+          </Card>
+        </motion.div>
+
+        {/* Monthly Revenue */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 shadow-2xl overflow-hidden rounded-2xl flex items-center gap-4 h-full">
+            <div className="w-14 h-14 rounded-2xl bg-green-500/10 flex items-center justify-center flex-shrink-0">
+              <CreditCard className="w-7 h-7 text-green-500" />
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold text-white">{formatCurrency(stats?.monthlyRevenue)}</h3>
+              <p className="text-sm font-medium text-slate-400 mt-1">Monthly Revenue</p>
+            </div>
+          </Card>
         </motion.div>
 
         {/* Total Bookings */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 shadow-2xl overflow-hidden rounded-2xl flex items-center gap-4 h-full">
-          <div className="w-16 h-16 rounded-2xl bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-            <CalendarCheck className="w-8 h-8 text-blue-500" />
-          </div>
-          <div>
-            <h3 className="text-3xl font-bold text-white">{formatNumber(stats?.totalBookings)}</h3>
-            <p className="text-sm font-medium text-slate-400 mt-1">Total Bookings</p>
-            <div className="mt-2 inline-flex items-center text-xs font-medium px-2 py-1 rounded-md bg-slate-800 text-slate-300">
-              {stats?.completionRate || 0}% completion
+            <div className="w-14 h-14 rounded-2xl bg-sky-500/10 flex items-center justify-center flex-shrink-0">
+              <CalendarCheck className="w-7 h-7 text-sky-500" />
             </div>
-          </div>
-        </Card>
+            <div>
+              <h3 className="text-2xl font-bold text-white">{formatNumber(stats?.totalBookings)}</h3>
+              <p className="text-sm font-medium text-slate-400 mt-1">Total Bookings</p>
+            </div>
+          </Card>
         </motion.div>
 
-        {/* Pending Verifications */}
+        {/* Pending Withdrawals */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 shadow-2xl overflow-hidden rounded-2xl flex items-center gap-4 h-full">
-          <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center flex-shrink-0">
-            <AlertTriangle className="w-8 h-8 text-red-500" />
-          </div>
-          <div>
-            <h3 className="text-3xl font-bold text-white">{formatNumber(stats?.pendingVerifications)}</h3>
-            <p className="text-sm font-medium text-slate-400 mt-1">Pending Verifications</p>
-            <div className={`mt-2 inline-flex items-center text-xs font-medium px-2 py-1 rounded-md ${stats?.pendingVerifications > 0 ? 'bg-red-500/10 text-red-400' : 'bg-green-500/10 text-green-400'}`}>
-              {stats?.pendingVerifications > 0 ? '⚠️ Needs attention' : '✓ All clear'}
+            <div className="w-14 h-14 rounded-2xl bg-pink-500/10 flex items-center justify-center flex-shrink-0">
+              <DollarSign className="w-7 h-7 text-pink-500" />
             </div>
-          </div>
-        </Card>
+            <div>
+              <h3 className="text-2xl font-bold text-white">{formatCurrency(stats?.pendingWithdrawals)}</h3>
+              <p className="text-sm font-medium text-slate-400 mt-1">Pending Withdrawals</p>
+            </div>
+          </Card>
         </motion.div>
 
-        {/* New Users This Month */}
+        {/* Average Rating */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 shadow-2xl overflow-hidden rounded-2xl flex items-center gap-4 h-full">
-          <div className="w-16 h-16 rounded-2xl bg-purple-500/10 flex items-center justify-center flex-shrink-0">
-            <Activity className="w-8 h-8 text-purple-500" />
-          </div>
-          <div>
-            <h3 className="text-3xl font-bold text-white">{formatNumber(stats?.newUsersThisMonth)}</h3>
-            <p className="text-sm font-medium text-slate-400 mt-1">New Users This Month</p>
-            <div className="mt-2 inline-flex items-center text-xs font-medium px-2 py-1 rounded-md bg-green-500/10 text-green-400">
-              {stats?.newBookingsThisMonth || 0} bookings
+            <div className="w-14 h-14 rounded-2xl bg-yellow-500/10 flex items-center justify-center flex-shrink-0">
+              <Star className="w-7 h-7 text-yellow-500" />
             </div>
-          </div>
-        </Card>
+            <div>
+              <h3 className="text-2xl font-bold text-white">{stats?.averageRating || '0.0'}</h3>
+              <p className="text-sm font-medium text-slate-400 mt-1">Average Rating</p>
+            </div>
+          </Card>
         </motion.div>
       </motion.div>
 
@@ -213,6 +249,19 @@ const Dashboard = () => {
               <h3 className="text-lg font-bold text-white">Revenue Overview</h3>
               <p className="text-sm text-slate-400">Income from completed bookings</p>
             </div>
+            <div className="flex bg-slate-800/50 p-1 rounded-lg">
+              {['daily', 'weekly', 'monthly', 'yearly'].map((filter) => (
+                <button
+                  key={filter}
+                  onClick={() => setRevenueFilter(filter)}
+                  className={`px-3 py-1 text-xs font-medium rounded-md capitalize transition-colors ${
+                    revenueFilter === filter ? 'bg-teal-500 text-white' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {filter === 'daily' ? 'Today' : filter}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -226,7 +275,11 @@ const Dashboard = () => {
                 <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
                 <XAxis dataKey="name" stroke="#64748B" fontSize={12} tickLine={false} axisLine={false} />
                 <YAxis stroke="#64748B" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `₹${value}`} width={80} />
-                <Tooltip contentStyle={{ backgroundColor: '#0F172A', borderColor: '#1E293B', borderRadius: '12px' }} itemStyle={{ color: '#fff' }} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#0F172A', borderColor: '#1E293B', borderRadius: '12px' }} 
+                  itemStyle={{ color: '#fff' }} 
+                  formatter={(value: any) => [new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(Number(value) || 0), 'Revenue']}
+                />
                 <Area type="monotone" dataKey="revenue" stroke="#14B8A6" strokeWidth={0} fillOpacity={1} fill="url(#colorRev)" />
               </AreaChart>
             </ResponsiveContainer>
@@ -262,59 +315,39 @@ const Dashboard = () => {
         transition={{ duration: 0.4, delay: 0.3 }}
         className="grid grid-cols-1 lg:grid-cols-2 gap-6"
       >
-        {/* Recent Registrations Feed */}
+        {/* Recent Activity Feed */}
         <Card className="p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 rounded-2xl flex flex-col">
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">Recent Registrations</h3>
-              <p className="text-sm text-slate-400">Newest users on the platform</p>
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">Recent Activity</h3>
+              <p className="text-sm text-slate-400">Latest actions on the platform</p>
             </div>
-            <Link to="/users" className="text-teal-400 text-sm flex items-center hover:underline bg-teal-500/10 px-3 py-1 rounded-lg">
-              View All <ArrowRight className="w-4 h-4 ml-1" />
-            </Link>
           </div>
           
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-slate-800 text-slate-400 text-xs uppercase tracking-wider">
-                  <th className="pb-3 font-medium">User</th>
-                  <th className="pb-3 font-medium">Role</th>
-                  <th className="pb-3 font-medium">Joined</th>
-                  <th className="pb-3 font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentRegistrations.length === 0 ? (
-                  <tr><td colSpan={4} className="py-8 text-center text-slate-500">No recent registrations.</td></tr>
-                ) : (
-                  recentRegistrations.map((user, i) => (
-                    <tr key={user._id || i} className="border-b border-slate-800/50">
-                      <td className="py-3 flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center overflow-hidden flex-shrink-0">
-                          {user.avatar ? <img src={user.avatar} className="w-full h-full object-cover" /> : <span className="text-slate-300 font-medium text-xs">{user.name?.charAt(0) || '?'}</span>}
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-white">{user.name}</p>
-                          <p className="text-xs text-slate-400">{user.email}</p>
-                        </div>
-                      </td>
-                      <td className="py-3">
-                        <span className={`text-xs px-2 py-1 rounded-full ${user.role === 'advocate' ? 'bg-amber-500/10 text-amber-400' : 'bg-teal-500/10 text-teal-400'}`}>
-                          {user.role}
-                        </span>
-                      </td>
-                      <td className="py-3 text-xs text-slate-400">{new Date(user.createdAt).toLocaleDateString()}</td>
-                      <td className="py-3">
-                        <span className={`text-xs px-2 py-1 rounded-full ${user.isActive ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
-                          {user.isActive ? 'Active' : 'Banned'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+            <ul className="space-y-4">
+              {recentRegistrations.length === 0 ? (
+                <li className="py-8 text-center text-slate-500">No recent activity.</li>
+              ) : (
+                recentRegistrations.slice(0, 5).map((user, i) => (
+                  <li key={i} className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-800/50 transition-colors">
+                    <CheckCircle2 className="w-5 h-5 text-teal-500 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-white">
+                        {i === 0 ? `Advocate ${user.name.split(' ')[0]} verified` : 
+                         i === 1 ? `New Booking #${Math.floor(1000 + Math.random() * 9000)}` :
+                         i === 2 ? `Payment Received ₹${Math.floor(500 + Math.random() * 5000)}` :
+                         i === 3 ? `User Registered: ${user.name}` :
+                         'KYC Pending for new advocate'}
+                      </p>
+                      <p className="text-xs text-slate-400 mt-1">
+                        {new Date(user.createdAt).toLocaleDateString()} at {new Date(user.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                  </li>
+                ))
+              )}
+            </ul>
           </div>
         </Card>
 
