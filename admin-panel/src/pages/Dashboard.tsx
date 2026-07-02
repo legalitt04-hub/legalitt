@@ -5,6 +5,7 @@ import { Users, UserCheck, CreditCard, CalendarCheck, ArrowRight, Server, Databa
 import { Card } from '../components/ui/card';
 import { Link } from 'react-router-dom';
 import api from '../lib/api';
+import { CountUp } from '../components/ui/count-up';
 
 // Stable activity message generator (no Math.random on render)
 const activityMessages = [
@@ -24,44 +25,6 @@ const getActivityMessage = (user: any, index: number) => {
     'KYC Pending for new advocate',
   ];
   return templates[index % templates.length];
-};
-
-const CountUp = ({ to, type = 'number' }: { to: number, type?: 'number' | 'currency' | 'decimal' }) => {
-  const [count, setCount] = useState(0);
-
-  useEffect(() => {
-    if (to === 0) {
-      setCount(0);
-      return;
-    }
-    
-    let startTime: number;
-    const duration = 1200; // 1.2 seconds
-    
-    const animate = (time: number) => {
-      if (!startTime) startTime = time;
-      const progress = Math.min((time - startTime) / duration, 1);
-      const easeProgress = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
-      
-      setCount(to * easeProgress);
-      
-      if (progress < 1) {
-        requestAnimationFrame(animate);
-      } else {
-        setCount(to);
-      }
-    };
-    
-    requestAnimationFrame(animate);
-  }, [to]);
-
-  if (type === 'currency') {
-    return <>{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(count)}</>;
-  }
-  if (type === 'decimal') {
-    return <>{count.toFixed(1)}</>;
-  }
-  return <>{Math.floor(count).toLocaleString('en-IN')}</>;
 };
 
 const Dashboard = () => {
