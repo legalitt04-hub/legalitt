@@ -88,8 +88,12 @@ const Dashboard = () => {
             if (total <= 0) return Array(count).fill(0);
             let arr = [];
             let sum = 0;
+            const pseudoRandom = (seed: number) => {
+              const x = Math.sin(seed + 1.1) * 10000;
+              return x - Math.floor(x);
+            };
             for(let i=0; i<count; i++) {
-              const val = (i+1) + Math.random() * count; 
+              const val = (i+1) + pseudoRandom(i) * count; 
               arr.push(val);
               sum += val;
             }
@@ -179,12 +183,16 @@ const Dashboard = () => {
             targetTotalRevenue = totalRev;
           }
           
-          const distribute = (total: number, count: number) => {
+          const distribute = (total: number, count: number, seedOffset: number = 0) => {
             if (total <= 0) return Array(count).fill(0);
             let arr = [];
             let sum = 0;
+            const pseudoRandom = (seed: number) => {
+              const x = Math.sin(seed + 2.2) * 10000;
+              return x - Math.floor(x);
+            };
             for(let i=0; i<count; i++) {
-              const val = (i+1) + Math.random() * count; 
+              const val = (i+1) + pseudoRandom(i + seedOffset) * count; 
               arr.push(val);
               sum += val;
             }
@@ -195,7 +203,8 @@ const Dashboard = () => {
             return arr;
           };
 
-          const revArray = distribute(targetTotalRevenue, count);
+          // Pass the count as a seed offset so different filters have slightly different (but stable) shapes
+          const revArray = distribute(targetTotalRevenue, count, count);
 
           for (let i = count - 1; i >= 0; i--) {
             const d = new Date(now.getTime() - (i * interval * 24 * 60 * 60 * 1000));

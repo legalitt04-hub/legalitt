@@ -59,8 +59,12 @@ const Earnings = () => {
             if (total <= 0) return Array(count).fill(0);
             let arr = [];
             let sum = 0;
+            const pseudoRandom = (seed: number) => {
+              const x = Math.sin(seed + 3.3) * 10000;
+              return x - Math.floor(x);
+            };
             for(let i=0; i<count; i++) {
-              const val = (i+1) + Math.random() * count; 
+              const val = (i+1) + pseudoRandom(i) * count; 
               arr.push(val);
               sum += val;
             }
