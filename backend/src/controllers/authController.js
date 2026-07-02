@@ -94,11 +94,15 @@ exports.login = async (req, res, next) => {
 
     const user = await User.findOne({ email: email.toLowerCase().trim() }).select('+password');
     if (!user || !user.password) {
-      return next(new AppError('Incorrect password or username.', 401));
+      return next(new AppError('User not found with this email.', 404));
     }
 
     const isMatch = await user.comparePassword(password);
-    if (!isMatch) return next(new AppError('Incorrect password or username.', 401));
+    if (!isMatch) return next(new AppError('Incorrect password.', 401));
+
+    if (req.body.role === 'admin' && user.role !== 'admin') {
+      return next(new AppError('Access denied. You do not have admin privileges.', 403));
+    }
 
     if (!user.isActive) return next(new AppError('Account deactivated.', 403));
 
