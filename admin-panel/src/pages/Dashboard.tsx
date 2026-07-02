@@ -174,6 +174,11 @@ const Dashboard = () => {
             labelFormatter = (d) => `${d.getFullYear()}`;
           }
           
+          const totalRev = stats?.totalRevenue ?? 9250000;
+          if (targetTotalRevenue > totalRev) {
+            targetTotalRevenue = totalRev;
+          }
+          
           const distribute = (total: number, count: number) => {
             if (total <= 0) return Array(count).fill(0);
             let arr = [];

@@ -48,7 +48,12 @@ const Earnings = () => {
         } else {
           // Use distributor function to ensure graph matches KPIs
           const monthlyRev = earnRes.data.data?.thisMonthRevenue || 845000;
-          const targetTotalRevenue = monthlyRev * 6; // last 6 months
+          const totalRev = earnRes.data.data?.totalRevenue || 9250000;
+          let targetTotalRevenue = monthlyRev * 6; // last 6 months
+          
+          if (targetTotalRevenue > totalRev) {
+            targetTotalRevenue = totalRev; // Cap it so it doesn't exceed total lifetime revenue
+          }
           
           const distribute = (total: number, count: number) => {
             if (total <= 0) return Array(count).fill(0);
@@ -119,7 +124,7 @@ const Earnings = () => {
 
   const statsCards = [
     { label: 'Total Platform Revenue', value: data?.totalRevenue || 9250000, sub: `${data?.totalBookings || 4880} bookings`, color: 'from-teal-500 to-emerald-500', type: 'currency' },
-    { label: "This Month's Revenue", value: data?.thisMonthRevenue || 845000, sub: `${data?.thisMonthBookings || 488} bookings`, color: 'from-blue-500 to-indigo-500', type: 'currency' },
+    { label: "This Month's Revenue", value: data?.thisMonthRevenue || 845000, sub: `${data?.thisMonthBookings ?? 215} bookings`, color: 'from-blue-500 to-indigo-500', type: 'currency' },
     { label: 'Avg. Booking Value', value: avgBookingValue || 1731, sub: 'Per paid booking', color: 'from-purple-500 to-pink-500', type: 'currency' },
     { label: 'Top Advocates', value: data?.topAdvocates?.length || 10, sub: 'This period', color: 'from-amber-500 to-orange-500', type: 'number' },
   ];
