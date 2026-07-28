@@ -1,15 +1,29 @@
+import { normalize } from '../utils/responsive';
+
 export const COLORS = {
-  primary: '#14B8A6',
-  primaryDark: '#0D9488',
-  primaryLight: '#5EEAD4',
-  success: '#10B981',
-  error: '#EF4444',
-  warning: '#F59E0B',
-  textPrimary: '#1F2937',
-  textSecondary: '#6B7280',
-  background: '#FFFFFF',
-  backgroundGray: '#F9FAFB',
-  border: '#E5E7EB',
+  // New Color Palette
+  primary: "#B09C85",
+  primaryDark: "#8D7865",
+  primaryLight: "#C7BFB4",
+
+  background: "#FAF9F8",
+  card: "#FFFFFF",
+
+  text: "#46464A",
+  textSecondary: "#727477",
+
+  border: "#C7C2BC",
+
+  danger: "#E53935",
+
+  // Compatibility Mappings for Existing Components
+  textPrimary: "#46464A",
+  backgroundGray: "#FAF9F8",
+  error: "#E53935",
+  primaryGradientStart: "#B09C85",
+  primaryGradientEnd: "#8D7865",
+  success: "#10B981",
+  warning: "#F59E0B",
 };
 
 export const SHADOWS = {
@@ -37,8 +51,13 @@ export const SHADOWS = {
 };
 
 export const SIZES = {
-  small: 12,
-  medium: 16,
-  large: 20,
-  xlarge: 24,
+  small: normalize(12),
+  medium: normalize(16),
+  large: normalize(20),
+  xlarge: normalize(24),
+  xxlarge: normalize(32),
+  buttonHeight: normalize(56),
+  radiusXl: normalize(16),
+  radiusLg: normalize(12),
+  radiusMd: normalize(8),
 };

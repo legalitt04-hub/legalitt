@@ -5,16 +5,16 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   StatusBar,
   Animated,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../constants/theme';
 
 const PaymentSuccessScreen = ({ navigation, route }) => {
-  const amount = route?.params?.amount || 800;
+  const { amount = 800, chatId, advocateName, advocateAvatar, advocateId } = route?.params || {};
   
   // Animation values
   const scaleAnim = React.useRef(new Animated.Value(0)).current;
@@ -95,7 +95,7 @@ const PaymentSuccessScreen = ({ navigation, route }) => {
         <Animated.View style={{ opacity: buttonFadeAnim, width: '100%' }}>
           <TouchableOpacity
             style={styles.primaryButtonWrapper}
-            onPress={() => navigation.navigate('Chat', { advocateId: route?.params?.advocateId })}
+            onPress={() => navigation.navigate('Chat', { chatId, advocateName, advocateAvatar, advocateId })}
             activeOpacity={0.9}
           >
             <LinearGradient
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonWrapper: {
     width: '100%',
-    borderRadius: 28,
+    borderRadius: 16,
     overflow: 'hidden',
     marginBottom: 12,
     shadowColor: COLORS.primary,
@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
   },
   secondaryButton: {
     height: 56,
-    borderRadius: 28,
+    borderRadius: 16,
     backgroundColor: '#F0FDFA',
     alignItems: 'center',
     justifyContent: 'center',

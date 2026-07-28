@@ -1,28 +1,34 @@
-// screens/client/SearchScreen.jsx - WITH SHOW ON MAP
+// screens/client/SearchScreen.jsx - WITH PAGINATION
 import React, { useState, useEffect } from 'react';
-import FilterModal from './FilterModal';
 import {
   View,
   Text,
-  TextInput,
+  StyleSheet,
   FlatList,
   TouchableOpacity,
-  StyleSheet,
   Image,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import * as Location from 'expo-location';
 import { COLORS } from '../../constants/theme';
+import SafeScreen from '../../components/SafeScreen';
 import { advocateAPI } from '../../services/api';
 
-const SearchScreen = ({ navigation }) => {
-  const [searchQuery, setSearchQuery] = useState('');
+const SearchScreen = ({ navigation, route }) => {
   const [advocates, setAdvocates] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [userLocation, setUserLocation] = useState(null);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
+
   const [filters, setFilters] = useState({
     specializations: [],
+    searchMode: 'nearby',
     city: '',
     minRating: 0,
     maxFee: null,
@@ -31,503 +37,302 @@ const SearchScreen = ({ navigation }) => {
   });
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchQuery.trim() || filters.specializations.length > 0 || filters.city) {
-        searchAdvocates();
-      } else {
-        fetchDefaultAdvocates();
-      }
-    }, 500);
+    getCurrentLocation();
+  }, []);
 
-    return () => clearTimeout(timer);
-  }, [searchQuery, filters]);
+  useEffect(() => {
+    // Fetch if we have location OR a city filter
+    if (userLocation || (filters.city && filters.city.trim())) {
+      fetchAdvocates(1, true);
+    }
+  }, [userLocation, filters]);
 
-  const searchAdvocates = async () => {
+  const getCurrentLocation = async () => {
     try {
-      setLoading(true);
-
-      const params = {
-        limit: 100,
-      };
-
-      if (searchQuery.trim()) {
-        params.search = searchQuery.trim();
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setUserLocation({ latitude: 22.7196, longitude: 75.8577 });
+        return;
       }
 
-      if (filters.city) {
-        params.city = filters.city;
-      }
-
-      if (filters.specializations.length > 0) {
-        params.specializations = filters.specializations.join(',');
-      }
-
-      if (filters.minRating > 0) {
-        params.minRating = filters.minRating;
-      }
-
-      if (filters.maxFee !== null) {
-        params.maxFee = filters.maxFee;
-      }
-
-      if (filters.minExperience > 0) {
-        params.minExperience = filters.minExperience;
-      }
-
-      const response = await advocateAPI.getAdvocates(params);
-
-      if (response.data.success) {
-        const advocatesData = response.data.data || [];
-        
-        const filtered = advocatesData.filter((adv) => {
-          const matchesSearch = !searchQuery.trim() || 
-            adv.user?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            adv.specializations?.some(spec => 
-              spec.toLowerCase().includes(searchQuery.toLowerCase())
-            );
-
-          const matchesRating = 
-            (adv.rating?.average || adv.rating || 0) >= filters.minRating;
-
-          const matchesFee = 
-            filters.maxFee === null || (adv.consultationFee || 0) <= filters.maxFee;
-
-          const matchesExperience = 
-            (adv.experience || 0) >= filters.minExperience;
-
-          return matchesSearch && matchesRating && matchesFee && matchesExperience;
-        });
-
-        setAdvocates(filtered);
-      }
+      const location = await Location.getCurrentPositionAsync({});
+      setUserLocation({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
     } catch (error) {
-      console.error('Error searching advocates:', error);
-    } finally {
-      setLoading(false);
+      console.error('Error getting location:', error);
+      setUserLocation({ latitude: 22.7196, longitude: 75.8577 });
     }
   };
 
-  const fetchDefaultAdvocates = async () => {
+  const fetchAdvocates = async (pageNum = 1, reset = false) => {
     try {
-      setLoading(true);
+      if (pageNum === 1) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
 
-      const response = await advocateAPI.getAdvocates({
-        limit: 50,
-        page: 1,
-      });
+      if (!userLocation && !filters.city) {
+        console.log('Waiting for location...');
+        setLoading(false);
+        return;
+      }
 
-      if (response.data.success) {
-        setAdvocates(response.data.data || []);
+      let response;
+
+      if (filters.city && filters.city.trim()) {
+        // ✅ City search with pagination
+        response = await advocateAPI.getAdvocates({
+          city: filters.city,
+          specialization: filters.specializations.length > 0 ? filters.specializations[0] : undefined,
+          limit: 10,
+          page: pageNum,
+        });
+      } else if (userLocation) {
+        const { latitude, longitude } = userLocation;
+
+        // ✅ Nearby search with pagination
+        response = await advocateAPI.getNearby({
+          lat: latitude,
+          lng: longitude,
+          radius: filters.radius,
+          limit: 50, // ✅ 50 per page
+          page: pageNum, // ✅ Current page
+        });
+      }
+
+      if (response.data.success && response.data.data) {
+        const transformedAdvocates = response.data.data.map(adv => ({
+          id: adv._id,
+          name: adv.user?.name || 'Unknown',
+          avatar: adv.user?.avatar || `https://i.pravatar.cc/150?u=${adv.user?._id || adv._id}`,
+          specialization: adv.specializations?.join(' • ') || 'Legal Services',
+          rating: adv.rating?.average || 0,
+          reviews: adv.rating?.count || 0,
+          experience: adv.experience || 0,
+          consultationFee: adv.consultationFee || 500,
+          distance: adv.distance || 0,
+          status: adv.isOnline ? 'Online' : 'Offline',
+        }));
+
+        // ✅ Handle pagination
+        if (reset || pageNum === 1) {
+          setAdvocates(transformedAdvocates);
+        } else {
+          setAdvocates(prev => [...prev, ...transformedAdvocates]);
+        }
+
+        // ✅ Update pagination state
+        if (response.data.pagination) {
+          setHasMore(response.data.pagination.hasMore);
+          setTotalCount(response.data.pagination.total);
+        } else {
+          setHasMore(false);
+          setTotalCount(transformedAdvocates.length);
+        }
+
+        setPage(pageNum);
       }
     } catch (error) {
       console.error('Error fetching advocates:', error);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
-  const handleApplyFilters = (newFilters) => {
-    setFilters(newFilters);
+  const handleLoadMore = () => {
+    if (!loadingMore && hasMore) {
+      fetchAdvocates(page + 1, false);
+    }
   };
 
-  const handleShowOnMap = (filterData) => {
-    navigation.navigate('Map', { filters: filterData });
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchAdvocates(1, true);
+    setRefreshing(false);
   };
 
-  const renderAdvocate = ({ item: advocate, index }) => (
+  const renderAdvocateCard = ({ item }) => (
     <TouchableOpacity
-      key={`adv-${index}`}
       style={styles.advocateCard}
-      onPress={() => navigation.navigate('AdvocateProfile', { id: advocate._id })}
+      onPress={() => navigation.navigate('AdvocateProfile', { id: item.id })}
+      activeOpacity={0.9}
     >
-      <Image
-        source={{
-          uri: advocate.user?.avatar || advocate.profilePicture || 'https://i.pravatar.cc/150?img=12',
-        }}
-        style={styles.avatar}
-      />
-
-      <View style={styles.advocateInfo}>
-        <View style={styles.nameRow}>
-          <Text style={styles.name} numberOfLines={1}>
-            {advocate.user?.name || advocate.name || 'Advocate'}
-          </Text>
-          {advocate.isVerified && (
-            <Ionicons name="checkmark-circle" size={16} color={COLORS.primary} />
-          )}
-        </View>
-
-        <Text style={styles.specialization} numberOfLines={1}>
-          {advocate.specializations?.[0] || 'Legal Advisor'}
-        </Text>
-
-        <View style={styles.statsRow}>
-          <View style={styles.stat}>
-            <Ionicons name="star" size={14} color="#FCD34D" />
-            <Text style={styles.statText}>
-              {advocate.rating?.average || advocate.rating || 4.5}
-            </Text>
-            <Text style={styles.statSubtext}>
-              ({advocate.rating?.count || advocate.reviewCount || 0})
-            </Text>
-          </View>
-
-          <View style={styles.stat}>
-            <Ionicons name="briefcase" size={14} color="#6B7280" />
-            <Text style={styles.statText}>{advocate.experience || 5}+ yrs</Text>
-          </View>
-
-          {advocate.isOnline && (
-            <View style={styles.onlineBadge}>
-              <View style={styles.onlineDot} />
-              <Text style={styles.onlineText}>Online</Text>
+      <View style={styles.cardHeader}>
+        <Image source={{ uri: item.avatar }} style={styles.avatar} />
+        <View style={styles.advocateInfo}>
+          <View style={styles.nameRow}>
+            <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
+            <View style={styles.verifiedBadge}>
+              <Text style={styles.verifiedCheck}>✓</Text>
             </View>
-          )}
+          </View>
+          <Text style={styles.specialization} numberOfLines={1}>{item.specialization}</Text>
+          <View style={styles.statsRow}>
+            <Ionicons name="star" size={12} color="#FCD34D" />
+            <Text style={styles.rating}>{item.rating.toFixed(1)}</Text>
+            <Text style={styles.reviews}>({item.reviews})</Text>
+            {item.distance > 0 && (
+              <>
+                <Text style={styles.separator}>•</Text>
+                <Text style={styles.distance}>{item.distance.toFixed(1)}km away</Text>
+              </>
+            )}
+          </View>
         </View>
-
-        <Text style={styles.fee}>
-          ₹{advocate.consultationFee || 2000}
-          <Text style={styles.feeLabel}> /consultation</Text>
-        </Text>
       </View>
 
-      <View style={styles.actions}>
-        <TouchableOpacity
-          style={styles.viewButton}
-          onPress={() => navigation.navigate('AdvocateProfile', { id: advocate._id })}
-        >
-          <Text style={styles.viewButtonText}>View</Text>
-        </TouchableOpacity>
+      <View style={styles.cardFooter}>
+        <View style={styles.statusBadge}>
+          <View style={[styles.statusDot, { backgroundColor: item.status === 'Online' ? '#10B981' : '#9CA3AF' }]} />
+          <Text style={styles.statusText}>{item.status}</Text>
+        </View>
+        <Text style={styles.fee}>₹{item.consultationFee}/consultation</Text>
+      </View>
 
-        <TouchableOpacity
-          style={styles.bookButton}
-          onPress={() => navigation.navigate('Payment', { advocateId: advocate._id })}
-        >
-          <LinearGradient
-            colors={['#14B8A6', '#0D9488']}
-            style={styles.bookGradient}
-          >
-            <Text style={styles.bookButtonText}>Book</Text>
-          </LinearGradient>
+      <View style={styles.actionButtons}>
+        <TouchableOpacity style={styles.viewButton}>
+          <Text style={styles.viewButtonText}>View Profile</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.bookButton}>
+          <Text style={styles.bookButtonText}>Book Now</Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
   );
 
-  const activeFilterCount = 
-    filters.specializations.length +
-    (filters.city ? 1 : 0) +
-    (filters.minRating > 0 ? 1 : 0) +
-    (filters.maxFee !== null ? 1 : 0) +
-    (filters.minExperience > 0 ? 1 : 0);
+  const renderFooter = () => {
+    if (!loadingMore) return null;
+    return (
+      <View style={styles.footerLoader}>
+        <ActivityIndicator size="small" color={COLORS.primary} />
+        <Text style={styles.footerText}>Loading more...</Text>
+      </View>
+    );
+  };
+
+  const renderEmpty = () => (
+    <View style={styles.emptyContainer}>
+      <Ionicons name="search-outline" size={64} color="#D1D5DB" />
+      <Text style={styles.emptyText}>No advocates found</Text>
+      <Text style={styles.emptySubtext}>Try adjusting your filters</Text>
+    </View>
+  );
 
   return (
-    <View style={styles.container}>
-      <LinearGradient colors={['#14B8A6', '#0D9488']} style={styles.header}>
-        <Text style={styles.headerTitle}>Find Advocates</Text>
-
-        <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="#6B7280" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search by name or specialization..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholderTextColor="#9CA3AF"
-          />
-          {loading && searchQuery.trim() && (
-            <ActivityIndicator size="small" color={COLORS.primary} style={{ marginRight: 8 }} />
-          )}
-          <TouchableOpacity
-            style={styles.filterButton}
-            onPress={() => setShowFilterModal(true)}
-          >
-            <Ionicons name="options-outline" size={22} color={COLORS.primary} />
-            {activeFilterCount > 0 && (
-              <View style={styles.filterBadge}>
-                <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
-
+    <SafeScreen backgroundColor="#F9FAFB" barStyle="dark-content">
+      {/* Header */}
+      <View style={styles.header}>
         <TouchableOpacity
-          style={styles.mapButton}
-          onPress={() => navigation.navigate('Map')}
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
         >
-          <Ionicons name="map" size={18} color={COLORS.primary} />
-          <Text style={styles.mapButtonText}>View on Map</Text>
+          <Ionicons name="chevron-back" size={24} color="#1F2937" />
         </TouchableOpacity>
-      </LinearGradient>
-
-      <View style={styles.content}>
-        <Text style={styles.resultsText}>
-          {loading ? 'Searching...' : `${advocates.length} advocate${advocates.length !== 1 ? 's' : ''} found`}
-        </Text>
-
-        <FlatList
-          data={advocates}
-          renderItem={renderAdvocate}
-          keyExtractor={(item, index) => `adv-${index}`}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            !loading && (
-              <View style={styles.emptyContainer}>
-                <Ionicons name="search-outline" size={64} color="#D1D5DB" />
-                <Text style={styles.emptyText}>No advocates found</Text>
-                <Text style={styles.emptySubtext}>
-                  {searchQuery.trim() 
-                    ? 'Try different keywords or filters'
-                    : 'Start typing to search'}
-                </Text>
-              </View>
-            )
-          }
-        />
+        <Text style={styles.headerTitle}>Find Advocates</Text>
+        <TouchableOpacity
+          style={styles.filterButton}
+          onPress={() => navigation.navigate('Filter')}
+        >
+          <Ionicons name="options-outline" size={20} color={COLORS.primary} />
+        </TouchableOpacity>
       </View>
 
-      <FilterModal
-        visible={showFilterModal}
-        onClose={() => setShowFilterModal(false)}
-        onApplyFilters={handleApplyFilters}
-        onShowOnMap={handleShowOnMap}
-        initialFilters={filters}
+      {/* Results Header */}
+      <View style={styles.resultsHeader}>
+        <Text style={styles.resultsText}>
+          {loading ? 'Searching...' : `${totalCount} advocates found within ${filters.radius}km`}
+        </Text>
+        {advocates.length > 0 && hasMore && (
+          <Text style={styles.loadedText}>
+            Showing {advocates.length} of {totalCount}
+          </Text>
+        )}
+      </View>
+
+      {/* Advocates List */}
+      <FlatList
+        data={advocates}
+        renderItem={renderAdvocateCard}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={COLORS.primary}
+          />
+        }
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={renderFooter}
+        ListEmptyComponent={!loading && renderEmpty}
       />
-    </View>
+
+      {/* Loading Overlay */}
+      {loading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.loadingText}>Finding advocates...</Text>
+        </View>
+      )}
+    </SafeScreen>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-  },
   header: {
-    paddingTop: 60,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 16,
-  },
-  searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    height: 48,
-    fontSize: 15,
-    color: '#1F2937',
-  },
-  filterButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: '#F3F4F6',
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  filterBadge: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: '#EF4444',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  filterBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  mapButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
     paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    gap: 8,
-  },
-  mapButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: COLORS.primary,
-  },
-  content: {
-    flex: 1,
-  },
-  resultsText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#6B7280',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-  },
-  listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  advocateCard: {
-    flexDirection: 'row',
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#F3F4F6',
-  },
-  advocateInfo: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 4,
-  },
-  name: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1F2937',
-    flex: 1,
-  },
-  specialization: {
-    fontSize: 13,
-    color: '#6B7280',
-    marginBottom: 6,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 6,
-  },
-  stat: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  statText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#1F2937',
-  },
-  statSubtext: {
-    fontSize: 12,
-    color: '#9CA3AF',
-  },
-  onlineBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    backgroundColor: '#D1FAE5',
-    borderRadius: 8,
-  },
-  onlineDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#10B981',
-  },
-  onlineText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#059669',
-  },
-  fee: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.primary,
-  },
-  feeLabel: {
-    fontSize: 12,
-    fontWeight: '400',
-    color: '#6B7280',
-  },
-  actions: {
-    gap: 8,
-    marginLeft: 8,
-  },
-  viewButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: COLORS.primary,
-    alignItems: 'center',
-  },
-  viewButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: COLORS.primary,
-  },
-  bookButton: {
-    borderRadius: 10,
-    overflow: 'hidden',
-  },
-  bookGradient: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    alignItems: 'center',
-  },
-  bookButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#6B7280',
-    marginTop: 16,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    marginTop: 4,
-  },
+  backButton: { padding: 8 },
+  headerTitle: { fontSize: 18, fontWeight: '600', color: '#1F2937', flex: 1, marginLeft: 12 },
+  filterButton: { padding: 8 },
+  resultsHeader: { paddingHorizontal: 20, paddingVertical: 12, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
+  resultsText: { fontSize: 14, fontWeight: '600', color: '#1F2937' },
+  loadedText: { fontSize: 12, color: '#6B7280', marginTop: 4 },
+  listContent: { padding: 20 },
+  advocateCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 },
+  cardHeader: { flexDirection: 'row', gap: 12, marginBottom: 12 },
+  avatar: { width: 56, height: 56, borderRadius: 14 },
+  advocateInfo: { flex: 1 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  name: { fontSize: 15, fontWeight: '600', color: '#1F2937', flex: 1 },
+  verifiedBadge: { width: 16, height: 16, borderRadius: 8, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' },
+  verifiedCheck: { fontSize: 9, color: '#FFFFFF', fontWeight: '700' },
+  specialization: { fontSize: 12, color: '#6B7280', marginBottom: 6 },
+  statsRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  rating: { fontSize: 12, fontWeight: '500', color: '#1F2937' },
+  reviews: { fontSize: 11, color: '#6B7280' },
+  separator: { fontSize: 11, color: '#6B7280', marginHorizontal: 4 },
+  distance: { fontSize: 11, color: '#6B7280' },
+  cardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#F3F4F6', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  statusDot: { width: 6, height: 6, borderRadius: 3 },
+  statusText: { fontSize: 11, fontWeight: '500', color: '#6B7280' },
+  fee: { fontSize: 13, fontWeight: '600', color: COLORS.primary },
+  actionButtons: { flexDirection: 'row', gap: 8 },
+  viewButton: { flex: 1, backgroundColor: '#F3F4F6', paddingVertical: 10, borderRadius: 12, alignItems: 'center' },
+  viewButtonText: { fontSize: 13, fontWeight: '600', color: '#374151' },
+  bookButton: { flex: 1, backgroundColor: COLORS.primary, paddingVertical: 10, borderRadius: 12, alignItems: 'center' },
+  bookButtonText: { fontSize: 13, fontWeight: '600', color: '#FFFFFF' },
+  footerLoader: { paddingVertical: 20, alignItems: 'center', gap: 8 },
+  footerText: { fontSize: 12, color: '#6B7280' },
+  emptyContainer: { paddingVertical: 60, alignItems: 'center' },
+  emptyText: { fontSize: 16, fontWeight: '600', color: '#6B7280', marginTop: 12 },
+  emptySubtext: { fontSize: 13, color: '#9CA3AF', marginTop: 4 },
+  loadingOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(255, 255, 255, 0.9)', alignItems: 'center', justifyContent: 'center', gap: 12 },
+  loadingText: { fontSize: 14, color: '#6B7280' },
 });
 
 export default SearchScreen;

@@ -1,30 +1,45 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Animated, StatusBar, Easing } from 'react-native';
-import Svg, { Path, G } from 'react-native-svg';
+import Svg, { Path, G, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { COLORS } from '../../constants/theme';
 
-// Legalitt Shield Logo (matches your design)
+// Legalitt Hexagon Ring Logo
 const ShieldLogo = ({ size = 120 }) => {
-  const scale = size / 100; // Base size is 100
-  
+  const scale = size / 100;
+  const R = 28;
+  const r = 12;
+  const angles = [270, 330, 30, 90, 150, 210];
+
   return (
     <Svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+      <Defs>
+        <LinearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <Stop offset="0%" stopColor="#FFE4A0" />
+          <Stop offset="50%" stopColor="#E5B25D" />
+          <Stop offset="100%" stopColor="#A3742C" />
+        </LinearGradient>
+      </Defs>
       <G transform={`scale(${scale})`}>
-        {/* Shield background */}
-        <Path
-          d="M50 10 L85 25 L85 55 Q85 75 50 90 Q15 75 15 55 L15 25 Z"
-          fill={COLORS.primary || '#14B8A6'}
-        />
-        {/* Scale of Justice */}
-        <Path
-          d="M45 35 L55 35 M50 35 L50 60 M35 40 L45 40 L40 50 L30 50 Z M55 40 L65 40 L70 50 L60 50 Z M40 65 L60 65"
-          stroke="white"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          fill="white"
-          fillOpacity="0.9"
-        />
+        {angles.map((angle, idx) => {
+          const rad = (angle * Math.PI) / 180;
+          const cx = 50 + R * Math.cos(rad);
+          const cy = 50 + R * Math.sin(rad);
+          return (
+            <Path
+              key={idx}
+              d={`
+                M ${cx} ${cy - r}
+                L ${cx + r * 0.866} ${cy - r * 0.5}
+                L ${cx + r * 0.866} ${cy + r * 0.5}
+                L ${cx} ${cy + r}
+                L ${cx - r * 0.866} ${cy + r * 0.5}
+                L ${cx - r * 0.866} ${cy - r * 0.5}
+                Z
+              `}
+              fill="url(#goldGradient)"
+            />
+          );
+        })}
       </G>
     </Svg>
   );
@@ -50,8 +65,8 @@ export default function LogoScreen({ navigation }) {
   const taglineSlide = useRef(new Animated.Value(30)).current;
 
   useEffect(() => {
-    StatusBar.setBarStyle('dark-content');
-    StatusBar.setBackgroundColor('#FCFBF8');
+    StatusBar.setBarStyle('light-content');
+    StatusBar.setBackgroundColor('#090D16');
 
     // Professional animation sequence
     Animated.sequence([
@@ -143,7 +158,7 @@ export default function LogoScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FCFBF8" />
+      <StatusBar barStyle="light-content" backgroundColor="#090D16" />
 
       <View style={styles.content}>
         {/* Logo with zoom + rotate animation */}
@@ -198,7 +213,7 @@ export default function LogoScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FCFBF8',
+    backgroundColor: '#090D16',
   },
   content: {
     flex: 1,
@@ -216,12 +231,12 @@ const styles = StyleSheet.create({
     fontFamily: 'System',
     fontSize: 36,
     fontWeight: '700',
-    color: COLORS.primary || '#14B8A6',
+    color: '#FFFFFF',
     letterSpacing: 1,
   },
   tagline: {
     fontSize: 15,
-    color: '#6B7280',
+    color: '#94A3B8',
     textAlign: 'center',
     lineHeight: 22,
     maxWidth: 320,

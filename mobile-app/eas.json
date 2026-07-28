@@ -25,9 +25,10 @@
         "buildType": "apk"
       },
       "env": {
-        "API_URL": "https://legalitt-api.onrender.com/api",
-        "SOCKET_URL": "https://legalitt-api.onrender.com",
-        "GOOGLE_WEB_CLIENT_ID": "477031689444-qss3ik1q1cvgtcels5uq04qfmh38msa4.apps.googleusercontent.com"
+        "API_URL": "https://legalitt-growth.onrender.com/api/v1",
+        "SOCKET_URL": "https://legalitt-growth.onrender.com",
+        "GOOGLE_WEB_CLIENT_ID": "145094326598-95qo14kskqa4ddr6k57rrs9ebp1so35t.apps.googleusercontent.com",
+        "MOBILE_APP_SECRET": "legalitt_mobile_app_secure_secret_2026"
       }
     },
     "production": {
@@ -40,9 +41,10 @@
         "credentialsSource": "remote"
       },
       "env": {
-        "API_URL": "https://api.legalitt.com/api",
-        "SOCKET_URL": "https://api.legalitt.com",
-        "GOOGLE_WEB_CLIENT_ID": "477031689444-qss3ik1q1cvgtcels5uq04qfmh38msa4.apps.googleusercontent.com"
+        "API_URL": "https://legalitt-growth.onrender.com/api/v1",
+        "SOCKET_URL": "https://legalitt-growth.onrender.com",
+        "GOOGLE_WEB_CLIENT_ID": "145094326598-95qo14kskqa4ddr6k57rrs9ebp1so35t.apps.googleusercontent.com",
+        "MOBILE_APP_SECRET": "legalitt_mobile_app_secure_secret_2026"
       }
     }
   },

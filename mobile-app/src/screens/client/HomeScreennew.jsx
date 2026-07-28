@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   StatusBar, RefreshControl, Image, Dimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../context/AuthContext';
@@ -97,7 +98,7 @@ const HomeScreen = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
       {/* Header */}
@@ -218,7 +219,7 @@ const HomeScreen = ({ navigation }) => {
           )}
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -226,7 +227,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.backgroundGrey },
   header: {
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: SIZES.screenPadding,
-    paddingTop: 52, paddingBottom: 16, backgroundColor: '#fff',
+    paddingTop: 12, paddingBottom: 16, backgroundColor: '#fff',
   },
   avatarCircle: {
     width: 42, height: 42, borderRadius: 21,

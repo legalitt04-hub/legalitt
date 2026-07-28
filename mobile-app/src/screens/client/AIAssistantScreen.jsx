@@ -4,13 +4,17 @@ import {
   FlatList, KeyboardAvoidingView, Platform, StatusBar, ActivityIndicator,
   Alert, Modal, Linking,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import { Audio } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
+import EventSource from 'react-native-sse';
 import { COLORS, SIZES, SHADOWS } from '../../constants/theme';
+import api, { BASE_URL } from '../../services/api';
 
 const DISCLAIMER = '⚠️ AI responses are for informational purposes only and do not constitute legal advice.';
 
@@ -22,16 +26,12 @@ const SUGGESTIONS = [
   'How to transfer property in India?',
 ];
 
-// Google Gemini API Configuration
-const GEMINI_API_KEY = 'AIzaSyATUqI6sS_XFv940pQgUa-Z9eC2PrXRcVQ';
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
-
 const AIAssistantScreen = ({ navigation }) => {
   const [messages, setMessages] = useState([
     { 
       id: '1', 
       role: 'model', 
-      content: 'Hello! I\'m your AI Legal Assistant powered by Google Gemini. I can help you with:\n\n• Legal questions and explanations\n• Document analysis (upload PDFs, images, docs)\n• FIR drafting guidance\n• Voice queries (tap mic icon)\n\n' + DISCLAIMER 
+      content: 'Hello! I\'m your AI Legal Assistant. I can help you with:\n\n• Legal questions and explanations\n• Document analysis\n• FIR drafting guidance\n\n' + DISCLAIMER 
     },
   ]);
   const [input, setInput] = useState('');
@@ -39,25 +39,17 @@ const AIAssistantScreen = ({ navigation }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [recording, setRecording] = useState(null);
   const [uploadedDoc, setUploadedDoc] = useState(null);
+  const [currentConversationId, setCurrentConversationId] = useState(null);
   const [showHistory, setShowHistory] = useState(false);
   const [chatHistory, setChatHistory] = useState([]);
   
   const flatRef = useRef(null);
 
-  // Load chat history on mount
   useEffect(() => {
-    loadChatHistory();
+    fetchHistory();
     requestAudioPermission();
   }, []);
 
-  // Save chat when messages change
-  useEffect(() => {
-    if (messages.length > 1) {
-      saveChatSession();
-    }
-  }, [messages]);
-
-  // Request audio permission
   const requestAudioPermission = async () => {
     try {
       await Audio.requestPermissionsAsync();
@@ -70,678 +62,279 @@ const AIAssistantScreen = ({ navigation }) => {
     }
   };
 
-  // Load saved chats
-  const loadChatHistory = async () => {
+  const fetchHistory = async () => {
     try {
-      const history = await AsyncStorage.getItem('ai_chat_history');
-      if (history) {
-        setChatHistory(JSON.parse(history));
+      const response = await api.get('/ai/history');
+      if (response.data.success) {
+        setChatHistory(response.data.data);
       }
     } catch (error) {
-      console.log('Error loading history:', error);
+      console.log('Error fetching history:', error);
     }
   };
 
-  // Save current session
-  const saveChatSession = async () => {
-    try {
-      const lastMessage = messages[messages.length - 1];
-      const session = {
-        id: Date.now().toString(),
-        timestamp: new Date().toISOString(),
-        preview: lastMessage?.content.substring(0, 60) + '...',
-        messageCount: messages.length,
-        messages: messages,
-      };
-
-      const history = await AsyncStorage.getItem('ai_chat_history');
-      const existing = history ? JSON.parse(history) : [];
-      const updated = [session, ...existing.slice(0, 19)]; // Keep last 20
-      
-      await AsyncStorage.setItem('ai_chat_history', JSON.stringify(updated));
-      setChatHistory(updated);
-    } catch (error) {
-      console.log('Error saving:', error);
-    }
-  };
-
-  // Load previous chat
   const loadSession = (session) => {
-    setMessages(session.messages);
+    // Convert backend messages to frontend format
+    const formattedMsgs = session.messages.map(m => ({
+      id: m._id,
+      role: m.role,
+      content: m.content
+    }));
+    setMessages(formattedMsgs);
+    setCurrentConversationId(session._id);
     setShowHistory(false);
     setTimeout(() => flatRef.current?.scrollToEnd({ animated: true }), 100);
   };
 
-  // Clear history
-  const clearHistory = () => {
-    Alert.alert(
-      'Clear All History',
-      'Delete all saved chats?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            await AsyncStorage.removeItem('ai_chat_history');
-            setChatHistory([]);
-            setShowHistory(false);
-          },
-        },
-      ]
-    );
-  };
-
-  // New chat
-  const startNewChat = () => {
-    setMessages([
-      { 
-        id: '1', 
-        role: 'model', 
-        content: 'Hello! How can I help you with legal matters today?\n\n' + DISCLAIMER 
-      },
-    ]);
-    setUploadedDoc(null);
-  };
-
-  // Send to Gemini API
-  const sendToGemini = async (userMessage, documentContent = null) => {
+  const deleteSession = async (id) => {
     try {
-      // Build conversation history for Gemini
-      const conversationHistory = messages.slice(-6).map(msg => ({
-        role: msg.role === 'assistant' ? 'model' : msg.role,
-        parts: [{ text: msg.content }]
-      }));
-
-      // Add system context
-      const systemContext = `You are an AI legal assistant specializing in Indian law. Provide accurate, helpful information about Indian legal matters including criminal law, civil law, property law, family law, consumer rights, and legal procedures. Always remind users that this is general information and not formal legal advice. Be concise, clear, and reference relevant sections of Indian law when applicable (IPC, BNSS, Constitution, etc.).`;
-
-      let userPrompt = userMessage;
-
-      // Add document context if available
-      if (documentContent) {
-        userPrompt = `[Document uploaded]\n${documentContent}\n\nUser question: ${userMessage}`;
-      }
-
-      // Build request
-      const requestBody = {
-        contents: [
-          {
-            role: 'user',
-            parts: [{ text: systemContext }]
-          },
-          ...conversationHistory,
-          {
-            role: 'user',
-            parts: [{ text: userPrompt }]
-          }
-        ],
-        generationConfig: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 1024,
-        },
-        safetySettings: [
-          {
-            category: 'HARM_CATEGORY_HARASSMENT',
-            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-          },
-          {
-            category: 'HARM_CATEGORY_HATE_SPEECH',
-            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-          },
-          {
-            category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-          },
-          {
-            category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-            threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-          }
-        ]
-      };
-
-      console.log('Sending to Gemini API...');
-      
-      const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      });
-
-      const data = await response.json();
-      console.log('Gemini response:', data);
-
-      if (!response.ok) {
-        throw new Error(data.error?.message || `API Error: ${response.status}`);
-      }
-
-      if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
-        return data.candidates[0].content.parts[0].text;
-      } else if (data.candidates && data.candidates[0]?.finishReason === 'SAFETY') {
-        return 'I cannot provide a response to this query due to safety concerns. Please rephrase your question or ask about a different legal topic.';
-      } else {
-        throw new Error('Invalid response format from API');
-      }
+      await api.delete(`/ai/history/${id}`);
+      setChatHistory(prev => prev.filter(s => s._id !== id));
+      if (currentConversationId === id) startNewChat();
     } catch (error) {
-      console.error('Gemini API Error:', error);
-      throw error;
+      Alert.alert('Error', 'Could not delete conversation');
     }
   };
 
-  // Send message
+  const startNewChat = () => {
+    setMessages([{ id: '1', role: 'model', content: 'How can I help you today?\n\n' + DISCLAIMER }]);
+    setCurrentConversationId(null);
+    setUploadedDoc(null);
+    setShowHistory(false);
+  };
+
+  const sendToAI = async (userMessage, documentContent = null) => {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const token = await SecureStore.getItemAsync('authToken');
+        const url = `${BASE_URL}/ai/stream?message=${encodeURIComponent(userMessage)}&conversationId=${currentConversationId || ''}`;
+        
+        let fullReply = '';
+        setMessages(prev => [...prev, { id: 'streaming', role: 'model', content: '' }]);
+
+        const es = new EventSource(url, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        es.addEventListener('message', (event) => {
+          const data = JSON.parse(event.data);
+          
+          if (data.chunk) {
+            fullReply += data.chunk;
+            setMessages(prev => prev.map(m => 
+              m.id === 'streaming' ? { ...m, content: fullReply } : m
+            ));
+          }
+
+          if (data.done) {
+            if (!currentConversationId) {
+              setCurrentConversationId(data.conversationId);
+              fetchHistory();
+            }
+            setMessages(prev => prev.map(m => 
+              m.id === 'streaming' ? { ...m, id: Date.now().toString() + '_ai', content: fullReply + DISCLAIMER } : m
+            ));
+            es.close();
+            resolve(true);
+          }
+
+          if (data.error) {
+            es.close();
+            reject(new Error(data.error));
+          }
+        });
+
+        es.addEventListener('error', (err) => {
+          console.error('SSE Error:', err);
+          es.close();
+          reject(err);
+        });
+
+      } catch (error) {
+        console.error('AI Error:', error);
+        reject(error);
+      }
+    });
+  };
+
   const send = async (text) => {
     const q = text || input.trim();
     if (!q && !uploadedDoc) return;
 
-    const userMsg = { 
-      id: Date.now().toString(), 
-      role: 'user', 
-      content: q,
-      hasDocument: !!uploadedDoc,
-      documentName: uploadedDoc?.name
-    };
-    
-    setMessages((prev) => [...prev, userMsg]);
+    setMessages(prev => [...prev, { id: Date.now().toString(), role: 'user', content: q }]);
     setInput('');
     setLoading(true);
 
     try {
-      const reply = await sendToGemini(q, uploadedDoc?.content);
-      
-      setMessages((prev) => [...prev, { 
-        id: Date.now().toString() + '_ai', 
-        role: 'model', 
-        content: reply 
-      }]);
-      
+      await sendToAI(q, uploadedDoc?.content);
       setUploadedDoc(null);
-      
     } catch (error) {
-      console.error('Error:', error);
-      setMessages((prev) => [...prev, { 
-        id: Date.now().toString() + '_err', 
-        role: 'model', 
-        content: `Sorry, I encountered an error: ${error.message}\n\nPlease try again or rephrase your question.` 
-      }]);
+      setMessages(prev => [...prev, { id: Date.now().toString() + '_err', role: 'model', content: 'Error connecting to AI.' }]);
     } finally {
       setLoading(false);
       setTimeout(() => flatRef.current?.scrollToEnd({ animated: true }), 100);
     }
   };
 
-  // Pick document
   const pickDocument = async () => {
     try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: ['application/pdf', 'image/*', 'text/*'],
-        copyToCacheDirectory: true,
-      });
-
-      if (result.type === 'cancel' || !result.assets || result.assets.length === 0) {
-        return;
-      }
-
+      const result = await DocumentPicker.getDocumentAsync({ type: ['application/pdf', 'image/*', 'text/*'] });
+      if (result.canceled) return;
       const file = result.assets[0];
-      console.log('Picked file:', file);
-
-      // Read file content
-      let content = '';
-      
-      if (file.mimeType === 'application/pdf') {
-        Alert.alert('PDF Support', 'PDF text extraction coming soon. For now, please describe the document content in your message.');
-        return;
-      } else if (file.mimeType?.startsWith('text/')) {
-        content = await FileSystem.readAsStringAsync(file.uri);
-      } else if (file.mimeType?.startsWith('image/')) {
-        Alert.alert('Image Support', 'Image analysis coming soon. For now, please describe what\'s in the image.');
-        return;
+      if (file.mimeType?.startsWith('text/')) {
+        const content = await FileSystem.readAsStringAsync(file.uri);
+        setUploadedDoc({ name: file.name, content: content.substring(0, 5000) });
+      } else {
+        Alert.alert('Support', 'Please upload text files for analysis.');
       }
-
-      setUploadedDoc({
-        name: file.name,
-        size: file.size,
-        type: file.mimeType,
-        content: content.substring(0, 5000), // Limit to 5000 chars
-      });
-
-      Alert.alert('Document Uploaded', `${file.name} is ready. Ask me anything about it!`);
-      
-    } catch (error) {
-      console.error('Document picker error:', error);
-      Alert.alert('Error', 'Could not read document');
-    }
+    } catch (error) { console.log(error); }
   };
 
-  // Start recording
-  const startRecording = async () => {
-    try {
-      const { status } = await Audio.requestPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Microphone access is needed for voice input');
-        return;
-      }
-
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-      });
-
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
-      );
-      
-      setRecording(recording);
-      setIsRecording(true);
-    } catch (error) {
-      console.error('Recording error:', error);
-      Alert.alert('Error', 'Could not start recording');
-    }
-  };
-
-  // Stop recording
-  const stopRecording = async () => {
-    try {
-      setIsRecording(false);
-      await recording.stopAndUnloadAsync();
-      const uri = recording.getURI();
-      setRecording(null);
-      
-      Alert.alert(
-        'Voice Input',
-        'Voice-to-text transcription coming soon! For now, please type your question.',
-        [{ text: 'OK' }]
-      );
-    } catch (error) {
-      console.error('Stop recording error:', error);
-    }
-  };
-
-  // Render message
-  const renderMsg = ({ item }) => {
-    const isUser = item.role === 'user';
-    return (
-      <View style={[styles.msgWrap, isUser && styles.msgWrapUser]}>
-        {!isUser && (
-          <View style={styles.aiAvatar}>
-            <Text style={{ fontSize: 16 }}>🤖</Text>
-          </View>
-        )}
-        <View style={[styles.msgBubble, isUser ? styles.msgBubbleUser : styles.msgBubbleAI]}>
-          {item.hasDocument && (
-            <View style={styles.docTag}>
-              <Ionicons name="document-attach" size={14} color={COLORS.primary} />
-              <Text style={styles.docTagText}>{item.documentName}</Text>
-            </View>
-          )}
-          <Text style={[styles.msgText, isUser && styles.msgTextUser]}>{item.content}</Text>
-        </View>
+  const renderMsg = ({ item }) => (
+    <View style={[styles.msgWrap, item.role === 'user' && styles.msgWrapUser]}>
+      {item.role !== 'user' && <View style={styles.aiAvatar}><Text>🤖</Text></View>}
+      <View style={[styles.msgBubble, item.role === 'user' ? styles.msgBubbleUser : styles.msgBubbleAI]}>
+        <Text style={[styles.msgText, item.role === 'user' && styles.msgTextUser]}>{item.content}</Text>
       </View>
-    );
-  };
-
-  // Render history modal
-  const renderHistoryModal = () => (
-    <Modal
-      visible={showHistory}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={() => setShowHistory(false)}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Chat History</Text>
-            <TouchableOpacity onPress={() => setShowHistory(false)}>
-              <Ionicons name="close" size={24} color={COLORS.textPrimary} />
-            </TouchableOpacity>
-          </View>
-
-          {chatHistory.length === 0 ? (
-            <View style={styles.emptyHistory}>
-              <Ionicons name="time-outline" size={48} color={COLORS.textMuted} />
-              <Text style={styles.emptyText}>No saved chats yet</Text>
-            </View>
-          ) : (
-            <FlatList
-              data={chatHistory}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.historyItem}
-                  onPress={() => loadSession(item)}
-                >
-                  <View style={styles.historyIcon}>
-                    <Ionicons name="chatbubbles" size={20} color={COLORS.primary} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.historyPreview} numberOfLines={2}>
-                      {item.preview}
-                    </Text>
-                    <Text style={styles.historyMeta}>
-                      {new Date(item.timestamp).toLocaleDateString()} • {item.messageCount} messages
-                    </Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
-                </TouchableOpacity>
-              )}
-            />
-          )}
-
-          {chatHistory.length > 0 && (
-            <TouchableOpacity style={styles.clearBtn} onPress={clearHistory}>
-              <Ionicons name="trash-outline" size={18} color="#fff" />
-              <Text style={styles.clearBtnText}>Clear All History</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-    </Modal>
+    </View>
   );
 
+  const insets = useSafeAreaInsets();
+
   return (
-    <KeyboardAvoidingView 
-      style={{ flex: 1 }} 
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-    >
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
-
-      {/* Header */}
-      <LinearGradient colors={['#14B8A6', '#0D9488']} style={styles.header}>
+    <View style={{ flex: 1, backgroundColor: '#f8fafc' }}>
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }} 
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
+        <LinearGradient colors={['#14B8A6', '#0D9488']} style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <View style={styles.headerInner}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={24} color="#fff" />
-          </TouchableOpacity>
-          
-          <View style={styles.aiHeaderIcon}>
-            <Text style={{ fontSize: 24 }}>🤖</Text>
-          </View>
-          
-          <View style={{ flex: 1 }}>
+          <TouchableOpacity onPress={() => navigation.goBack()}><Ionicons name="arrow-back" size={24} color="#fff" /></TouchableOpacity>
+          <View style={{ flex: 1, marginLeft: 15 }}>
             <Text style={styles.headerTitle}>AI Legal Assistant</Text>
-            <Text style={styles.headerSub}>Powered by Google Gemini</Text>
+            <Text style={styles.headerSub}>Secure & Private</Text>
           </View>
-
-          <TouchableOpacity onPress={() => setShowHistory(true)} style={styles.headerIconBtn}>
-            <Ionicons name="time-outline" size={22} color="#fff" />
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={startNewChat} style={styles.headerIconBtn}>
-            <Ionicons name="add-circle-outline" size={22} color="#fff" />
-          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setShowHistory(true)}><Ionicons name="time-outline" size={24} color="#fff" /></TouchableOpacity>
         </View>
       </LinearGradient>
 
-      {/* Messages */}
       <FlatList
         ref={flatRef}
         data={messages}
         keyExtractor={(item) => item.id}
         renderItem={renderMsg}
         contentContainerStyle={styles.msgList}
-        showsVerticalScrollIndicator={false}
-        ListFooterComponent={loading ? (
-          <View style={styles.loadingBubble}>
-            <ActivityIndicator size="small" color={COLORS.primary} />
-            <Text style={styles.loadingText}>Thinking...</Text>
-          </View>
-        ) : null}
-        ListHeaderComponent={messages.length === 1 ? (
-          <View style={styles.suggestions}>
-            <Text style={styles.suggestionsTitle}>Quick Questions</Text>
-            <View style={styles.suggestionsRow}>
-              {SUGGESTIONS.map((s, i) => (
-                <TouchableOpacity key={i} onPress={() => send(s)} style={styles.suggestionChip}>
-                  <Text style={styles.suggestionText}>{s}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        ) : null}
+        ListFooterComponent={loading && <ActivityIndicator color={COLORS.primary} style={{ margin: 10 }} />}
       />
 
-      {/* Document indicator */}
       {uploadedDoc && (
         <View style={styles.docIndicator}>
-          <Ionicons name="document-attach" size={16} color={COLORS.primary} />
           <Text style={styles.docIndicatorText}>{uploadedDoc.name}</Text>
           <TouchableOpacity onPress={() => setUploadedDoc(null)}>
-            <Ionicons name="close-circle" size={20} color={COLORS.textMuted} />
+            <Ionicons name="close-circle" size={18} color="#0D9488" />
           </TouchableOpacity>
         </View>
       )}
 
-      {/* Input Bar */}
       <View style={styles.inputBar}>
-        <TouchableOpacity onPress={pickDocument} style={styles.iconBtn}>
-          <Ionicons name="attach" size={24} color={COLORS.textSecondary} />
-        </TouchableOpacity>
-
+        <TouchableOpacity onPress={pickDocument}><Ionicons name="attach" size={28} color={COLORS.textSecondary} /></TouchableOpacity>
         <TextInput
           value={input}
           onChangeText={setInput}
-          placeholder="Ask a legal question..."
-          placeholderTextColor={COLORS.textMuted}
+          placeholder="Type message..."
           style={styles.input}
           multiline
-          maxLength={500}
-          editable={!loading}
         />
-
-        <TouchableOpacity 
-          onPress={isRecording ? stopRecording : startRecording} 
-          style={[styles.iconBtn, isRecording && styles.recording]}
-        >
-          <Ionicons 
-            name={isRecording ? "stop-circle" : "mic"} 
-            size={24} 
-            color={isRecording ? "#ff0000" : COLORS.textSecondary} 
-          />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => send()}
-          disabled={(!input.trim() && !uploadedDoc) || loading}
-          style={[
-            styles.sendBtn, 
-            ((!input.trim() && !uploadedDoc) || loading) && styles.sendBtnDisabled
-          ]}
-        >
-          <Ionicons name="send" size={20} color="#fff" />
-        </TouchableOpacity>
+        <TouchableOpacity onPress={() => send()} style={styles.sendBtn}><Ionicons name="send" size={20} color="#fff" /></TouchableOpacity>
       </View>
 
-      {/* History Modal */}
-      {renderHistoryModal()}
-    </KeyboardAvoidingView>
+      <Modal visible={showHistory} animationType="slide">
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Chat History</Text>
+            <TouchableOpacity onPress={() => setShowHistory(false)}>
+              <Ionicons name="close" size={24} color="#333" />
+            </TouchableOpacity>
+          </View>
+
+          <FlatList
+            data={chatHistory}
+            keyExtractor={(item) => item._id}
+            renderItem={({ item }) => (
+              <View style={styles.historyItemRow}>
+                <TouchableOpacity style={styles.historyItem} onPress={() => loadSession(item)}>
+                  <View style={styles.historyInfo}>
+                    <Text style={styles.historyTitle} numberOfLines={1}>{item.title}</Text>
+                    <Text style={styles.historyDate}>{new Date(item.lastUpdated).toLocaleDateString()}</Text>
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => deleteSession(item._id)} style={styles.deleteBtn}>
+                  <Ionicons name="trash-outline" size={20} color="#ff4444" />
+                </TouchableOpacity>
+              </View>
+            )}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>No history found</Text>
+              </View>
+            }
+          />
+          
+          <TouchableOpacity style={styles.newChatBtn} onPress={startNewChat}>
+            <Text style={styles.newChatBtnText}>+ Start New Conversation</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+      </KeyboardAvoidingView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  header: { 
-    paddingTop: Platform.OS === 'ios' ? 50 : 40, 
-    paddingBottom: 12, 
-    paddingHorizontal: SIZES.screenPadding 
-  },
+  header: { paddingTop: 10, paddingBottom: 15, paddingHorizontal: 20 },
   headerInner: { flexDirection: 'row', alignItems: 'center' },
-  backBtn: { marginRight: 12, padding: 4 },
-  aiHeaderIcon: { 
-    width: 44, height: 44, borderRadius: 22, 
-    backgroundColor: 'rgba(255,255,255,0.2)', 
-    alignItems: 'center', justifyContent: 'center', 
-    marginRight: 12 
-  },
-  headerTitle: { fontSize: SIZES.subtitle, fontWeight: '700', color: '#fff' },
-  headerSub: { fontSize: SIZES.caption, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
-  headerIconBtn: { padding: 8, marginLeft: 4 },
-  
-  msgList: { padding: SIZES.screenPadding, paddingBottom: 20 },
-  suggestions: { marginBottom: SIZES.xl },
-  suggestionsTitle: { fontSize: SIZES.caption, fontWeight: '700', color: COLORS.textSecondary, marginBottom: 10 },
-  suggestionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  suggestionChip: { 
-    backgroundColor: COLORS.primaryLight, 
-    borderRadius: SIZES.radiusFull, 
-    paddingHorizontal: 14, 
-    paddingVertical: 10, 
-    borderWidth: 1, 
-    borderColor: COLORS.primary + '40' 
-  },
-  suggestionText: { fontSize: SIZES.caption, color: COLORS.primary, fontWeight: '600' },
-  
-  msgWrap: { flexDirection: 'row', marginBottom: SIZES.lg, alignItems: 'flex-end' },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: '#fff' },
+  headerSub: { fontSize: 12, color: 'rgba(255,255,255,0.7)' },
+  msgList: { padding: 20 },
+  msgWrap: { flexDirection: 'row', marginBottom: 15, alignItems: 'flex-end' },
   msgWrapUser: { flexDirection: 'row-reverse' },
-  aiAvatar: { 
-    width: 32, height: 32, borderRadius: 16, 
-    backgroundColor: COLORS.primaryLight, 
-    alignItems: 'center', justifyContent: 'center', 
-    marginRight: SIZES.sm 
-  },
-  msgBubble: { maxWidth: '75%', borderRadius: 16, padding: SIZES.md },
-  msgBubbleAI: { backgroundColor: '#f3f4f6', borderBottomLeftRadius: 4 },
-  msgBubbleUser: { backgroundColor: COLORS.primary, borderBottomRightRadius: 4 },
-  msgText: { fontSize: SIZES.body, color: COLORS.textPrimary, lineHeight: 22 },
+  aiAvatar: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#f0f0f0', alignItems: 'center', justifyContent: 'center', marginRight: 10 },
+  msgBubble: { maxWidth: '80%', padding: 12, borderRadius: 15 },
+  msgBubbleAI: { backgroundColor: '#f0f0f0' },
+  msgBubbleUser: { backgroundColor: '#0D9488' },
+  msgText: { fontSize: 14, color: '#333' },
   msgTextUser: { color: '#fff' },
-  docTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.primaryLight,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginBottom: 8,
-    gap: 4,
-  },
-  docTagText: { fontSize: 11, color: COLORS.primary, fontWeight: '600' },
-  
-  loadingBubble: { flexDirection: 'row', alignItems: 'center', padding: SIZES.md, gap: 8 },
-  loadingText: { fontSize: SIZES.caption, color: COLORS.textMuted },
-  
-  docIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.primaryLight,
-    marginHorizontal: SIZES.screenPadding,
-    marginBottom: 8,
-    padding: 10,
-    borderRadius: 12,
-    gap: 8,
-  },
-  docIndicatorText: { flex: 1, fontSize: SIZES.caption, color: COLORS.primary, fontWeight: '600' },
-  
-  inputBar: {
+  inputBar: { flexDirection: 'row', alignItems: 'center', padding: 15, backgroundColor: '#fff', borderTopWidth: 1, borderColor: '#eee' },
+  input: { flex: 1, marginHorizontal: 10, padding: 10, backgroundColor: '#f9f9f9', borderRadius: 20, maxHeight: 100 },
+  sendBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#0D9488', alignItems: 'center', justifyContent: 'center' },
+  docIndicator: { padding: 10, backgroundColor: '#e6f7f5', flexDirection: 'row', justifyContent: 'space-between' },
+  docIndicatorText: { color: '#0D9488', fontSize: 12 },
+  modalContent: { flex: 1, paddingTop: 50 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', padding: 20, borderBottomWidth: 1, borderColor: '#eee' },
+  modalTitle: { fontSize: 18, fontWeight: '700' },
+  historyItemRow: { 
     flexDirection: 'row', 
-    alignItems: 'flex-end',
-    paddingHorizontal: SIZES.screenPadding, 
-    paddingVertical: 10,
-    backgroundColor: '#fff', 
-    borderTopWidth: 1, 
-    borderColor: COLORS.border,
-    paddingBottom: Platform.OS === 'ios' ? 30 : 10,
-    ...SHADOWS.sm,
+    alignItems: 'center', 
+    paddingHorizontal: 20,
+    borderBottomWidth: 1, 
+    borderColor: '#eee' 
   },
-  iconBtn: { padding: 8 },
-  recording: { backgroundColor: '#ffebee', borderRadius: 20 },
-  input: {
-    flex: 1, 
-    fontSize: SIZES.body, 
-    color: COLORS.textPrimary,
-    backgroundColor: COLORS.inputBg, 
-    borderRadius: SIZES.radiusXl,
-    paddingHorizontal: SIZES.md, 
-    paddingVertical: 10,
-    marginHorizontal: 8,
-    maxHeight: 100,
-    borderWidth: 1, 
-    borderColor: COLORS.border,
+  historyItem: { flex: 1, paddingVertical: 15 },
+  historyTitle: { fontSize: 14, fontWeight: '600', color: '#333' },
+  historyDate: { fontSize: 11, color: '#999', marginTop: 2 },
+  deleteBtn: { padding: 10 },
+  emptyContainer: { padding: 40, alignItems: 'center' },
+  emptyText: { color: '#999' },
+  newChatBtn: { 
+    margin: 20, 
+    padding: 15, 
+    backgroundColor: '#0D9488', 
+    borderRadius: 12, 
+    alignItems: 'center' 
   },
-  sendBtn: { 
-    width: 40, height: 40, borderRadius: 20, 
-    backgroundColor: COLORS.primary, 
-    alignItems: 'center', justifyContent: 'center' 
-  },
-  sendBtnDisabled: { backgroundColor: COLORS.textMuted },
-
-  // Modal styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: '80%',
-    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: SIZES.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  modalTitle: {
-    fontSize: SIZES.title,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-  },
-  emptyHistory: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  emptyText: {
-    fontSize: SIZES.body,
-    color: COLORS.textMuted,
-    marginTop: 12,
-  },
-  historyItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: SIZES.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    gap: 12,
-  },
-  historyIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  historyPreview: {
-    fontSize: SIZES.body,
-    color: COLORS.textPrimary,
-    marginBottom: 4,
-  },
-  historyMeta: {
-    fontSize: SIZES.caption,
-    color: COLORS.textMuted,
-  },
-  clearBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#ef4444',
-    margin: SIZES.md,
-    padding: 14,
-    borderRadius: 12,
-    gap: 8,
-  },
-  clearBtnText: {
-    color: '#fff',
-    fontSize: SIZES.body,
-    fontWeight: '600',
-  },
+  newChatBtnText: { color: '#fff', fontWeight: '700' }
 });
 
 export default AIAssistantScreen;

@@ -11,9 +11,7 @@
       "resizeMode": "contain",
       "backgroundColor": "#0d9488"
     },
-    "updates": {
-      "fallbackToCacheTimeout": 0
-    },
+
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -52,8 +50,7 @@
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.RECORD_AUDIO"
-      ],
-      "googleServicesFile": "./google-services.json"
+      ]
     },
     "plugins": [
       "expo-font",
@@ -68,11 +65,6 @@
           "color": "#0d9488"
         }
       ]
-    ],
-    "extra": {
-      "eas": {
-        "projectId": "c7cbf65c-ddc9-4089-afc6-30f135b6d5e8"
-      }
-    }
+    ]
   }
 }

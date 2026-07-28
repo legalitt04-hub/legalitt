@@ -4,19 +4,24 @@ import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
-  SafeAreaView,
+  TextInput,
   StatusBar,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/theme';
+import { useAuth } from '../../context/AuthContext';
+import { authAPI } from '../../services/api';
+import Constants from 'expo-constants';
 
 const OTPScreen = ({ navigation, route }) => {
-  const { email, role, mode, password: loginPassword } = route.params;
-  
+  const { email, role, mode, password: loginPassword, registerData } = route.params;
+  const { register, login } = useAuth();
+
   // OTP Input
   const [otp, setOtp] = useState(['', '', '', '']);
   const inputRefs = useRef([]);
@@ -26,17 +31,18 @@ const OTPScreen = ({ navigation, route }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
+
   // Flow control
   const [otpVerified, setOtpVerified] = useState(false);
 
   useEffect(() => {
     // Auto-focus first input
     inputRefs.current[0]?.focus();
+    // Send initial OTP E2E
+    handleResendOTP();
   }, []);
 
   const handleOtpChange = (text, index) => {
-    // Only allow numbers
     if (text && !/^\d+$/.test(text)) return;
 
     const newOtp = [...otp];
@@ -55,52 +61,79 @@ const OTPScreen = ({ navigation, route }) => {
     }
   };
 
-  const handleVerifyOTP = () => {
+  const handleVerifyOTP = async () => {
     const otpCode = otp.join('');
     if (otpCode.length !== 4) return;
 
-    // TODO: Verify OTP with backend
-    console.log('Verifying OTP:', otpCode);
+    console.log('Verifying OTP E2E:', otpCode);
 
-    if (mode === 'login') {
-      // LOGIN MODE: OTP verified → Navigate to home
-      // TODO: Call login API and save token
-      navigateToHome();
-    } else {
-      // REGISTER MODE: OTP verified → Show password setup
-      setOtpVerified(true);
+    try {
+      // 1. Call E2E verify-otp endpoint on backend
+      const { data } = await authAPI.verifyOTP(email.trim().toLowerCase(), otpCode, role);
+
+      if (data.success) {
+        if (mode === 'login') {
+          // LOGIN MODE: OTP verified -> Call login API via context
+          const response = await login(
+            email.trim().toLowerCase(),
+            loginPassword
+          );
+          if (!response.success) {
+            Alert.alert('Verification failed', response.message || 'OTP verification failed');
+          }
+        } else {
+          // REGISTER MODE: OTP verified -> Show password setup
+          setOtpVerified(true);
+        }
+      } else {
+        Alert.alert('Verification Failed', 'Incorrect OTP entered.');
+      }
+    } catch (error) {
+      Alert.alert('Verification failed', error.response?.data?.message || 'Incorrect OTP or connection issue.');
     }
   };
 
-  const handleCompleteRegistration = () => {
+  const handleCompleteRegistration = async () => {
     if (!newPassword || !confirmPassword) return;
     if (newPassword !== confirmPassword) {
-      alert('Passwords do not match!');
+      Alert.alert('Error', 'Passwords do not match!');
       return;
     }
     if (newPassword.length < 6) {
-      alert('Password must be at least 6 characters!');
+      Alert.alert('Error', 'Password must be at least 6 characters!');
       return;
     }
 
-    // TODO: Call registration API with email, otp, password, role
-    console.log('Registering:', { email, otp: otp.join(''), password: newPassword, role });
+    try {
+      const mobileAppSecret = Constants.expoConfig?.extra?.MOBILE_APP_SECRET || 'mock_captcha_token';
+      // Use registerData (name, barCouncilId) if passed from advocate RegisterScreen
+      const response = await register({
+        name: registerData?.name || email.split('@')[0],
+        email: email.trim().toLowerCase(),
+        password: newPassword,
+        role: role,
+        barCouncilId: registerData?.barCouncilId || undefined,
+        captchaToken: mobileAppSecret,
+      });
 
-    navigateToHome();
-  };
-
-  const navigateToHome = () => {
-    // Navigate based on role
-    if (role === 'advocate') {
-      navigation.replace('AdvocateMain');
-    } else {
-      navigation.replace('ClientMain');
+      if (!response.success) {
+        Alert.alert('Registration Failed', response.message || 'Registration failed');
+      } else if (role === 'advocate') {
+        // Advocates go to document upload after registration
+        navigation.replace('DocumentUpload', { registerData });
+      }
+    } catch (error) {
+      Alert.alert('Registration Error', error.message);
     }
   };
 
-  const handleResendOTP = () => {
-    console.log('Resending OTP to:', email);
-    // TODO: Call resend OTP API
+  const handleResendOTP = async () => {
+    console.log('Sending Email OTP to:', email);
+    try {
+      await authAPI.sendOTP(email.trim().toLowerCase());
+    } catch (err) {
+      console.log('Error triggering OTP resend:', err.message);
+    }
     setOtp(['', '', '', '']);
     inputRefs.current[0]?.focus();
   };

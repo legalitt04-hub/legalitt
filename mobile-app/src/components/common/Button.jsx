@@ -9,10 +9,13 @@ const Button = ({
   size = 'lg', // sm | md | lg
   style, textStyle, icon, fullWidth = true,
 }) => {
-  const heights = { sm: 40, md: 48, lg: SIZES.buttonHeight };
+  const heights = { sm: 40, md: 48, lg: SIZES.buttonHeight || 56 };
   const fontSizes = { sm: 13, md: 14, lg: 16 };
   const h = heights[size];
   const fs = fontSizes[size];
+
+  const flatStyle = StyleSheet.flatten(style) || {};
+  const br = flatStyle.borderRadius !== undefined ? flatStyle.borderRadius : (h / 2);
 
   if (variant === 'primary') {
     return (
@@ -23,9 +26,9 @@ const Button = ({
         style={[{ width: fullWidth ? '100%' : undefined }, style]}
       >
         <LinearGradient
-          colors={disabled ? ['#9ca3af', '#9ca3af'] : [COLORS.primaryGradientStart, COLORS.primaryGradientEnd]}
+          colors={disabled ? ['#9ca3af', '#9ca3af'] : [COLORS.primaryGradientStart || '#14B8A6', COLORS.primaryGradientEnd || '#0D9488']}
           start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-          style={[styles.btn, { height: h, borderRadius: h / 2 }]}
+          style={[styles.btn, { height: h, borderRadius: br }]}
         >
           {loading ? (
             <ActivityIndicator color="#fff" size="small" />
@@ -47,7 +50,7 @@ const Button = ({
         disabled={disabled || loading}
         activeOpacity={0.8}
         style={[
-          styles.btn, styles.outlineBtn, { height: h, borderRadius: h / 2, width: fullWidth ? '100%' : undefined },
+          styles.btn, styles.outlineBtn, { height: h, borderRadius: br, width: fullWidth ? '100%' : undefined },
           style,
         ]}
       >
@@ -70,7 +73,7 @@ const Button = ({
         disabled={disabled || loading}
         activeOpacity={0.8}
         style={[
-          styles.btn, styles.secondaryBtn, { height: h, borderRadius: h / 2, width: fullWidth ? '100%' : undefined },
+          styles.btn, styles.secondaryBtn, { height: h, borderRadius: br, width: fullWidth ? '100%' : undefined },
           style,
         ]}
       >

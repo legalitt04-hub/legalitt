@@ -1,6 +1,7 @@
 // FIRDraftScreen.jsx
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, StatusBar, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, StatusBar, KeyboardAvoidingView, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { aiAPI } from '../../services/api';
 import Input from '../../components/common/Input';
@@ -24,7 +25,7 @@ export const FIRDraftScreen = ({ navigation }) => {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#fff' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }} edges={['top', 'bottom', 'left', 'right']}>
       <StatusBar barStyle="dark-content" />
       <View style={st.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 4 }}>
@@ -33,7 +34,11 @@ export const FIRDraftScreen = ({ navigation }) => {
         <Text style={st.title}>FIR Draft Generator</Text>
         <View style={{ width: 32 }} />
       </View>
-      <ScrollView contentContainerStyle={{ padding: SIZES.screenPadding, paddingBottom: 100 }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        <ScrollView contentContainerStyle={{ padding: SIZES.screenPadding, paddingBottom: 100 }}>
         <View style={st.aiNote}>
           <Ionicons name="information-circle" size={18} color={COLORS.primary} />
           <Text style={st.aiNoteText}>AI-generated draft. Always review with a lawyer before submission.</Text>
@@ -50,13 +55,14 @@ export const FIRDraftScreen = ({ navigation }) => {
             <Text style={st.draftText}>{draft}</Text>
           </View>
         ) : null}
-      </ScrollView>
-    </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const st = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SIZES.screenPadding, paddingTop: 52, paddingBottom: 12, borderBottomWidth: 1, borderColor: COLORS.border },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SIZES.screenPadding, paddingTop: 12, paddingBottom: 12, borderBottomWidth: 1, borderColor: COLORS.border },
   title: { fontSize: SIZES.subtitle, fontWeight: '800', color: COLORS.textPrimary },
   aiNote: { flexDirection: 'row', alignItems: 'flex-start', backgroundColor: COLORS.primaryLight, borderRadius: SIZES.radiusMd, padding: SIZES.md, marginBottom: SIZES.xl, gap: 8 },
   aiNoteText: { flex: 1, fontSize: SIZES.caption, color: COLORS.primary, lineHeight: 18 },
