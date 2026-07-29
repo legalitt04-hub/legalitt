@@ -198,16 +198,28 @@ const AdvocateTabs = () => {
 
 const AppNavigator = () => {
   const { isAuthenticated, user, isRestoring, consentAccepted } = useAuth();
+  const [splashFinished, setSplashFinished] = useState(false);
 
-  if (isRestoring) {
-    return <AuthLoadingScreen />;
+  // ─── SYNCHRONIZED SPLASH ANIMATION GATE ─────────────────────────────────
+  // Render LegalittIntroScreen until the logo reveal animation completion event fires.
+  // Prevents Home screen or Auth screens from appearing while animation is running.
+  if (!splashFinished) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#07080A' }}>
+        <LegalittIntroScreen
+          onAnimationComplete={() => {
+            setSplashFinished(true);
+          }}
+        />
+      </View>
+    );
   }
 
   return (
     <View style={{ flex: 1 }}>
       <OfflineBanner />
       <NavigationContainer>
-        <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade', animationDuration: 300 }}>
+        <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade', animationDuration: 400 }}>
           {!consentAccepted ? (
             // ─── CONSENT GATE FLOW (UNACCEPTED) ────────────────────────
             <>
@@ -218,8 +230,6 @@ const AppNavigator = () => {
           ) : !isAuthenticated ? (
             // ─── AUTHENTICATION FLOW (UNAUTHENTICATED) ───────────────────
             <>
-              <Stack.Screen name="LegalittIntro" component={LegalittIntroScreen} />
-              <Stack.Screen name="Splash" component={SplashScreen} />
               <Stack.Screen name="RoleSelect" component={RoleSelectScreen} />
               <Stack.Screen name="Onboarding" component={OnboardingScreen} />
               <Stack.Screen name="LoginRegister" component={LoginRegisterScreen} />

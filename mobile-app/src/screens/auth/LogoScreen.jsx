@@ -1,244 +1,211 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Animated, StatusBar, Easing } from 'react-native';
-import Svg, { Path, G, Defs, LinearGradient, Stop } from 'react-native-svg';
-import { COLORS } from '../../constants/theme';
+// screens/auth/LogoScreen.jsx - Premium Cinematic Progressive Logo Reveal (No Yellow Bars)
+import React, { useEffect, useRef } from 'react';
+import {
+  View,
+  StyleSheet,
+  Animated,
+  StatusBar,
+  Dimensions,
+  Image,
+  Easing,
+} from 'react-native';
 
-// Legalitt Hexagon Ring Logo
-const ShieldLogo = ({ size = 120 }) => {
-  const scale = size / 100;
-  const R = 28;
-  const r = 12;
-  const angles = [270, 330, 30, 90, 150, 210];
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-  return (
-    <Svg width={size} height={size} viewBox="0 0 100 100" fill="none">
-      <Defs>
-        <LinearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <Stop offset="0%" stopColor="#FFE4A0" />
-          <Stop offset="50%" stopColor="#E5B25D" />
-          <Stop offset="100%" stopColor="#A3742C" />
-        </LinearGradient>
-      </Defs>
-      <G transform={`scale(${scale})`}>
-        {angles.map((angle, idx) => {
-          const rad = (angle * Math.PI) / 180;
-          const cx = 50 + R * Math.cos(rad);
-          const cy = 50 + R * Math.sin(rad);
-          return (
-            <Path
-              key={idx}
-              d={`
-                M ${cx} ${cy - r}
-                L ${cx + r * 0.866} ${cy - r * 0.5}
-                L ${cx + r * 0.866} ${cy + r * 0.5}
-                L ${cx} ${cy + r}
-                L ${cx - r * 0.866} ${cy + r * 0.5}
-                L ${cx - r * 0.866} ${cy - r * 0.5}
-                Z
-              `}
-              fill="url(#goldGradient)"
-            />
-          );
-        })}
-      </G>
-    </Svg>
-  );
-};
+const LOGO_WIDTH = Math.min(SCREEN_WIDTH * 0.75, 300);
+const LOGO_HEIGHT = LOGO_WIDTH * 0.42;
+const PARTICLE_COUNT = 20;
 
-export default function LogoScreen({ navigation }) {
-  // Logo animations
-  const logoScale = useRef(new Animated.Value(0.3)).current;
-  const logoOpacity = useRef(new Animated.Value(0)).current;
-  const logoRotate = useRef(new Animated.Value(0)).current;
-  
-  // Letter animations (one for each letter in "Legalitt")
-  const letterAnims = useRef(
-    'Legalitt'.split('').map(() => ({
+export default function LogoScreen({ navigation, onAnimationComplete }) {
+  const revealAnim = useRef(new Animated.Value(0)).current;
+  const glowOpacity = useRef(new Animated.Value(0)).current;
+  const dollyScale = useRef(new Animated.Value(0.96)).current;
+  const screenOpacity = useRef(new Animated.Value(1)).current;
+
+  // Floating Golden Particles
+  const particles = useRef(
+    Array.from({ length: PARTICLE_COUNT }).map(() => ({
+      x: Math.random() * SCREEN_WIDTH,
+      y: SCREEN_HEIGHT * 0.3 + Math.random() * (SCREEN_HEIGHT * 0.4),
+      animY: new Animated.Value(0),
+      animX: new Animated.Value(0),
       opacity: new Animated.Value(0),
-      translateY: new Animated.Value(20),
-      scale: new Animated.Value(0.5),
+      speedY: -0.3 - Math.random() * 0.5,
+      speedX: (Math.random() - 0.5) * 0.3,
+      size: 1.5 + Math.random() * 2.5,
     }))
   ).current;
 
-  // Tagline animation
-  const taglineOpacity = useRef(new Animated.Value(0)).current;
-  const taglineSlide = useRef(new Animated.Value(30)).current;
-
   useEffect(() => {
     StatusBar.setBarStyle('light-content');
-    StatusBar.setBackgroundColor('#090D16');
+    StatusBar.setBackgroundColor('#07080A');
 
-    // Professional animation sequence
-    Animated.sequence([
-      // 1. Logo appears with smooth zoom and rotation (800ms)
-      Animated.parallel([
-        Animated.timing(logoOpacity, {
-          toValue: 1,
-          duration: 800,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        Animated.spring(logoScale, {
-          toValue: 1,
-          friction: 8,
-          tension: 40,
-          useNativeDriver: true,
-        }),
-        Animated.timing(logoRotate, {
-          toValue: 1,
-          duration: 800,
-          easing: Easing.out(Easing.back(1.2)),
-          useNativeDriver: true,
-        }),
-      ]),
+    // Particles animation
+    particles.forEach((p) => {
+      Animated.timing(p.opacity, {
+        toValue: 0.3 + Math.random() * 0.5,
+        duration: 1000,
+        useNativeDriver: true,
+      }).start();
 
-      // Small pause
-      Animated.delay(200),
+      Animated.timing(p.animY, {
+        toValue: p.speedY * 150,
+        duration: 5500,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }).start();
 
-      // 2. Letters appear one by one (stagger: 80ms each, total ~640ms for 8 letters)
-      Animated.stagger(
-        80,
-        letterAnims.map((anim) =>
-          Animated.parallel([
-            Animated.timing(anim.opacity, {
-              toValue: 1,
-              duration: 400,
-              easing: Easing.out(Easing.quad),
-              useNativeDriver: true,
-            }),
-            Animated.spring(anim.translateY, {
-              toValue: 0,
-              friction: 7,
-              tension: 40,
-              useNativeDriver: true,
-            }),
-            Animated.spring(anim.scale, {
-              toValue: 1,
-              friction: 6,
-              tension: 50,
-              useNativeDriver: true,
-            }),
-          ])
-        )
-      ),
-
-      // Small pause after letters
-      Animated.delay(300),
-
-      // 3. Tagline slides up and fades in (500ms)
-      Animated.parallel([
-        Animated.timing(taglineOpacity, {
-          toValue: 1,
-          duration: 500,
-          easing: Easing.out(Easing.quad),
-          useNativeDriver: true,
-        }),
-        Animated.spring(taglineSlide, {
-          toValue: 0,
-          friction: 9,
-          tension: 40,
-          useNativeDriver: true,
-        }),
-      ]),
-
-      // Hold the complete screen for a moment
-      Animated.delay(600),
-
-    ]).start(() => {
-      // Navigate to RoleSelect
-      // Total time: 800 + 200 + 640 + 300 + 500 + 600 = ~3040ms (~3s)
-      navigation.replace('RoleSelect');
+      Animated.timing(p.animX, {
+        toValue: p.speedX * 80,
+        duration: 5500,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }).start();
     });
-  }, [navigation]);
 
-  const logoRotateInterpolate = logoRotate.interpolate({
+    // Camera dolly scale
+    Animated.timing(dollyScale, {
+      toValue: 1.02,
+      duration: 5500,
+      easing: Easing.out(Easing.sin),
+      useNativeDriver: true,
+    }).start();
+
+    // Sequence (No yellow bars)
+    Animated.sequence([
+      // 0.0s - 0.5s: Matte Black & Ambient Glow
+      Animated.timing(glowOpacity, {
+        toValue: 0.7,
+        duration: 500,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+
+      // 0.5s - 2.5s: Progressive Left -> Right Logo Mask Reveal
+      Animated.timing(revealAnim, {
+        toValue: 1,
+        duration: 2000,
+        easing: Easing.linear,
+        useNativeDriver: false,
+      }),
+
+      // 2.5s: Logo fully revealed. Hold 1 second
+      Animated.delay(1000),
+
+      // Transition out
+      Animated.timing(screenOpacity, {
+        toValue: 0,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+    ]).start(({ finished }) => {
+      if (finished) {
+        if (onAnimationComplete) {
+          onAnimationComplete();
+        } else if (navigation?.replace) {
+          navigation.replace('RoleSelect');
+        }
+      }
+    });
+  }, [navigation, onAnimationComplete]);
+
+  const maskWidth = revealAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['-10deg', '0deg'],
+    outputRange: [0, LOGO_WIDTH + 10],
   });
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#090D16" />
+    <Animated.View style={[styles.container, { opacity: screenOpacity }]}>
+      <StatusBar barStyle="light-content" backgroundColor="#07080A" />
 
-      <View style={styles.content}>
-        {/* Logo with zoom + rotate animation */}
+      {/* Ambient Glow Backdrop */}
+      <Animated.View style={[styles.ambientGlow, { opacity: glowOpacity }]} />
+
+      {/* Floating Golden Dust Particles */}
+      {particles.map((p, i) => (
         <Animated.View
-          style={{
-            opacity: logoOpacity,
-            transform: [
-              { scale: logoScale },
-              { rotate: logoRotateInterpolate },
-            ],
-          }}
-        >
-          <ShieldLogo size={140} />
-        </Animated.View>
+          key={i}
+          style={[
+            styles.particle,
+            {
+              left: p.x,
+              top: p.y,
+              width: p.size,
+              height: p.size,
+              borderRadius: p.size / 2,
+              opacity: p.opacity,
+              transform: [
+                { translateY: p.animY },
+                { translateX: p.animX },
+              ],
+            },
+          ]}
+        />
+      ))}
 
-        {/* "Legalitt" - Letter by letter reveal */}
-        <View style={styles.titleContainer}>
-          {'Legalitt'.split('').map((letter, index) => (
-            <Animated.View
-              key={index}
-              style={{
-                opacity: letterAnims[index].opacity,
-                transform: [
-                  { translateY: letterAnims[index].translateY },
-                  { scale: letterAnims[index].scale },
-                ],
-              }}
-            >
-              <Text style={styles.letter}>{letter}</Text>
-            </Animated.View>
-          ))}
+      {/* Dolly Wrapper */}
+      <Animated.View
+        style={[
+          styles.logoDollyWrapper,
+          {
+            transform: [{ scale: dollyScale }],
+          },
+        ]}
+      >
+        <View style={[styles.logoViewport, { width: LOGO_WIDTH, height: LOGO_HEIGHT }]}>
+          
+          {/* Logo Reveal Layer (Progressive Clip Mask) */}
+          <Animated.View style={[styles.maskContainer, { width: maskWidth }]}>
+            <Image
+              source={require('../../../assets/logo-transparent.png')}
+              style={{ width: LOGO_WIDTH, height: LOGO_HEIGHT }}
+              resizeMode="contain"
+            />
+          </Animated.View>
+
         </View>
-
-        {/* Tagline with slide up animation */}
-        <Animated.View
-          style={{
-            opacity: taglineOpacity,
-            transform: [{ translateY: taglineSlide }],
-            marginTop: 24,
-          }}
-        >
-          <Text style={styles.tagline}>
-            Justice, simplified.{'\n'}
-            Connect with verified advocates anytime.
-          </Text>
-        </Animated.View>
-      </View>
-    </View>
+      </Animated.View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#090D16',
-  },
-  content: {
-    flex: 1,
+    backgroundColor: '#07080A',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
   },
-  titleContainer: {
-    flexDirection: 'row',
-    marginTop: 32,
-    height: 50,
+  ambientGlow: {
+    position: 'absolute',
+    width: SCREEN_WIDTH * 0.85,
+    height: SCREEN_WIDTH * 0.85,
+    borderRadius: (SCREEN_WIDTH * 0.85) / 2,
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    shadowColor: '#FFD700',
+    shadowOffset: { width: 0, height: 0 },
+    shadowRadius: 80,
+    shadowOpacity: 0.5,
+  },
+  particle: {
+    position: 'absolute',
+    backgroundColor: '#FFE4A0',
+    shadowColor: '#FFD700',
+    shadowOffset: { width: 0, height: 0 },
+    shadowRadius: 4,
+    shadowOpacity: 0.8,
+  },
+  logoDollyWrapper: {
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  letter: {
-    fontFamily: 'System',
-    fontSize: 36,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 1,
+  logoViewport: {
+    position: 'relative',
+    alignItems: 'flex-start',
+    justifyContent: 'center',
   },
-  tagline: {
-    fontSize: 15,
-    color: '#94A3B8',
-    textAlign: 'center',
-    lineHeight: 22,
-    maxWidth: 320,
+  maskContainer: {
+    height: '100%',
+    overflow: 'hidden',
   },
 });
