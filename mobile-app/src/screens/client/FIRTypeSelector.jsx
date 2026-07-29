@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { COLORS } from '../../constants/theme';
 
 const FIR_TYPES = [
   { id: 'theft', title: 'Theft / Burglary', icon: 'cart-outline', color: '#3b82f6' },
@@ -18,7 +19,7 @@ const FIR_TYPES = [
 const FIRTypeSelector = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient colors={['#14B8A6', '#0D9488']} style={styles.header}>
+      <LinearGradient colors={[COLORS.primary, COLORS.primaryDark || '#8D7865']} style={styles.header}>
         <View style={styles.headerInner}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Ionicons name="arrow-back" size={24} color="#fff" />
@@ -58,7 +59,7 @@ const FIRTypeSelector = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
+  container: { flex: 1, backgroundColor: COLORS.background },
   header: { paddingTop: 20, paddingBottom: 20, paddingHorizontal: 20 },
   headerInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   headerTitle: { fontSize: 18, fontWeight: '700', color: '#fff', flex: 1, marginLeft: 15 },

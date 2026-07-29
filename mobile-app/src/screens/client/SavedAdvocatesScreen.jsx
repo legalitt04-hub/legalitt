@@ -103,7 +103,7 @@ const SavedAdvocatesScreen = ({ navigation }) => {
             style={styles.removeBtn}
             onPress={() => handleRemove(item._id)}
           >
-            <Ionicons name="bookmark" size={20} color="#0D9488" />
+            <Ionicons name="bookmark" size={20} color={COLORS.primary} />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.viewBtn}
@@ -118,9 +118,9 @@ const SavedAdvocatesScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      {/* Teal Gradient Header */}
+      {/* Primary Gradient Header */}
       <LinearGradient
-        colors={['#14B8A6', '#0D9488']}
+        colors={[COLORS.primary, COLORS.primaryDark || '#8D7865']}
         style={[styles.header, { paddingTop: insets.top + 10 }]}
       >
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
@@ -144,8 +144,8 @@ const SavedAdvocatesScreen = ({ navigation }) => {
         </View>
       ) : advocates.length === 0 ? (
         <View style={styles.center}>
-          <LinearGradient colors={['#F0FDFA', '#CCFBF1']} style={styles.emptyIconBg}>
-            <Ionicons name="heart-dislike-outline" size={48} color={COLORS.primary} />
+          <LinearGradient colors={['#FAF9F8', 'rgba(176, 156, 133, 0.2)']} style={styles.emptyIconBg}>
+            <Ionicons name="bookmark-outline" size={48} color={COLORS.primary} />
           </LinearGradient>
           <Text style={styles.emptyTitle}>No Saved Advocates</Text>
           <Text style={styles.emptySubText}>
@@ -180,7 +180,7 @@ const SavedAdvocatesScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F1F5F9' },
+  container: { flex: 1, backgroundColor: COLORS.background },
 
   // Header
   header: {
@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     overflow: 'hidden',
     alignItems: 'center',
-    shadowColor: '#0D9488',
+    shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 10,
@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
   badgeRow: { flexDirection: 'row', gap: 6, marginBottom: 4 },
   expBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: '#F0FDFA', borderRadius: 8,
+    backgroundColor: 'rgba(176, 156, 133, 0.12)', borderRadius: 8,
     paddingHorizontal: 7, paddingVertical: 3,
   },
   expText: { fontSize: 11, color: COLORS.primary, fontWeight: '600' },
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
   },
   removeBtn: {
     width: 38, height: 38, borderRadius: 19,
-    backgroundColor: '#F0FDFA',
+    backgroundColor: 'rgba(176, 156, 133, 0.12)',
     alignItems: 'center', justifyContent: 'center',
   },
   viewBtn: {

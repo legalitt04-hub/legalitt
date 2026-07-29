@@ -202,14 +202,14 @@ const AIAssistantScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#f8fafc' }}>
+    <View style={{ flex: 1, backgroundColor: COLORS.background }}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
       <KeyboardAvoidingView 
         style={{ flex: 1 }} 
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
-        <LinearGradient colors={['#14B8A6', '#0D9488']} style={[styles.header, { paddingTop: insets.top + 10 }]}>
+        <LinearGradient colors={[COLORS.primary, COLORS.primaryDark || '#8D7865']} style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <View style={styles.headerInner}>
           <TouchableOpacity onPress={() => navigation.goBack()}><Ionicons name="arrow-back" size={24} color="#fff" /></TouchableOpacity>
           <View style={{ flex: 1, marginLeft: 15 }}>
@@ -233,7 +233,7 @@ const AIAssistantScreen = ({ navigation }) => {
         <View style={styles.docIndicator}>
           <Text style={styles.docIndicatorText}>{uploadedDoc.name}</Text>
           <TouchableOpacity onPress={() => setUploadedDoc(null)}>
-            <Ionicons name="close-circle" size={18} color="#0D9488" />
+            <Ionicons name="close-circle" size={18} color={COLORS.primary} />
           </TouchableOpacity>
         </View>
       )}
@@ -303,14 +303,14 @@ const styles = StyleSheet.create({
   aiAvatar: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#f0f0f0', alignItems: 'center', justifyContent: 'center', marginRight: 10 },
   msgBubble: { maxWidth: '80%', padding: 12, borderRadius: 15 },
   msgBubbleAI: { backgroundColor: '#f0f0f0' },
-  msgBubbleUser: { backgroundColor: '#0D9488' },
+  msgBubbleUser: { backgroundColor: COLORS.primary },
   msgText: { fontSize: 14, color: '#333' },
   msgTextUser: { color: '#fff' },
   inputBar: { flexDirection: 'row', alignItems: 'center', padding: 15, backgroundColor: '#fff', borderTopWidth: 1, borderColor: '#eee' },
   input: { flex: 1, marginHorizontal: 10, padding: 10, backgroundColor: '#f9f9f9', borderRadius: 20, maxHeight: 100 },
-  sendBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#0D9488', alignItems: 'center', justifyContent: 'center' },
-  docIndicator: { padding: 10, backgroundColor: '#e6f7f5', flexDirection: 'row', justifyContent: 'space-between' },
-  docIndicatorText: { color: '#0D9488', fontSize: 12 },
+  sendBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' },
+  docIndicator: { padding: 10, backgroundColor: 'rgba(176, 156, 133, 0.15)', flexDirection: 'row', justifyContent: 'space-between' },
+  docIndicatorText: { color: COLORS.primary, fontSize: 12, fontWeight: '600' },
   modalContent: { flex: 1, paddingTop: 50 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', padding: 20, borderBottomWidth: 1, borderColor: '#eee' },
   modalTitle: { fontSize: 18, fontWeight: '700' },
@@ -330,7 +330,7 @@ const styles = StyleSheet.create({
   newChatBtn: { 
     margin: 20, 
     padding: 15, 
-    backgroundColor: '#0D9488', 
+    backgroundColor: COLORS.primary, 
     borderRadius: 12, 
     alignItems: 'center' 
   },
