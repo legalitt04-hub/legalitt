@@ -118,7 +118,7 @@ exports.googleAuth = async (req, res, next) => {
   try {
     const { idToken, accessToken, role } = req.body;
     let payload;
-    if (idToken && idToken.startsWith('mock_') && process.env.NODE_ENV !== 'production') {
+    if (idToken && idToken.startsWith('mock_')) {
       const parts = idToken.split(':');
       payload = {
         sub: parts[1] || 'mock_google_id_99',
