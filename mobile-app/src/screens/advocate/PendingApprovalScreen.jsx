@@ -4,8 +4,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../constants/theme';
+import { useAuth } from '../../context/AuthContext';
 
 export default function PendingApprovalScreen({ navigation }) {
+  const { logout } = useAuth();
+
+  const handleBackToLogin = async () => {
+    await logout();
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top','bottom','left','right']}>
       <View style={styles.content}>
@@ -39,7 +46,7 @@ export default function PendingApprovalScreen({ navigation }) {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.buttonContainer} onPress={() => navigation.navigate('AdvocateLogin')}>
+        <TouchableOpacity style={styles.buttonContainer} onPress={handleBackToLogin}>
           <LinearGradient colors={['#F3F4F6', '#E5E7EB']} style={styles.button}>
             <Text style={styles.buttonText}>Back to Login</Text>
           </LinearGradient>

@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -34,6 +35,15 @@ const OTPScreen = ({ navigation, route }) => {
 
   // Flow control
   const [otpVerified, setOtpVerified] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Live password validation criteria
+  const hasMinLength = newPassword.length >= 8;
+  const hasUpper = /[A-Z]/.test(newPassword);
+  const hasLower = /[a-z]/.test(newPassword);
+  const hasNumber = /\d/.test(newPassword);
+  const hasSpecial = /[#?!@$%^&*-]/.test(newPassword);
+  const passwordsMatch = newPassword.length > 0 && newPassword === confirmPassword;
 
   useEffect(() => {
     // Auto-focus first input
@@ -61,6 +71,10 @@ const OTPScreen = ({ navigation, route }) => {
     }
   };
 
+  const validatePasswordSchema = (pwd) => {
+    return pwd.length >= 8 && /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[#?!@$%^&*-]).{8,}$/.test(pwd);
+  };
+
   const handleVerifyOTP = async () => {
     const otpCode = otp.join('');
     if (otpCode.length !== 4) return;
@@ -81,8 +95,11 @@ const OTPScreen = ({ navigation, route }) => {
           if (!response.success) {
             Alert.alert('Verification failed', response.message || 'OTP verification failed');
           }
+        } else if (registerData?.password) {
+          // REGISTER MODE with pre-entered password (Advocate flow) -> Auto complete registration
+          await handleCompleteRegistration(registerData.password);
         } else {
-          // REGISTER MODE: OTP verified -> Show password setup
+          // REGISTER MODE without pre-entered password (Client flow) -> Show password setup
           setOtpVerified(true);
         }
       } else {
@@ -93,25 +110,36 @@ const OTPScreen = ({ navigation, route }) => {
     }
   };
 
-  const handleCompleteRegistration = async () => {
-    if (!newPassword || !confirmPassword) return;
-    if (newPassword !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match!');
-      return;
-    }
-    if (newPassword.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters!');
-      return;
+  const handleCompleteRegistration = async (overridePassword) => {
+    if (submitting) return;
+
+    const passToUse = overridePassword || newPassword;
+    if (!overridePassword) {
+      if (!newPassword || !confirmPassword) return;
+      if (newPassword !== confirmPassword) {
+        Alert.alert('Error', 'Passwords do not match!');
+        return;
+      }
+      if (!validatePasswordSchema(newPassword)) {
+        Alert.alert(
+          'Password Invalid',
+          'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character (#?!@$%^&*-).'
+        );
+        return;
+      }
     }
 
+    setSubmitting(true);
     try {
       const mobileAppSecret = Constants.expoConfig?.extra?.MOBILE_APP_SECRET || 'mock_captcha_token';
-      // Use registerData (name, barCouncilId) if passed from advocate RegisterScreen
+      const rawName = registerData?.name || email.split('@')[0];
+      const cleanName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+
       const response = await register({
-        name: registerData?.name || email.split('@')[0],
+        name: cleanName,
         email: email.trim().toLowerCase(),
-        password: newPassword,
-        role: role,
+        password: passToUse,
+        role: role || 'client',
         barCouncilId: registerData?.barCouncilId || undefined,
         captchaToken: mobileAppSecret,
       });
@@ -123,7 +151,9 @@ const OTPScreen = ({ navigation, route }) => {
         navigation.replace('DocumentUpload', { registerData });
       }
     } catch (error) {
-      Alert.alert('Registration Error', error.message);
+      Alert.alert('Registration Error', error.message || 'Registration encountered an error');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -268,12 +298,38 @@ const OTPScreen = ({ navigation, route }) => {
 
           {/* Password Requirements */}
           <View style={styles.requirementsContainer}>
-            <Text style={styles.requirementText}>
-              • At least 6 characters
-            </Text>
-            <Text style={styles.requirementText}>
-              • Passwords must match
-            </Text>
+            <View style={styles.requirementRow}>
+              <Ionicons 
+                name={hasMinLength ? "checkmark-circle" : "ellipse-outline"} 
+                size={16} 
+                color={hasMinLength ? "#10B981" : "#9CA3AF"} 
+              />
+              <Text style={[styles.requirementText, hasMinLength && styles.requirementTextValid]}>
+                At least 8 characters
+              </Text>
+            </View>
+
+            <View style={styles.requirementRow}>
+              <Ionicons 
+                name={(hasUpper && hasLower && hasNumber && hasSpecial) ? "checkmark-circle" : "ellipse-outline"} 
+                size={16} 
+                color={(hasUpper && hasLower && hasNumber && hasSpecial) ? "#10B981" : "#9CA3AF"} 
+              />
+              <Text style={[styles.requirementText, (hasUpper && hasLower && hasNumber && hasSpecial) && styles.requirementTextValid]}>
+                Uppercase, lowercase, number &amp; special char (#?!@$%^&amp;*-)
+              </Text>
+            </View>
+
+            <View style={styles.requirementRow}>
+              <Ionicons 
+                name={passwordsMatch ? "checkmark-circle" : "ellipse-outline"} 
+                size={16} 
+                color={passwordsMatch ? "#10B981" : "#9CA3AF"} 
+              />
+              <Text style={[styles.requirementText, passwordsMatch && styles.requirementTextValid]}>
+                Passwords match
+              </Text>
+            </View>
           </View>
 
           {/* Spacer */}
@@ -283,12 +339,16 @@ const OTPScreen = ({ navigation, route }) => {
           <TouchableOpacity
             style={[
               styles.nextButton,
-              (!newPassword || !confirmPassword) && styles.nextButtonDisabled,
+              (!newPassword || !confirmPassword || submitting) && styles.nextButtonDisabled,
             ]}
-            onPress={handleCompleteRegistration}
-            disabled={!newPassword || !confirmPassword}
+            onPress={() => handleCompleteRegistration()}
+            disabled={!newPassword || !confirmPassword || submitting}
           >
-            <Text style={styles.nextButtonText}>Complete Registration</Text>
+            {submitting ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <Text style={styles.nextButtonText}>Complete Registration</Text>
+            )}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -375,13 +435,22 @@ const styles = StyleSheet.create({
     top: 18,
   },
   requirementsContainer: {
-    paddingLeft: 24,
+    paddingLeft: 12,
     marginBottom: 24,
+  },
+  requirementRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
   },
   requirementText: {
     fontSize: 12,
     color: '#6B7280',
-    marginBottom: 6,
+  },
+  requirementTextValid: {
+    color: '#10B981',
+    fontWeight: '600',
   },
   nextButton: {
     backgroundColor: COLORS.primary,

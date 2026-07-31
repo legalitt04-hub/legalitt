@@ -23,46 +23,20 @@ export default function DocumentUploadScreen({ navigation, route }) {
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
-    if (!registerData) {
-      Alert.alert('Error', 'Registration data is missing. Please go back and try again.');
-      return;
-    }
-
     setLoading(true);
     try {
-      // 1. E2E Registration of Advocate as User
-      const response = await register({
-        name: registerData.name,
-        email: registerData.email,
-        password: registerData.password,
-        phone: registerData.phone,
-        role: 'advocate',
-        captchaToken: 'mock_captcha_token', // developer bypass captcha
+      await advocateAPI.upsertProfile({
+        barCouncilId: registerData?.barCouncilId || 'MAH/PENDING',
       });
 
-      if (response.success) {
-        // 2. Create the Advocate Profile
-        try {
-          await advocateAPI.upsertProfile({
-            barCouncilId: registerData.barCouncilId,
-          });
-
-          // Redirect to pending screen
-          navigation.replace('PendingApproval');
-        } catch (profileErr) {
-          console.log('Failed to upsert advocate profile:', profileErr.message);
-          Alert.alert(
-            'Profile Pending',
-            'Your login credentials were saved successfully, but we could not complete the profile. Please login to complete registration.'
-          );
-          navigation.replace('AdvocateLogin');
-        }
-      } else {
-        Alert.alert('Registration Failed', response.message || 'Could not verify your registration.');
-      }
-    } catch (err) {
-      console.log('E2E Signup error:', err.message);
-      Alert.alert('Registration Error', 'An unexpected error occurred. Please try again.');
+      // Redirect to pending screen
+      navigation.replace('PendingApproval');
+    } catch (profileErr) {
+      console.log('Failed to upsert advocate profile:', profileErr.message);
+      Alert.alert(
+        'Profile Setup Error',
+        profileErr.response?.data?.message || 'Could not complete advocate profile. Please try again.'
+      );
     } finally {
       setLoading(false);
     }

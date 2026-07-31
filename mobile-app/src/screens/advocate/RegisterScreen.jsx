@@ -56,8 +56,8 @@ export default function RegisterScreen({ navigation }) {
     if (!formData.password.trim()) {
       newErrors.password = 'Password is required';
     } else {
-      if (formData.password.length < 8 || !/[a-zA-Z]/.test(formData.password) || !/[0-9]/.test(formData.password)) {
-        newErrors.password = 'Password must be 8+ characters with letters & numbers';
+      if (formData.password.length < 8 || !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[#?!@$%^&*-]).{8,}$/.test(formData.password)) {
+        newErrors.password = 'Must be 8+ chars with uppercase, lowercase, number & special char (#?!@$%^&*-)';
       }
     }
 

@@ -164,7 +164,7 @@ export default function AILegalNoticeScreen({ navigation }) {
           </TouchableOpacity>
 
           <View style={styles.headerTitleWrap}>
-            <Text style={styles.headerTitle}>AI Legal Notice Assistance</Text>
+            <Text style={styles.headerTitle}>Legal Notice Assistance</Text>
             <View style={styles.headerSubtitleRow}>
               <Ionicons name="shield-outline" size={12} color={COLORS.primary} />
               <Text style={styles.headerSubtitle}>Secure &amp; Confidential</Text>

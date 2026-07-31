@@ -43,6 +43,14 @@ import MyDraftsScreen from '../screens/client/MyDraftsScreen';
 import ProfileEditScreen from '../screens/client/ProfileEditScreen';
 import SavedAdvocatesScreen from '../screens/client/SavedAdvocatesScreen';
 import SettingsScreen from '../screens/client/SettingsScreen';
+import PropertyResearchLandingScreen from '../screens/client/PropertyResearchLandingScreen';
+import PropertyResearchFormScreen from '../screens/client/PropertyResearchFormScreen';
+import PropertyResearchReviewScreen from '../screens/client/PropertyResearchReviewScreen';
+import PropertyResearchPaymentScreen from '../screens/client/PropertyResearchPaymentScreen';
+import PropertyResearchSuccessScreen from '../screens/client/PropertyResearchSuccessScreen';
+import PropertyResearchTrackScreen from '../screens/client/PropertyResearchTrackScreen';
+import PropertyResearchChecklistScreen from '../screens/client/PropertyResearchChecklistScreen';
+import PropertyResearchLockScreen from '../screens/client/PropertyResearchLockScreen';
 
 // SHARED SCREENS
 import ChatScreen from '../screens/shared/ChatScreen';
@@ -57,6 +65,8 @@ import AdvocateStack from './AdvocateStack';
 import AdvocateDashboardScreen from '../screens/advocate/DashboardScreen';
 import CaseRequestsScreen from '../screens/advocate/CaseRequestsScreen';
 import EarningsScreen from '../screens/advocate/EarningsScreen';
+import DocumentUploadScreen from '../screens/advocate/DocumentUploadScreen';
+import PendingApprovalScreen from '../screens/advocate/PendingApprovalScreen';
 import { CasesScreen, ClientsScreen, CaseDetailScreen, ProfileEditScreen as AdvocateProfileEditScreen } from '../screens/advocate';
 
 const Stack = createNativeStackNavigator();
@@ -244,6 +254,8 @@ const AppNavigator = () => {
             // ─── ADVOCATE PRACTICE MANAGEMENT FLOW (AUTHENTICATED) ────────
             <>
               <Stack.Screen name="AdvocateMain" component={AdvocateTabs} />
+              <Stack.Screen name="DocumentUpload" component={DocumentUploadScreen} />
+              <Stack.Screen name="PendingApproval" component={PendingApprovalScreen} />
               <Stack.Screen name="Cases" component={CasesScreen} />
               <Stack.Screen name="CaseRequests" component={CaseRequestsScreen} />
               <Stack.Screen name="CaseDetail" component={CaseDetailScreen} />
@@ -276,6 +288,14 @@ const AppNavigator = () => {
               <Stack.Screen name="AILegalNotice" component={AILegalNoticeScreen} />
               <Stack.Screen name="MyDrafts" component={MyDraftsScreen} />
               <Stack.Screen name="ProfileEdit" component={ProfileEditScreen} />
+              <Stack.Screen name="PropertyResearchLanding" component={PropertyResearchLandingScreen} />
+              <Stack.Screen name="PropertyResearchForm" component={PropertyResearchFormScreen} />
+              <Stack.Screen name="PropertyResearchConfirm" component={PropertyResearchReviewScreen} />
+              <Stack.Screen name="PropertyResearchPayment" component={PropertyResearchPaymentScreen} />
+              <Stack.Screen name="PropertyResearchSuccess" component={PropertyResearchSuccessScreen} />
+              <Stack.Screen name="PropertyResearchTrack" component={PropertyResearchTrackScreen} />
+              <Stack.Screen name="PropertyResearchChecklist" component={PropertyResearchChecklistScreen} />
+              <Stack.Screen name="PropertyResearchLock" component={PropertyResearchLockScreen} />
               <Stack.Screen name="Settings" component={SettingsScreen} />
               <Stack.Screen name="Notifications" component={NotificationsScreen} />
               <Stack.Screen 

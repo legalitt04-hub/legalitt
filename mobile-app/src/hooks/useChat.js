@@ -218,13 +218,6 @@ export const useChatList = () => {
   const [error, setError]     = useState(null);
   const socketRef             = useRef(null);
 
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
-      fetchChats();
-    });
-    return unsubscribe;
-  }, [navigation, fetchChats]);
-
   const fetchChats = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -237,6 +230,13 @@ export const useChatList = () => {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      fetchChats();
+    });
+    return unsubscribe;
+  }, [navigation, fetchChats]);
 
   useEffect(() => {
     fetchChats();
@@ -288,7 +288,7 @@ export const useChatList = () => {
       socketRef.current?.disconnect();
       socketRef.current = null;
     };
-  }, [fetchChats]);
+  }, [fetchChats, user]);
 
   return { chats, loading, error, refetch: fetchChats };
 };
