@@ -35,9 +35,12 @@ router.put('/settings',               adminController.updateSettings);
 // ─── New Modules (Phase 3 Integration) ────────────────────────────────────────
 const adminModuleController = require('../controllers/adminModuleController');
 router.get('/cases',                  adminModuleController.getCases);
+router.put('/cases/:id',              adminModuleController.updateCase);
 router.get('/services',               adminModuleController.getServices);
+router.put('/services/:id',           adminModuleController.updateService);
 router.get('/documents',              adminModuleController.getDocuments);
 router.get('/support-tickets',        adminModuleController.getSupportTickets);
+router.put('/support-tickets/:id',    adminModuleController.updateSupportTicket);
 router.get('/ai-drafts',              adminModuleController.getAIDrafts);
 router.get('/notifications/templates',adminModuleController.getNotificationTemplates);
 

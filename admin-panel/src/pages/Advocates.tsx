@@ -3,6 +3,7 @@ import { Card } from '../components/ui/card';
 import { UserCheck, Search, ShieldCheck, X, ChevronLeft, ChevronRight, Ban } from 'lucide-react';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
+import { Modal } from '../components/ui/Modal';
 import api from '../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -13,6 +14,7 @@ const Advocates = () => {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [verificationFilter, setVerificationFilter] = useState('');
   const [selectedAdv, setSelectedAdv] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   
   // Pagination state
   const [page, setPage] = useState(1);
@@ -76,6 +78,7 @@ const Advocates = () => {
     try {
       const res = await api.get(`/admin/advocates/${id}`);
       setSelectedAdv(res.data.data);
+      setIsModalOpen(true);
     } catch (err) {
       alert('Failed to fetch advocate details');
     }
@@ -278,98 +281,86 @@ const Advocates = () => {
       </Card>
 
       {/* Advocate Details Modal */}
-      {selectedAdv && (
-        <AnimatePresence>
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-          >
-            <motion.div 
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="w-full max-w-2xl"
-            >
-              <Card className="w-full bg-white border-slate-200 shadow-2xl relative max-h-[90vh] overflow-y-auto hidden-scrollbar">
-                <button onClick={() => setSelectedAdv(null)} className="absolute top-4 right-4 text-slate-500 hover:text-slate-900 bg-slate-50 rounded-full p-1 z-10">
-                  <X className="w-5 h-5" />
-                </button>
-                <div className="p-6">
-                  <div className="flex items-start gap-4 mb-6">
-                    <div className="w-20 h-20 rounded-full bg-slate-50 overflow-hidden flex items-center justify-center border-2 border-slate-200 flex-shrink-0">
-                      {selectedAdv.advocate.user?.avatar ? <img src={selectedAdv.advocate.user.avatar} className="w-full h-full object-cover" /> : <span className="text-2xl font-bold text-slate-600">{selectedAdv.advocate.user?.name?.charAt(0) || '?'}</span>}
-                    </div>
-                    <div>
-                      <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-                        {selectedAdv.advocate.user?.name}
-                        {selectedAdv.advocate.verificationStatus === 'approved' && <ShieldCheck className="w-5 h-5 text-amber-500" />}
-                      </h2>
-                      <p className="text-sm text-slate-500 mt-1">{selectedAdv.advocate.user?.email}</p>
-                      <p className="text-sm text-slate-500">{selectedAdv.advocate.user?.phone || 'No phone'}</p>
-                      
-                      <div className="mt-3 flex flex-wrap items-center gap-2">
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${selectedAdv.advocate.verificationStatus === 'approved' ? 'bg-green-500/10 text-green-400' : 'bg-amber-500/10 text-amber-400'}`}>
-                          Verification: {selectedAdv.advocate.verificationStatus.replace('_', ' ')}
-                        </span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${selectedAdv.advocate.user?.isActive ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
-                          {selectedAdv.advocate.user?.isActive ? 'Account Active' : 'Account Suspended'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                      <div className="bg-slate-50/50 p-3 rounded-lg border border-slate-200">
-                        <p className="text-xs text-slate-500 uppercase">Bar Council No.</p>
-                        <p className="text-sm font-medium text-slate-900 mt-1 font-mono">{selectedAdv.advocate.barCouncilNumber || 'N/A'}</p>
-                      </div>
-                      <div className="bg-slate-50/50 p-3 rounded-lg border border-slate-200">
-                        <p className="text-xs text-slate-500 uppercase">Experience</p>
-                        <p className="text-sm font-medium text-slate-900 mt-1">{selectedAdv.advocate.experience ? `${selectedAdv.advocate.experience} Years` : 'N/A'}</p>
-                      </div>
-                      <div className="bg-slate-50/50 p-3 rounded-lg border border-slate-200">
-                        <p className="text-xs text-slate-500 uppercase">Consultation Fee</p>
-                        <p className="text-sm font-medium text-amber-400 mt-1">₹{selectedAdv.advocate.consultationFee || 0}</p>
-                      </div>
-                      <div className="bg-slate-50/50 p-3 rounded-lg border border-slate-200">
-                        <p className="text-xs text-slate-500 uppercase">Rating</p>
-                        <p className="text-sm font-medium text-amber-400 mt-1 flex items-center">⭐ {selectedAdv.advocate.rating?.average?.toFixed(1) || '0.0'} <span className="text-slate-500 text-xs ml-1">({selectedAdv.advocate.rating?.count || 0})</span></p>
-                      </div>
-                    </div>
-
-                    <div className="bg-slate-50/50 p-4 rounded-lg border border-slate-200">
-                      <p className="text-xs text-slate-500 uppercase mb-2">Specializations</p>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedAdv.advocate.specializations?.length ? selectedAdv.advocate.specializations.map((spec: string) => (
-                          <span key={spec} className="px-2 py-1 bg-slate-50 rounded-md text-sm text-slate-600">{spec}</span>
-                        )) : <span className="text-sm text-slate-500">None provided</span>}
-                      </div>
-                    </div>
-
-                    <div className="bg-slate-50/50 p-4 rounded-lg border border-slate-200">
-                      <p className="text-xs text-slate-500 uppercase mb-2">Bio / About</p>
-                      <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">{selectedAdv.advocate.about || 'No bio provided.'}</p>
-                    </div>
-                  </div>
-
-                  <div className="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-4">
-                    <Button onClick={() => setSelectedAdv(null)} variant="outline" className="bg-slate-50 border-slate-200 text-slate-900 hover:bg-slate-100">Close</Button>
-                    <Button onClick={() => {
-                      toggleUserStatus(selectedAdv.advocate.user._id, selectedAdv.advocate.user.isActive);
-                    }} className={`${selectedAdv.advocate.user?.isActive ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'} text-slate-900`}>
-                      {selectedAdv.advocate.user?.isActive ? 'Suspend Advocate' : 'Activate Advocate'}
-                    </Button>
-                  </div>
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Advocate Profile" maxWidth="max-w-2xl">
+        {selectedAdv && (
+          <div className="space-y-6">
+            <div className="flex items-start gap-4">
+              <div className="w-20 h-20 rounded-full bg-slate-50 overflow-hidden flex items-center justify-center border-2 border-slate-200 flex-shrink-0">
+                {selectedAdv.advocate.user?.avatar ? (
+                  <img src={selectedAdv.advocate.user.avatar} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-2xl font-bold text-slate-600">{selectedAdv.advocate.user?.name?.charAt(0) || '?'}</span>
+                )}
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+                  {selectedAdv.advocate.user?.name}
+                  {selectedAdv.advocate.verificationStatus === 'approved' && <ShieldCheck className="w-5 h-5 text-amber-500" />}
+                </h2>
+                <p className="text-sm text-slate-500 mt-1">{selectedAdv.advocate.user?.email}</p>
+                <p className="text-sm text-slate-500">{selectedAdv.advocate.user?.phone || 'No phone'}</p>
+                
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${selectedAdv.advocate.verificationStatus === 'approved' ? 'bg-green-500/10 text-green-600' : 'bg-amber-500/10 text-amber-600'}`}>
+                    Verification: {selectedAdv.advocate.verificationStatus.replace('_', ' ')}
+                  </span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${selectedAdv.advocate.user?.isActive ? 'bg-green-500/10 text-green-600' : 'bg-red-500/10 text-red-600'}`}>
+                    {selectedAdv.advocate.user?.isActive ? 'Account Active' : 'Account Suspended'}
+                  </span>
                 </div>
-              </Card>
-            </motion.div>
-          </motion.div>
-        </AnimatePresence>
-      )}
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="bg-slate-50/50 p-3 rounded-lg border border-slate-100">
+                  <p className="text-xs text-slate-500 uppercase">Bar Council No.</p>
+                  <p className="text-sm font-medium text-slate-900 mt-1 font-mono">{selectedAdv.advocate.barCouncilNumber || 'N/A'}</p>
+                </div>
+                <div className="bg-slate-50/50 p-3 rounded-lg border border-slate-100">
+                  <p className="text-xs text-slate-500 uppercase">Experience</p>
+                  <p className="text-sm font-medium text-slate-900 mt-1">{selectedAdv.advocate.experience ? `${selectedAdv.advocate.experience} Years` : 'N/A'}</p>
+                </div>
+                <div className="bg-slate-50/50 p-3 rounded-lg border border-slate-100">
+                  <p className="text-xs text-slate-500 uppercase">Fee</p>
+                  <p className="text-sm font-medium text-amber-600 mt-1">₹{selectedAdv.advocate.consultationFee || 0}</p>
+                </div>
+                <div className="bg-slate-50/50 p-3 rounded-lg border border-slate-100">
+                  <p className="text-xs text-slate-500 uppercase">Rating</p>
+                  <p className="text-sm font-medium text-amber-600 mt-1 flex items-center">
+                    ⭐ {selectedAdv.advocate.rating?.average?.toFixed(1) || '0.0'} 
+                    <span className="text-slate-500 text-xs ml-1">({selectedAdv.advocate.rating?.count || 0})</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-slate-50/50 p-4 rounded-lg border border-slate-100">
+                <p className="text-xs text-slate-500 uppercase mb-2">Specializations</p>
+                <div className="flex flex-wrap gap-2">
+                  {selectedAdv.advocate.specializations?.length ? selectedAdv.advocate.specializations.map((spec: string) => (
+                    <span key={spec} className="px-2 py-1 bg-white border border-slate-200 rounded-md text-sm text-slate-600">{spec}</span>
+                  )) : <span className="text-sm text-slate-500">None provided</span>}
+                </div>
+              </div>
+
+              <div className="bg-slate-50/50 p-4 rounded-lg border border-slate-100">
+                <p className="text-xs text-slate-500 uppercase mb-2">Bio / About</p>
+                <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">{selectedAdv.advocate.about || 'No bio provided.'}</p>
+              </div>
+            </div>
+
+            <div className="mt-8 flex justify-end gap-3 pt-4">
+              <Button onClick={() => setIsModalOpen(false)} variant="outline" className="bg-white border-slate-200 text-slate-900 hover:bg-slate-50">Close</Button>
+              <Button onClick={() => {
+                toggleUserStatus(selectedAdv.advocate.user._id, selectedAdv.advocate.user.isActive);
+                setIsModalOpen(false);
+              }} className={`${selectedAdv.advocate.user?.isActive ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'} text-white`}>
+                {selectedAdv.advocate.user?.isActive ? 'Suspend Advocate' : 'Activate Advocate'}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </motion.div>
   );
 };

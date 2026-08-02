@@ -4,7 +4,8 @@ import { Card } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { LifeBuoy, Search, Filter, MessageSquare, AlertCircle, Clock, CheckCircle } from 'lucide-react';
 import { Input } from '../components/ui/input';
-
+import { Button } from '../components/ui/button';
+import { Modal } from '../components/ui/Modal';
 import api from '../lib/api';
 
 const timeAgo = (dateStr: string) => {
@@ -31,22 +32,41 @@ export default function Support() {
   const [search, setSearch] = useState('');
   const [tickets, setTickets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState<any>(null);
+  const [updateLoading, setUpdateLoading] = useState(false);
+
+  const fetchTickets = async () => {
+    try {
+      const res = await api.get('/admin/support-tickets');
+      if (res.data.success) {
+        setTickets(res.data.data);
+      }
+    } catch (err) {
+      console.error('Error fetching tickets', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   React.useEffect(() => {
-    const fetchTickets = async () => {
-      try {
-        const res = await api.get('/admin/support-tickets');
-        if (res.data.success) {
-          setTickets(res.data.data);
-        }
-      } catch (err) {
-        console.error('Error fetching tickets', err);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchTickets();
   }, []);
+
+  const handleUpdateTicket = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedTicket) return;
+    setUpdateLoading(true);
+    try {
+      await api.put(`/admin/support-tickets/${selectedTicket._id}`, { status: selectedTicket.status });
+      setIsModalOpen(false);
+      fetchTickets();
+    } catch (err) {
+      alert('Failed to update ticket');
+    } finally {
+      setUpdateLoading(false);
+    }
+  };
 
   const filteredTickets = tickets.filter(t => 
     t.subject?.toLowerCase().includes(search.toLowerCase()) ||
@@ -141,7 +161,7 @@ export default function Support() {
             <div className="p-8 text-center text-slate-500">No support tickets found.</div>
           ) : (
             filteredTickets.map(ticket => (
-              <div key={ticket._id} className="p-4 hover:bg-slate-50 transition-colors flex flex-col md:flex-row gap-4 group cursor-pointer">
+              <div key={ticket._id} onClick={() => { setSelectedTicket(ticket); setIsModalOpen(true); }} className="p-4 hover:bg-slate-50 transition-colors flex flex-col md:flex-row gap-4 group cursor-pointer">
                 <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-sm shrink-0 uppercase">
                   {ticket.user?.name ? ticket.user.name.substring(0,2) : 'U'}
                 </div>
@@ -177,6 +197,56 @@ export default function Support() {
           )}
         </div>
       </Card>
+
+      {/* Support Ticket Modal */}
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Support Ticket Details">
+        {selectedTicket && (
+          <form onSubmit={handleUpdateTicket} className="space-y-5">
+            <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-lg font-bold text-slate-900">{selectedTicket.subject}</h4>
+                <Badge variant="outline" className={`${getPriorityColor(selectedTicket.priority)} text-[10px] font-bold px-2 py-0 capitalize`}>
+                  {selectedTicket.priority || 'Medium'} Priority
+                </Badge>
+              </div>
+              <p className="text-xs text-slate-500 font-mono mb-4">Ticket ID: {selectedTicket._id}</p>
+              
+              <div className="bg-white p-3 rounded border border-slate-200 text-sm text-slate-700 whitespace-pre-wrap">
+                {selectedTicket.description || 'No description provided.'}
+              </div>
+
+              <div className="flex items-center gap-2 mt-4 text-xs text-slate-500">
+                <span className="font-medium text-slate-700">{selectedTicket.user?.name || 'Unknown User'}</span>
+                <span>•</span>
+                <span>{timeAgo(selectedTicket.createdAt)}</span>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Ticket Status</label>
+              <select
+                value={selectedTicket.status}
+                onChange={(e) => setSelectedTicket({ ...selectedTicket, status: e.target.value })}
+                className="w-full bg-white border border-slate-200 text-slate-900 rounded-md p-2.5 text-sm outline-none focus:ring-2 focus:ring-rose-500/50"
+              >
+                <option value="open">Open</option>
+                <option value="in-progress">In Progress</option>
+                <option value="resolved">Resolved</option>
+                <option value="closed">Closed</option>
+              </select>
+            </div>
+
+            <div className="pt-4 flex justify-end gap-3 border-t border-slate-100">
+              <Button type="button" onClick={() => setIsModalOpen(false)} variant="outline" className="bg-white border-slate-200">
+                Close
+              </Button>
+              <Button type="submit" disabled={updateLoading} className="bg-rose-500 hover:bg-rose-600 text-white">
+                {updateLoading ? 'Saving...' : 'Update Ticket'}
+              </Button>
+            </div>
+          </form>
+        )}
+      </Modal>
     </motion.div>
   );
 }

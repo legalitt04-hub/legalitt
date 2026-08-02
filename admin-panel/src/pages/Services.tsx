@@ -4,7 +4,8 @@ import { Card } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Layers, Plus, Search, Edit2, Archive, LayoutGrid, List } from 'lucide-react';
 import { Input } from '../components/ui/input';
-
+import { Button } from '../components/ui/button';
+import { Modal } from '../components/ui/Modal';
 import api from '../lib/api';
 
 const formatCurrency = (val: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val || 0);
@@ -14,22 +15,55 @@ export default function Services() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [services, setServices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedService, setSelectedService] = useState<any>(null);
+  const [updateLoading, setUpdateLoading] = useState(false);
+
+  const fetchServices = async () => {
+    try {
+      const res = await api.get('/admin/services');
+      if (res.data.success) {
+        setServices(res.data.data);
+      }
+    } catch (err) {
+      console.error('Error fetching services', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   React.useEffect(() => {
-    const fetchServices = async () => {
-      try {
-        const res = await api.get('/admin/services');
-        if (res.data.success) {
-          setServices(res.data.data);
-        }
-      } catch (err) {
-        console.error('Error fetching services', err);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchServices();
   }, []);
+
+  const handleUpdateService = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedService) return;
+    setUpdateLoading(true);
+    try {
+      await api.put(`/admin/services/${selectedService._id}`, { 
+        name: selectedService.name,
+        category: selectedService.category,
+        basePrice: selectedService.basePrice,
+        isActive: selectedService.isActive
+      });
+      setIsModalOpen(false);
+      fetchServices();
+    } catch (err) {
+      alert('Failed to update service');
+    } finally {
+      setUpdateLoading(false);
+    }
+  };
+
+  const handleToggleStatus = async (service: any) => {
+    try {
+      await api.put(`/admin/services/${service._id}`, { isActive: !service.isActive });
+      fetchServices();
+    } catch (err) {
+      alert('Failed to toggle status');
+    }
+  };
 
   const filteredServices = services.filter(s => 
     s.name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -109,10 +143,10 @@ export default function Services() {
                   </p>
                 </div>
                 <div className="border-t border-slate-100 bg-slate-50 flex items-center p-2 divide-x divide-slate-200">
-                  <button className="flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium text-slate-600 hover:text-amber-600 transition-colors">
+                  <button onClick={() => { setSelectedService(service); setIsModalOpen(true); }} className="flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium text-slate-600 hover:text-amber-600 transition-colors">
                     <Edit2 className="w-4 h-4" /> Edit
                   </button>
-                  <button className="flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium text-slate-600 hover:text-red-600 transition-colors">
+                  <button onClick={() => handleToggleStatus(service)} className="flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium text-slate-600 hover:text-red-600 transition-colors">
                     <Archive className="w-4 h-4" /> {service.isActive ? 'Disable' : 'Enable'}
                   </button>
                 </div>
@@ -157,8 +191,8 @@ export default function Services() {
                       </td>
                       <td className="p-4 text-right">
                         <div className="flex justify-end gap-2">
-                          <button className="p-1.5 text-slate-400 hover:text-amber-600 bg-white border border-slate-200 rounded-md shadow-sm transition-colors"><Edit2 className="w-4 h-4" /></button>
-                          <button className="p-1.5 text-slate-400 hover:text-red-600 bg-white border border-slate-200 rounded-md shadow-sm transition-colors"><Archive className="w-4 h-4" /></button>
+                          <button onClick={() => { setSelectedService(service); setIsModalOpen(true); }} className="p-1.5 text-slate-400 hover:text-amber-600 bg-white border border-slate-200 rounded-md shadow-sm transition-colors"><Edit2 className="w-4 h-4" /></button>
+                          <button onClick={() => handleToggleStatus(service)} className="p-1.5 text-slate-400 hover:text-red-600 bg-white border border-slate-200 rounded-md shadow-sm transition-colors"><Archive className="w-4 h-4" /></button>
                         </div>
                       </td>
                     </tr>
@@ -169,6 +203,61 @@ export default function Services() {
           </div>
         </Card>
       )}
+
+      {/* Service Edit Modal */}
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Edit Service">
+        {selectedService && (
+          <form onSubmit={handleUpdateService} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Service Name</label>
+              <Input 
+                value={selectedService.name} 
+                onChange={(e) => setSelectedService({ ...selectedService, name: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
+              <select
+                value={selectedService.category}
+                onChange={(e) => setSelectedService({ ...selectedService, category: e.target.value })}
+                className="w-full bg-white border border-slate-200 text-slate-900 rounded-md p-2.5 text-sm outline-none focus:ring-2 focus:ring-amber-500/50"
+              >
+                <option value="Consultation">Consultation</option>
+                <option value="Documentation">Documentation</option>
+                <option value="Representation">Representation</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Base Price (₹)</label>
+              <Input 
+                type="number"
+                value={selectedService.basePrice} 
+                onChange={(e) => setSelectedService({ ...selectedService, basePrice: Number(e.target.value) })}
+                required
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <input 
+                type="checkbox" 
+                id="isActive"
+                checked={selectedService.isActive}
+                onChange={(e) => setSelectedService({ ...selectedService, isActive: e.target.checked })}
+                className="w-4 h-4 text-amber-500 rounded border-slate-300 focus:ring-amber-500"
+              />
+              <label htmlFor="isActive" className="text-sm font-medium text-slate-700">Is Active</label>
+            </div>
+            <div className="pt-4 flex justify-end gap-3 border-t border-slate-100">
+              <Button type="button" onClick={() => setIsModalOpen(false)} variant="outline" className="bg-white border-slate-200">
+                Cancel
+              </Button>
+              <Button type="submit" disabled={updateLoading} className="bg-amber-500 hover:bg-amber-600 text-white">
+                {updateLoading ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          </form>
+        )}
+      </Modal>
     </motion.div>
   );
 }

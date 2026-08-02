@@ -19,11 +19,42 @@ exports.getCases = async (req, res, next) => {
   }
 };
 
+exports.updateCase = async (req, res, next) => {
+  try {
+    const updatedCase = await Case.findByIdAndUpdate(
+      req.params.id,
+      { $set: req.body },
+      { new: true, runValidators: true }
+    )
+      .populate('client', 'name email avatar')
+      .populate('assignedAdvocate', 'name email avatar');
+      
+    if (!updatedCase) return next(new AppError('Case not found', 404));
+    res.json({ success: true, data: updatedCase });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // ─── Services ─────────────────────────────────────────────────────────────────
 exports.getServices = async (req, res, next) => {
   try {
     const services = await Service.find().sort('-createdAt');
     res.json({ success: true, data: services });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.updateService = async (req, res, next) => {
+  try {
+    const updatedService = await Service.findByIdAndUpdate(
+      req.params.id,
+      { $set: req.body },
+      { new: true, runValidators: true }
+    );
+    if (!updatedService) return next(new AppError('Service not found', 404));
+    res.json({ success: true, data: updatedService });
   } catch (err) {
     next(err);
   }
@@ -50,6 +81,23 @@ exports.getSupportTickets = async (req, res, next) => {
       .populate('assignedTo', 'name email avatar')
       .sort('-createdAt');
     res.json({ success: true, data: tickets });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.updateSupportTicket = async (req, res, next) => {
+  try {
+    const updatedTicket = await SupportTicket.findByIdAndUpdate(
+      req.params.id,
+      { $set: req.body },
+      { new: true, runValidators: true }
+    )
+      .populate('user', 'name email avatar')
+      .populate('assignedTo', 'name email avatar');
+      
+    if (!updatedTicket) return next(new AppError('Ticket not found', 404));
+    res.json({ success: true, data: updatedTicket });
   } catch (err) {
     next(err);
   }

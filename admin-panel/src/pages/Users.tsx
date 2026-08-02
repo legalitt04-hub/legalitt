@@ -3,6 +3,7 @@ import { Card } from '../components/ui/card';
 import { Users as UsersIcon, Search, X, Edit, Lock, Unlock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
+import { Modal } from '../components/ui/Modal';
 import api from '../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -14,6 +15,7 @@ const Users = () => {
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -78,10 +80,28 @@ const Users = () => {
     try {
       const res = await api.get(`/admin/users/${id}`);
       setSelectedUser(res.data.data);
+      setIsModalOpen(true);
     } catch (err) {
       alert('Failed to load user details');
     }
   }, []);
+
+  const handleUpdateRole = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUser) return;
+    
+    setActionLoading('update-role');
+    try {
+      // In a real app, you'd have a PUT endpoint. Since we only have toggle right now, 
+      // let's simulate updating the role if the endpoint doesn't exist yet.
+      // Wait, let's just make the user details read-only for now since it's a View modal.
+      setIsModalOpen(false);
+    } catch (err) {
+      alert('Failed to update role');
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
   return (
     <motion.div 
@@ -332,76 +352,75 @@ const Users = () => {
       </Card>
 
       {/* User Details Modal */}
-      <AnimatePresence>
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="User Details">
         {selectedUser && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setSelectedUser(null)}
-            className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm p-0 md:p-4"
-          >
-            <motion.div 
-              initial={{ y: 100, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 100, opacity: 0 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full md:max-w-lg"
-            >
-              <Card className="w-full bg-white border-slate-200 shadow-2xl relative rounded-t-2xl md:rounded-2xl max-h-[85vh] overflow-y-auto">
-                <button onClick={() => setSelectedUser(null)} className="absolute top-4 right-4 text-slate-500 hover:text-slate-900 bg-slate-50 rounded-full p-1.5 z-10 active:scale-95 transition-transform">
-                  <X className="w-4 h-4" />
-                </button>
-                <div className="p-5 md:p-6">
-                  <div className="flex items-center gap-4 mb-6">
-                    <div className="w-14 h-14 rounded-full bg-slate-50 overflow-hidden flex items-center justify-center border-2 border-slate-200 flex-shrink-0">
-                      {selectedUser.user?.avatar ? <img src={selectedUser.user.avatar} className="w-full h-full object-cover" /> : <span className="text-lg font-bold text-slate-600">{selectedUser.user?.name?.charAt(0) || '?'}</span>}
-                    </div>
-                    <div className="min-w-0">
-                      <h2 className="text-lg font-bold text-slate-900 truncate">{selectedUser.user?.name}</h2>
-                      <p className="text-sm text-slate-500 truncate">{selectedUser.user?.email}</p>
-                      <div className="mt-1.5 flex items-center gap-2 flex-wrap">
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${selectedUser.user?.role === 'advocate' ? 'bg-amber-500/10 text-amber-400' : 'bg-teal-500/10 text-teal-400'}`}>{selectedUser.user?.role}</span>
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${selectedUser.user?.isActive ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>{selectedUser.user?.isActive ? 'Active' : 'Blocked'}</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-200">
-                        <p className="text-[10px] text-slate-500 uppercase font-medium">Phone</p>
-                        <p className="text-sm font-medium text-slate-900 mt-1">{selectedUser.user?.phone || 'Not provided'}</p>
-                      </div>
-                      <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-200">
-                        <p className="text-[10px] text-slate-500 uppercase font-medium">Joined</p>
-                        <p className="text-sm font-medium text-slate-900 mt-1">{new Date(selectedUser.user?.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
-                      </div>
-                    </div>
-                    {selectedUser.user?.isEmailVerified !== undefined && (
-                      <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-200">
-                        <p className="text-[10px] text-slate-500 uppercase font-medium">Email Verified</p>
-                        <p className={`text-sm font-medium mt-1 ${selectedUser.user?.isEmailVerified ? 'text-green-400' : 'text-amber-400'}`}>{selectedUser.user?.isEmailVerified ? 'Yes' : 'No'}</p>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="mt-6 flex gap-3">
-                    <Button onClick={() => setSelectedUser(null)} variant="outline" className="flex-1 bg-slate-50 border-slate-200 text-slate-900 hover:bg-slate-100 h-10">Close</Button>
-                    <Button onClick={() => {
-                      toggleUserStatus(selectedUser.user?._id, selectedUser.user?.isActive);
-                      setSelectedUser(null);
-                    }} className={`flex-1 h-10 ${selectedUser.user?.isActive ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'} text-slate-900`}>
-                      {selectedUser.user?.isActive ? 'Block User' : 'Unblock User'}
-                    </Button>
-                  </div>
+          <div className="space-y-4">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-200">
+                {selectedUser.avatar ? (
+                  <img src={selectedUser.avatar} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-2xl font-bold text-slate-500">{selectedUser.name?.charAt(0) || '?'}</span>
+                )}
+              </div>
+              <div>
+                <h4 className="text-xl font-bold text-slate-900">{selectedUser.name}</h4>
+                <p className="text-sm text-slate-500">{selectedUser.email}</p>
+                <div className="mt-1 flex items-center gap-2">
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium uppercase tracking-wider ${selectedUser.isActive ? 'bg-green-500/10 text-green-600' : 'bg-red-500/10 text-red-600'}`}>
+                    {selectedUser.isActive ? 'Active' : 'Blocked'}
+                  </span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium uppercase tracking-wider">
+                    {selectedUser.role}
+                  </span>
                 </div>
-              </Card>
-            </motion.div>
-          </motion.div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                <p className="text-xs text-slate-500 mb-1">Phone</p>
+                <p className="text-sm font-medium text-slate-900">{selectedUser.phone || 'N/A'}</p>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                <p className="text-xs text-slate-500 mb-1">Total Spent</p>
+                <p className="text-sm font-medium text-teal-600">₹{(selectedUser.totalSpent || 0).toLocaleString('en-IN')}</p>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                <p className="text-xs text-slate-500 mb-1">Cases</p>
+                <p className="text-sm font-medium text-slate-900">{selectedUser.totalCases || 0}</p>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                <p className="text-xs text-slate-500 mb-1">Bookings</p>
+                <p className="text-sm font-medium text-slate-900">{selectedUser.totalBookings || 0}</p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 mt-2">
+              <p className="text-xs text-slate-500 mb-1">Address</p>
+              <p className="text-sm font-medium text-slate-900">
+                {selectedUser.address?.street ? `${selectedUser.address.street}, ` : ''}
+                {selectedUser.address?.city ? `${selectedUser.address.city}, ` : ''}
+                {selectedUser.address?.state || 'N/A'}
+              </p>
+            </div>
+
+            <div className="pt-4 flex gap-3">
+              <Button onClick={() => setIsModalOpen(false)} variant="outline" className="flex-1">
+                Close
+              </Button>
+              <Button onClick={() => {
+                  toggleUserStatus(selectedUser._id, selectedUser.isActive);
+                  setIsModalOpen(false);
+                }} 
+                className={`flex-1 ${selectedUser.isActive ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'} text-white`}
+              >
+                {selectedUser.isActive ? 'Block User' : 'Unblock User'}
+              </Button>
+            </div>
+          </div>
         )}
-      </AnimatePresence>
+      </Modal>
     </motion.div>
   );
 };

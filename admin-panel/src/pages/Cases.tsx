@@ -4,7 +4,8 @@ import { Card } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Search, Filter, Briefcase, ChevronRight, FileText, Clock, User, MessageSquare } from 'lucide-react';
 import { Input } from '../components/ui/input';
-
+import { Button } from '../components/ui/button';
+import { Modal } from '../components/ui/Modal';
 import api from '../lib/api';
 
 const getStatusColor = (status: string) => {
@@ -21,22 +22,41 @@ export default function Cases() {
   const [search, setSearch] = useState('');
   const [cases, setCases] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedCase, setSelectedCase] = useState<any>(null);
+  const [updateLoading, setUpdateLoading] = useState(false);
+
+  const fetchCases = async () => {
+    try {
+      const res = await api.get('/admin/cases');
+      if (res.data.success) {
+        setCases(res.data.data);
+      }
+    } catch (err) {
+      console.error('Error fetching cases', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   React.useEffect(() => {
-    const fetchCases = async () => {
-      try {
-        const res = await api.get('/admin/cases');
-        if (res.data.success) {
-          setCases(res.data.data);
-        }
-      } catch (err) {
-        console.error('Error fetching cases', err);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchCases();
   }, []);
+
+  const handleUpdateCase = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCase) return;
+    setUpdateLoading(true);
+    try {
+      await api.put(`/admin/cases/${selectedCase._id}`, { status: selectedCase.status });
+      setIsModalOpen(false);
+      fetchCases();
+    } catch (err) {
+      alert('Failed to update case');
+    } finally {
+      setUpdateLoading(false);
+    }
+  };
 
   const filteredCases = cases.filter(c => 
     c.title?.toLowerCase().includes(search.toLowerCase()) ||
@@ -133,7 +153,7 @@ export default function Cases() {
                   <div className="flex flex-col items-center justify-center">
                     <FileText className="w-5 h-5 text-slate-400" />
                   </div>
-                  <button className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 group-hover:bg-amber-100 group-hover:text-amber-600 transition-colors">
+                  <button onClick={() => { setSelectedCase(kase); setIsModalOpen(true); }} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 group-hover:bg-amber-100 group-hover:text-amber-600 transition-colors">
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -142,6 +162,52 @@ export default function Cases() {
           )}
         </div>
       </Card>
+
+      {/* Case Details Modal */}
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Case Details & Update">
+        {selectedCase && (
+          <form onSubmit={handleUpdateCase} className="space-y-5">
+            <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
+              <h4 className="text-lg font-bold text-slate-900 mb-1">{selectedCase.title}</h4>
+              <p className="text-xs text-slate-500 font-mono">Case ID: {selectedCase._id}</p>
+              
+              <div className="grid grid-cols-2 gap-4 mt-4">
+                <div>
+                  <p className="text-xs text-slate-500 uppercase font-medium">Client</p>
+                  <p className="text-sm font-medium text-slate-900 mt-1">{selectedCase.client?.name || 'Unknown'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 uppercase font-medium">Assigned Advocate</p>
+                  <p className="text-sm font-medium text-slate-900 mt-1">{selectedCase.assignedAdvocate?.name || 'Unassigned'}</p>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Case Status</label>
+              <select
+                value={selectedCase.status}
+                onChange={(e) => setSelectedCase({ ...selectedCase, status: e.target.value })}
+                className="w-full bg-white border border-slate-200 text-slate-900 rounded-md p-2.5 text-sm outline-none focus:ring-2 focus:ring-amber-500/50"
+              >
+                <option value="Pending Review">Pending Review</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Hearing Scheduled">Hearing Scheduled</option>
+                <option value="Closed">Closed</option>
+              </select>
+            </div>
+
+            <div className="pt-4 flex justify-end gap-3 border-t border-slate-100">
+              <Button type="button" onClick={() => setIsModalOpen(false)} variant="outline" className="bg-white border-slate-200">
+                Cancel
+              </Button>
+              <Button type="submit" disabled={updateLoading} className="bg-amber-500 hover:bg-amber-600 text-white">
+                {updateLoading ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          </form>
+        )}
+      </Modal>
     </motion.div>
   );
 }
