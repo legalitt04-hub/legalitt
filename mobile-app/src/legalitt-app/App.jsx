@@ -22,9 +22,7 @@ Notifications.setNotificationHandler({
 
 export default function App() {
   useEffect(() => {
-    // Hide splash once auth check completes (handled inside AuthContext)
-    const timer = setTimeout(() => SplashScreen.hideAsync(), 0);
-    return () => clearTimeout(timer);
+    // Native splash screen hiding is managed smoothly when intro screen assets are ready
   }, []);
 
   return (

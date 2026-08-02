@@ -18,7 +18,7 @@ import { COLORS } from '../../constants/theme';
 import { authAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { sanitizeInput } from '../../utils/security';
-import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
+import { GoogleSignin, statusCodes } from '../../utils/GoogleSigninMock';
 
 const LoginRegisterScreen = ({ navigation, route }) => {
   const selectedRole = route?.params?.role || 'client';
@@ -213,12 +213,28 @@ const LoginRegisterScreen = ({ navigation, route }) => {
         >
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>Login / Register</Text>
-            <Text style={styles.subtitle}>
-              {mode === 'login' 
-                ? 'Login With Your Account' 
-                : 'Register With Your Account'}
-            </Text>
+            <TouchableOpacity 
+              style={styles.backButton} 
+              onPress={() => {
+                if (navigation.canGoBack()) {
+                  navigation.goBack();
+                } else {
+                  navigation.replace('RoleSelect');
+                }
+              }}
+              disabled={loading}
+            >
+              <Ionicons name="arrow-back" size={24} color="#1F2937" />
+            </TouchableOpacity>
+
+            <View style={styles.headerTitleWrap}>
+              <Text style={styles.title}>Login / Register</Text>
+              <Text style={styles.subtitle}>
+                {mode === 'login' 
+                  ? 'Login With Your Account' 
+                  : 'Register With Your Account'}
+              </Text>
+            </View>
           </View>
 
           {/* Mode Toggle */}
@@ -510,8 +526,21 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   header: {
+    flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 40,
+    gap: 16,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitleWrap: {
+    flex: 1,
   },
   title: {
     fontSize: 28,

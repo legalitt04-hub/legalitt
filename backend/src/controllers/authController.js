@@ -3,6 +3,7 @@ const { OAuth2Client } = require('google-auth-library');
 const User = require('../models/User');
 const { AppError } = require('../middlewares/errorHandler');
 const logger = require('../utils/logger');
+const crypto = require('crypto');
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -250,6 +251,71 @@ exports.updateFCMToken = async (req, res, next) => {
     const { fcmToken } = req.body;
     await User.findByIdAndUpdate(req.user._id, { fcmToken });
     res.json({ success: true, message: 'FCM token updated.' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ─── Forgot Password ──────────────────────────────────────────────────────────
+exports.forgotPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    if (!email) return next(new AppError('Please provide an email address.', 400));
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user) {
+      // Return 200 to prevent email enumeration attacks
+      return res.status(200).json({ success: true, message: 'If an account exists, a reset link has been sent.' });
+    }
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+    user.passwordResetToken = hashedToken;
+    user.passwordResetExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+    await user.save({ validateBeforeSave: false });
+
+    const resetURL = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
+    
+    // Dummy Email Transport Logging
+    console.log('---------------------------------------------------------');
+    console.log(`[DUMMY EMAIL] To: ${user.email}`);
+    console.log(`[DUMMY EMAIL] Subject: Password Reset Request`);
+    console.log(`[DUMMY EMAIL] Body: Please click here to reset your password: ${resetURL}`);
+    console.log('---------------------------------------------------------');
+
+    res.status(200).json({ success: true, message: 'If an account exists, a reset link has been sent.' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ─── Reset Password ───────────────────────────────────────────────────────────
+exports.resetPassword = async (req, res, next) => {
+  try {
+    const { token, password } = req.body;
+    
+    if (!token || !password) {
+      return next(new AppError('Token and new password are required.', 400));
+    }
+
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    const user = await User.findOne({
+      passwordResetToken: hashedToken,
+      passwordResetExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return next(new AppError('Token is invalid or has expired.', 400));
+    }
+
+    user.password = password;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save();
+
+    res.status(200).json({ success: true, message: 'Password has been successfully reset. Please log in.' });
   } catch (err) {
     next(err);
   }

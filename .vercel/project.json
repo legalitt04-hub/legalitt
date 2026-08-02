@@ -1,0 +1,16 @@
+{
+  "projectId": "prj_NIacKcFBXnzdFffLCXwgxYiBK12k",
+  "orgId": "team_uIvJynDWgj7OkNoDuQpofFC6",
+  "projectName": "legalitt",
+  "settings": {
+    "createdAt": 1781605216344,
+    "framework": null,
+    "devCommand": null,
+    "installCommand": null,
+    "buildCommand": null,
+    "outputDirectory": null,
+    "rootDirectory": "admin-panel",
+    "directoryListing": false,
+    "nodeVersion": "24.x"
+  }
+}

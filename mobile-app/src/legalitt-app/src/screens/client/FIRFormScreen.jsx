@@ -4,6 +4,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { firAPI } from '../../services/api';
+import { COLORS } from '../../constants/theme';
 
 const FIRFormScreen = ({ route, navigation }) => {
   const { type, title } = route.params;
@@ -225,7 +226,7 @@ const FIRFormScreen = ({ route, navigation }) => {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      <LinearGradient colors={['#14B8A6', '#0D9488']} style={[styles.header, { paddingTop: insets.top + 5 }]}>
+      <LinearGradient colors={[COLORS.primary, COLORS.primaryDark || '#8D7865']} style={[styles.header, { paddingTop: insets.top + 5 }]}>
         <View style={styles.headerInner}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Ionicons name="arrow-back" size={24} color="#fff" />
@@ -267,7 +268,7 @@ const FIRFormScreen = ({ route, navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
+  container: { flex: 1, backgroundColor: COLORS.background },
   header: { paddingTop: 5, paddingBottom: 25, paddingHorizontal: 20 },
   headerInner: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
   headerTitle: { fontSize: 18, fontWeight: '700', color: '#fff', marginLeft: 15 },
@@ -279,13 +280,13 @@ const styles = StyleSheet.create({
   inputLabel: { fontSize: 14, fontWeight: '600', color: '#64748b', marginBottom: 8, marginTop: 15 },
   input: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 12, padding: 12, fontSize: 15, color: '#334155' },
   textArea: { height: 100, textAlignVertical: 'top' },
-  sectionHeader: { fontSize: 16, fontWeight: '700', color: '#0d9488', marginBottom: 10 },
+  sectionHeader: { fontSize: 16, fontWeight: '700', color: COLORS.primary, marginBottom: 10 },
   arrayBox: { marginBottom: 10, padding: 10, backgroundColor: '#f1f5f9', borderRadius: 12 },
-  addBtn: { color: '#0d9488', fontWeight: '600', marginTop: 5 },
+  addBtn: { color: COLORS.primary, fontWeight: '600', marginTop: 5 },
   footer: { flexDirection: 'row', padding: 20, backgroundColor: '#fff', borderTopWidth: 1, borderColor: '#f1f5f9' },
   backBtn: { flex: 1, padding: 16, alignItems: 'center' },
   backBtnText: { fontSize: 16, fontWeight: '600', color: '#64748b' },
-  nextBtn: { flex: 2, backgroundColor: '#0d9488', padding: 16, borderRadius: 12, alignItems: 'center' },
+  nextBtn: { flex: 2, backgroundColor: COLORS.primary, padding: 16, borderRadius: 12, alignItems: 'center' },
   nextBtnText: { fontSize: 16, fontWeight: '700', color: '#fff' },
 });
 

@@ -33,7 +33,9 @@ router.post('/google', ctrl.googleAuth);
 router.post('/refresh', ctrl.refreshToken);
 router.post('/logout', protect, ctrl.logout);
 router.get('/me', protect, ctrl.getMe);
-router.patch('/fcm-token', protect, ctrl.updateFCMToken);
+router.post('/fcm-token', protect, ctrl.updateFCMToken);
+router.post('/forgot-password', ctrl.forgotPassword);
+router.post('/reset-password', ctrl.resetPassword);
 
 // Phone OTP (Indian market — MSG91)
 router.post('/send-otp', otpCtrl.sendOTP);

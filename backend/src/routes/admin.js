@@ -32,4 +32,13 @@ router.patch('/advocates/:id/verify', adminController.verifyAdvocate);
 router.get('/settings',               adminController.getSettings);
 router.put('/settings',               adminController.updateSettings);
 
+// ─── New Modules (Phase 3 Integration) ────────────────────────────────────────
+const adminModuleController = require('../controllers/adminModuleController');
+router.get('/cases',                  adminModuleController.getCases);
+router.get('/services',               adminModuleController.getServices);
+router.get('/documents',              adminModuleController.getDocuments);
+router.get('/support-tickets',        adminModuleController.getSupportTickets);
+router.get('/ai-drafts',              adminModuleController.getAIDrafts);
+router.get('/notifications/templates',adminModuleController.getNotificationTemplates);
+
 module.exports = router;

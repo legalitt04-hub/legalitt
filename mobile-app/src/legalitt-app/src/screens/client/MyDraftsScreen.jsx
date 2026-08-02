@@ -4,6 +4,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { firAPI } from '../../services/api';
+import { COLORS } from '../../constants/theme';
 
 const MyDraftsScreen = ({ navigation }) => {
   const [drafts, setDrafts] = useState([]);
@@ -35,7 +36,7 @@ const MyDraftsScreen = ({ navigation }) => {
     >
       <View style={styles.cardHeader}>
         <View style={styles.iconContainer}>
-          <Ionicons name="document-text" size={24} color="#0d9488" />
+          <Ionicons name="document-text" size={24} color={COLORS.primary} />
         </View>
         <View style={styles.cardInfo}>
           <Text style={styles.draftType}>{item.type.replace('_', ' ').toUpperCase()}</Text>
@@ -52,7 +53,7 @@ const MyDraftsScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      <LinearGradient colors={['#14B8A6', '#0D9488']} style={[styles.header, { paddingTop: insets.top + 5 }]}>
+      <LinearGradient colors={[COLORS.primary, COLORS.primaryDark || '#8D7865']} style={[styles.header, { paddingTop: insets.top + 5 }]}>
         <View style={styles.headerInner}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Ionicons name="arrow-back" size={24} color="#fff" />
@@ -63,7 +64,7 @@ const MyDraftsScreen = ({ navigation }) => {
 
       {loading ? (
         <View style={styles.center}>
-          <ActivityIndicator size="large" color="#0d9488" />
+          <ActivityIndicator size="large" color={COLORS.primary} />
         </View>
       ) : drafts.length > 0 ? (
         <FlatList
@@ -72,7 +73,7 @@ const MyDraftsScreen = ({ navigation }) => {
           renderItem={renderDraftItem}
           contentContainerStyle={styles.list}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchDrafts(); }} />
+            <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchDrafts(); }} colors={[COLORS.primary]} tintColor={COLORS.primary} />
           }
         />
       ) : (
@@ -93,14 +94,14 @@ const MyDraftsScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f1f5f9' },
+  container: { flex: 1, backgroundColor: COLORS.background },
   header: { paddingTop: 5, paddingBottom: 25, paddingHorizontal: 20 },
   headerInner: { flexDirection: 'row', alignItems: 'center' },
   headerTitle: { fontSize: 18, fontWeight: '700', color: '#fff', marginLeft: 15 },
   list: { padding: 20 },
   card: { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, elevation: 2 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-  iconContainer: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#e6f7f5', alignItems: 'center', justifyContent: 'center' },
+  iconContainer: { width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(176, 156, 133, 0.15)', alignItems: 'center', justifyContent: 'center' },
   cardInfo: { flex: 1, marginLeft: 12 },
   draftType: { fontSize: 15, fontWeight: '700', color: '#1e293b' },
   draftDate: { fontSize: 12, color: '#64748b', marginTop: 2 },
@@ -108,7 +109,7 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
   emptyTitle: { fontSize: 18, fontWeight: '700', color: '#1e293b', marginTop: 20 },
   emptySub: { fontSize: 14, color: '#64748b', textAlign: 'center', marginTop: 8 },
-  createBtn: { backgroundColor: '#0d9488', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, marginTop: 24 },
+  createBtn: { backgroundColor: COLORS.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, marginTop: 24 },
   createBtnText: { color: '#fff', fontWeight: '700' },
 });
 

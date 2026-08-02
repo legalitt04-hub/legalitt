@@ -38,6 +38,7 @@ import BookingScreen from '../screens/client/BookingScreen';
 import FIRTypeSelector from '../screens/client/FIRTypeSelector';
 import FIRFormScreen from '../screens/client/FIRFormScreen';
 import FIRPreviewScreen from '../screens/client/FIRPreviewScreen';
+import AILegalNoticeScreen from '../screens/client/AILegalNoticeScreen';
 import MyDraftsScreen from '../screens/client/MyDraftsScreen';
 import ProfileEditScreen from '../screens/client/ProfileEditScreen';
 import SavedAdvocatesScreen from '../screens/client/SavedAdvocatesScreen';
@@ -197,17 +198,8 @@ const AdvocateTabs = () => {
 
 const AppNavigator = () => {
   const { isAuthenticated, user, isRestoring, consentAccepted } = useAuth();
-  const [splashDelay, setSplashDelay] = useState(true);
 
-  useEffect(() => {
-    // Elegant minimum splash screen delay for smooth UX loading transition
-    const timer = setTimeout(() => {
-      setSplashDelay(false);
-    }, 3000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (isRestoring || splashDelay) {
+  if (isRestoring) {
     return <AuthLoadingScreen />;
   }
 
@@ -271,6 +263,7 @@ const AppNavigator = () => {
               <Stack.Screen name="FIRTypeSelector" component={FIRTypeSelector} />
               <Stack.Screen name="FIRForm" component={FIRFormScreen} />
               <Stack.Screen name="FIRPreview" component={FIRPreviewScreen} />
+              <Stack.Screen name="AILegalNotice" component={AILegalNoticeScreen} />
               <Stack.Screen name="MyDrafts" component={MyDraftsScreen} />
               <Stack.Screen name="ProfileEdit" component={ProfileEditScreen} />
               <Stack.Screen name="Settings" component={SettingsScreen} />

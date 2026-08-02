@@ -4,26 +4,32 @@
  
 @layer base {
   :root {
-    --background: 224 71.4% 4.1%; /* Deep Navy Slate */
-    --foreground: 210 40% 98%;
-    --card: 224 71.4% 4.1%;
-    --card-foreground: 210 40% 98%;
-    --popover: 224 71.4% 4.1%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 43 96% 58%; /* Legal Gold/Amber for primary */
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 173 80% 40%; /* Teal Accent */
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
+    --background: 210 20% 98%;       /* Clean off-white #F8FAFC */
+    --foreground: 222 47% 11%;       /* Dark slate text #1E293B */
+    --card: 0 0% 100%;               /* Pure white cards */
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 43 96% 58%;           /* Legal Gold/Amber */
+    --primary-foreground: 222 47% 11%;
+    --secondary: 210 20% 96%;        /* Light gray #F1F5F9 */
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 20% 96%;
+    --muted-foreground: 215 16% 47%; /* Medium gray text */
+    --accent: 173 80% 40%;           /* Teal Accent */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%;           /* Light border #E2E8F0 */
+    --input: 214 32% 91%;
     --ring: 43 96% 58%;
-    --radius: 0.75rem; /* Softer radius */
+    --radius: 0.75rem;
+    
+    /* Sidebar specific */
+    --sidebar-bg: 222 47% 11%;       /* Keep sidebar dark for contrast */
+    --sidebar-fg: 210 40% 98%;
+    --sidebar-border: 217 33% 17%;
+    --sidebar-accent: 43 96% 58%;
   }
 }
  
@@ -32,6 +38,37 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 }
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: hsl(var(--secondary));
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* Modal open — prevent background scroll */
+body.modal-open {
+  overflow: hidden;
+}
+
+/* Hidden scrollbar utility */
+.hidden-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hidden-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+

@@ -147,8 +147,10 @@ export default function HomeScreen({ navigation }) {
   const quickActions = [
     { id: '1', icon: 'location-outline', title: 'Find Nearby Advocates', subtitle: 'Search by Location', cta: 'Open', screen: 'Map' },
     { id: '2', icon: 'sparkles-outline', title: 'AI Legal Assistant', subtitle: 'Ask Questions', cta: 'Chat with AI', screen: 'AI' },
-    { id: '3', icon: 'document-text-outline', title: 'FIR Draft Generator', subtitle: 'Generate Drafts', cta: 'Generate', screen: 'FIRTypeSelector' },
-    { id: '4', icon: 'calendar-outline', title: 'My Bookings', subtitle: 'Track Consultations', cta: 'View', screen: 'MyBookings' },
+    { id: '3', icon: 'scale-outline', title: 'AI Legal Notice', subtitle: 'Create Legal Notice', cta: 'Create', screen: 'AILegalNotice' },
+    { id: '4', icon: 'document-text-outline', title: 'FIR Draft Generator', subtitle: 'Generate Drafts', cta: 'Generate', screen: 'FIRTypeSelector' },
+    { id: '5', icon: 'calendar-outline', title: 'My Bookings', subtitle: 'Track Consultations', cta: 'View', screen: 'MyBookings' },
+    { id: '6', icon: 'bookmark-outline', title: 'Saved Advocates', subtitle: 'Bookmarked Lawyers', cta: 'View', screen: 'SavedAdvocates' },
   ];
 
   return (

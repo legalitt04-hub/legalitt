@@ -87,39 +87,86 @@ const Settings = () => {
 
         {/* Financial & Bookings */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <Card className="bg-slate-900/50 border-slate-800 p-8 backdrop-blur-sm space-y-8">
+          <Card className="bg-white/50 border-slate-200 p-8 backdrop-blur-sm space-y-8">
           <div>
-            <h3 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
+            <h3 className="text-lg font-medium text-slate-900 mb-4 flex items-center gap-2">
               <SettingsIcon className="w-5 h-5 text-teal-500" />
               Financial & Booking Rules
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-400">Commission Rate (%)</label>
+                <label className="text-sm font-medium text-slate-500">Commission Rate (%)</label>
                 <Input 
                   type="number" 
                   value={settings.commissionRate} 
                   onChange={(e) => handleChange('commissionRate', Number(e.target.value))}
-                  className="bg-slate-950/50 border-slate-800 text-white" 
+                  className="bg-slate-50/50 border-slate-200 text-slate-900" 
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-400">Min Consultation Fee (₹)</label>
+                <label className="text-sm font-medium text-slate-500">Min Consultation Fee (₹)</label>
                 <Input 
                   type="number" 
                   value={settings.minFee} 
                   onChange={(e) => handleChange('minFee', Number(e.target.value))}
-                  className="bg-slate-950/50 border-slate-800 text-white" 
+                  className="bg-slate-50/50 border-slate-200 text-slate-900" 
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-400">Max Advance Booking (Days)</label>
+                <label className="text-sm font-medium text-slate-500">Max Advance Booking (Days)</label>
                 <Input 
                   type="number" 
                   value={settings.maxAdvanceBookingDays} 
                   onChange={(e) => handleChange('maxAdvanceBookingDays', Number(e.target.value))}
-                  className="bg-slate-950/50 border-slate-800 text-white" 
+                  className="bg-slate-50/50 border-slate-200 text-slate-900" 
                 />
+              </div>
+            </div>
+          </div>
+        </Card>
+        </motion.div>
+
+        {/* Branding & Appearance */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+          <Card className="bg-white/50 border-slate-200 p-8 backdrop-blur-sm space-y-8">
+          <div>
+            <h3 className="text-lg font-medium text-slate-900 mb-4 flex items-center gap-2">
+              <SettingsIcon className="w-5 h-5 text-teal-500" />
+              Branding & Appearance
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-500">Primary Brand Color</label>
+                <div className="flex gap-3">
+                  <div className="w-10 h-10 rounded border border-slate-200 bg-amber-500 shrink-0"></div>
+                  <Input 
+                    type="text" 
+                    value="#f59e0b" 
+                    readOnly
+                    className="bg-slate-50/50 border-slate-200 text-slate-900" 
+                  />
+                </div>
+                <p className="text-xs text-slate-400 mt-1">Hex code used for primary buttons and accents.</p>
+              </div>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-500">Company Logo</label>
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center p-2 border border-slate-200">
+                      <img src="/assets/shield-logo.png" alt="Logo" className="max-w-full max-h-full object-contain" />
+                    </div>
+                    <Button variant="outline" size="sm" className="bg-white text-slate-600 border-slate-200">Upload New Logo</Button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-500">Favicon</label>
+                  <div className="flex items-center gap-4">
+                    <div className="w-8 h-8 rounded border border-slate-200 p-1 bg-slate-100 flex items-center justify-center">
+                      <img src="/assets/shield-logo.png" alt="Favicon" className="max-w-full max-h-full object-contain" />
+                    </div>
+                    <Button variant="outline" size="sm" className="bg-white text-slate-600 border-slate-200">Change Favicon</Button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -128,8 +175,8 @@ const Settings = () => {
 
         {/* Feature Flags */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <Card className="bg-slate-900/50 border-slate-800 p-8 backdrop-blur-sm">
-          <h3 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
+          <Card className="bg-white/50 border-slate-200 p-8 backdrop-blur-sm">
+          <h3 className="text-lg font-medium text-slate-900 mb-4 flex items-center gap-2">
             <SettingsIcon className="w-5 h-5 text-teal-500" />
             Feature Flags
           </h3>
@@ -140,10 +187,10 @@ const Settings = () => {
               { id: 'registrationsEnabled', label: 'New Registrations', desc: 'Allow new users to sign up' },
               { id: 'googleEnabled', label: 'Google Sign-In', desc: 'Enable Google OAuth login' },
             ].map((f) => (
-              <div key={f.id} className="flex items-center justify-between p-4 rounded-xl border border-slate-800 bg-slate-950/30">
+              <div key={f.id} className="flex items-center justify-between p-4 rounded-xl border border-slate-200 bg-slate-50/30">
                 <div>
-                  <p className="font-medium text-white">{f.label}</p>
-                  <p className="text-sm text-slate-400">{f.desc}</p>
+                  <p className="font-medium text-slate-900">{f.label}</p>
+                  <p className="text-sm text-slate-500">{f.desc}</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" className="sr-only peer" checked={settings.features[f.id]} onChange={(e) => handleChange(f.id, e.target.checked, true)} />
@@ -167,28 +214,28 @@ const Settings = () => {
 
         {/* Announcement Banner */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-          <Card className="bg-slate-900/50 border-slate-800 p-8 backdrop-blur-sm">
-          <h3 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
+          <Card className="bg-white/50 border-slate-200 p-8 backdrop-blur-sm">
+          <h3 className="text-lg font-medium text-slate-900 mb-4 flex items-center gap-2">
             <Megaphone className="w-5 h-5 text-teal-500" />
             Announcement Banner
           </h3>
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-400">Message</label>
+              <label className="text-sm font-medium text-slate-500">Message</label>
               <textarea 
                 value={settings.announcement?.text || ''}
                 onChange={(e) => handleAnnouncementChange('text', e.target.value)}
                 rows={3} 
-                className="w-full bg-slate-950/50 border border-slate-800 text-white rounded-xl p-3 focus:outline-none focus:ring-1 focus:ring-teal-500/50"
+                className="w-full bg-slate-50/50 border border-slate-200 text-slate-900 rounded-xl p-3 focus:outline-none focus:ring-1 focus:ring-teal-500/50"
                 placeholder="e.g. System maintenance on Sunday..."
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-400">Banner Type</label>
+              <label className="text-sm font-medium text-slate-500">Banner Type</label>
               <select 
                 value={settings.announcement?.type || ''}
                 onChange={(e) => handleAnnouncementChange('type', e.target.value)}
-                className="w-full bg-slate-950/50 border border-slate-800 text-white rounded-xl p-3 focus:outline-none focus:ring-1 focus:ring-teal-500/50 appearance-none"
+                className="w-full bg-slate-50/50 border border-slate-200 text-slate-900 rounded-xl p-3 focus:outline-none focus:ring-1 focus:ring-teal-500/50 appearance-none"
               >
                 <option value="">None — Hide Banner</option>
                 <option value="info">ℹ️ Info (blue)</option>
@@ -196,7 +243,7 @@ const Settings = () => {
                 <option value="success">✅ Success (green)</option>
               </select>
             </div>
-            <Button onClick={handleSave} disabled={saving} className="w-full bg-slate-800 hover:bg-slate-700 text-white">Publish Announcement</Button>
+            <Button onClick={handleSave} disabled={saving} className="w-full bg-slate-50 hover:bg-slate-100 text-slate-900">Publish Announcement</Button>
           </div>
         </Card>
         </motion.div>
@@ -209,9 +256,9 @@ const Settings = () => {
         transition={{ duration: 0.4, delay: 0.4 }}
         className="xl:col-span-1"
       >
-        <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-sm flex flex-col h-full max-h-[calc(100vh-120px)] sticky top-24">
-          <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-            <h3 className="font-bold text-white flex items-center gap-2">
+        <Card className="bg-white/50 border-slate-200 backdrop-blur-sm flex flex-col h-full max-h-[calc(100vh-120px)] sticky top-24">
+          <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+            <h3 className="font-bold text-slate-900 flex items-center gap-2">
               <Activity className="w-4 h-4 text-teal-500" />
               Activity Logs
             </h3>
@@ -223,11 +270,11 @@ const Settings = () => {
             ) : (
               logs.map((log, i) => (
                 <div key={log._id || i} className="flex gap-3">
-                  <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-sm flex-shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-sm flex-shrink-0">
                     {log.type === 'booking' ? '📅' : log.type === 'user' ? '👤' : '🔍'}
                   </div>
                   <div>
-                    <p className="text-sm text-slate-300">{log.action}</p>
+                    <p className="text-sm text-slate-600">{log.action}</p>
                     <p className="text-xs text-slate-500 mt-1">{new Date(log.timestamp).toLocaleString()}</p>
                   </div>
                 </div>

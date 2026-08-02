@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '../components/ui/card';
-import { CreditCard, Download, TrendingUp } from 'lucide-react';
+import { CreditCard, Download, TrendingUp, FileText } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import api from '../lib/api';
@@ -101,11 +101,11 @@ const Earnings = () => {
       <div className="space-y-6 animate-pulse">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-28 bg-slate-900/60 rounded-2xl border border-slate-800" />
+            <div key={i} className="h-28 bg-white/60 rounded-2xl border border-slate-200" />
           ))}
         </div>
-        <div className="h-[350px] bg-slate-900/60 rounded-2xl border border-slate-800" />
-        <div className="h-[300px] bg-slate-900/60 rounded-2xl border border-slate-800" />
+        <div className="h-[350px] bg-white/60 rounded-2xl border border-slate-200" />
+        <div className="h-[300px] bg-white/60 rounded-2xl border border-slate-200" />
       </div>
     );
   }
@@ -140,11 +140,46 @@ const Earnings = () => {
       transition={{ duration: 0.3 }}
       className="space-y-6 pb-8"
     >
-      <div className="flex items-center justify-end">
-        <Button onClick={handleExport} variant="outline" className="bg-slate-900 border-slate-800 text-slate-300 hover:text-white h-9 text-sm active:scale-95 transition-transform">
-          <Download className="w-4 h-4 mr-2" />
-          Export CSV
-        </Button>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            <CreditCard className="w-6 h-6 text-emerald-500" />
+            Earnings & Analytics
+          </h2>
+          <p className="text-slate-500 text-sm mt-1">Platform revenue, payouts, and financial insights.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <select className="h-9 px-3 bg-white border border-slate-200 text-slate-600 rounded-md text-sm outline-none focus:ring-2 focus:ring-emerald-500/50 shadow-sm">
+            <option>All Dates</option>
+            <option>Today</option>
+            <option>This Week</option>
+            <option>This Month</option>
+          </select>
+          <select className="h-9 px-3 bg-white border border-slate-200 text-slate-600 rounded-md text-sm outline-none focus:ring-2 focus:ring-emerald-500/50 shadow-sm">
+            <option>All Services</option>
+            <option>Legal Notice</option>
+            <option>Property Search</option>
+            <option>FIR Draft</option>
+          </select>
+          <select className="h-9 px-3 bg-white border border-slate-200 text-slate-600 rounded-md text-sm outline-none focus:ring-2 focus:ring-emerald-500/50 shadow-sm">
+            <option>All Advocates</option>
+            <option>Top Earners</option>
+          </select>
+          <select className="h-9 px-3 bg-white border border-slate-200 text-slate-600 rounded-md text-sm outline-none focus:ring-2 focus:ring-emerald-500/50 shadow-sm">
+            <option>All Statuses</option>
+            <option>Success</option>
+            <option>Pending</option>
+            <option>Failed</option>
+          </select>
+          <Button onClick={handleExport} variant="outline" className="bg-white border-slate-200 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 h-9 text-sm active:scale-95 transition-transform shadow-sm">
+            <Download className="w-4 h-4 mr-2" />
+            Excel
+          </Button>
+          <Button variant="outline" className="bg-white border-slate-200 text-rose-600 hover:text-rose-700 hover:bg-rose-50 h-9 text-sm active:scale-95 transition-transform shadow-sm">
+            <FileText className="w-4 h-4 mr-2" />
+            PDF
+          </Button>
+        </div>
       </div>
 
       {/* Stats Grid */}
@@ -156,10 +191,10 @@ const Earnings = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: i * 0.05 }}
           >
-            <Card className="bg-slate-900/50 border-slate-800 p-4 md:p-5 backdrop-blur-sm relative overflow-hidden group h-full hover:border-slate-700 transition-colors">
+            <Card className="bg-white/50 border-slate-200 p-4 md:p-5 backdrop-blur-sm relative overflow-hidden group h-full hover:border-slate-200 transition-colors">
               <div className={`absolute inset-0 bg-gradient-to-r ${card.color} rounded-xl blur-xl opacity-0 group-hover:opacity-[0.08] transition-opacity`} />
-              <h3 className="text-[11px] md:text-xs font-medium text-slate-400 mb-2">{card.label}</h3>
-              <p className="text-xl md:text-2xl font-bold text-white">
+              <h3 className="text-[11px] md:text-xs font-medium text-slate-500 mb-2">{card.label}</h3>
+              <p className="text-xl md:text-2xl font-bold text-slate-900">
                 <CountUp to={Number(card.value)} type={card.type as any} />
               </p>
               <p className="text-[11px] text-slate-500 mt-2">{card.sub}</p>
@@ -169,9 +204,9 @@ const Earnings = () => {
       </div>
 
       {/* Chart */}
-      <Card className="p-4 md:p-6 bg-slate-900/60 backdrop-blur-xl border-slate-800 rounded-2xl">
+      <Card className="p-4 md:p-6 bg-white/60 backdrop-blur-xl border-slate-200 rounded-2xl">
         <div className="flex justify-between items-center mb-4 md:mb-6">
-          <h3 className="text-base md:text-lg font-bold text-white">Revenue Timeline</h3>
+          <h3 className="text-base md:text-lg font-bold text-slate-900">Revenue Timeline</h3>
         </div>
         <div className="h-[250px] md:h-[300px] w-full">
           <ResponsiveContainer width="100%" height="100%">
@@ -197,10 +232,10 @@ const Earnings = () => {
       </Card>
 
       {/* Top Advocates */}
-      <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-sm overflow-hidden">
-        <div className="p-4 md:p-6 border-b border-slate-800">
-          <h3 className="text-base md:text-lg font-bold text-white">Top Earning Advocates</h3>
-          <p className="text-xs text-slate-400 mt-0.5">Ranked by total earnings from paid bookings</p>
+      <Card className="bg-white/50 border-slate-200 backdrop-blur-sm overflow-hidden">
+        <div className="p-4 md:p-6 border-b border-slate-200">
+          <h3 className="text-base md:text-lg font-bold text-slate-900">Top Earning Advocates</h3>
+          <p className="text-xs text-slate-500 mt-0.5">Ranked by total earnings from paid bookings</p>
         </div>
         
         {/* Mobile Card View */}
@@ -211,14 +246,14 @@ const Earnings = () => {
             data.topAdvocates.map((adv: any, i: number) => (
               <div key={adv._id || i} className="p-4 flex items-center gap-3">
                 <div className="relative flex-shrink-0">
-                  <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center overflow-hidden border border-slate-700">
-                    {adv.user?.avatar ? <img src={adv.user.avatar} className="w-full h-full object-cover" /> : <span className="text-slate-300 text-sm">{adv.user?.name?.charAt(0) || '?'}</span>}
+                  <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center overflow-hidden border border-slate-200">
+                    {adv.user?.avatar ? <img src={adv.user.avatar} className="w-full h-full object-cover" /> : <span className="text-slate-600 text-sm">{adv.user?.name?.charAt(0) || '?'}</span>}
                   </div>
                   {i < 3 && <span className="absolute -top-1 -right-1 text-xs">{['🥇','🥈','🥉'][i]}</span>}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white truncate">{adv.user?.name || 'Unknown'}</p>
-                  <p className="text-xs text-slate-400">{adv.bookingCount} bookings</p>
+                  <p className="text-sm font-medium text-slate-900 truncate">{adv.user?.name || 'Unknown'}</p>
+                  <p className="text-xs text-slate-500">{adv.bookingCount} bookings</p>
                 </div>
                 <p className="font-bold text-teal-400 text-sm">{formatCurrency(adv.totalEarned)}</p>
               </div>
@@ -230,7 +265,7 @@ const Earnings = () => {
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-800 bg-slate-950/50 text-slate-400 text-[11px] uppercase tracking-wider">
+              <tr className="border-b border-slate-200 bg-slate-50/50 text-slate-500 text-[11px] uppercase tracking-wider">
                 <th className="p-4 font-medium">Advocate</th>
                 <th className="p-4 font-medium">Specializations</th>
                 <th className="p-4 font-medium">Total Earned</th>
@@ -247,34 +282,34 @@ const Earnings = () => {
                 data.topAdvocates.map((adv: any, i: number) => (
                   <tr 
                     key={adv._id || i} 
-                    className="border-b border-slate-800/50 hover:bg-slate-800/20 transition-colors"
+                    className="border-b border-slate-200/50 hover:bg-slate-50/20 transition-colors"
                   >
                     <td className="p-4">
                       <div className="flex items-center gap-3">
                         <div className="relative">
-                          <div className="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center overflow-hidden border border-slate-700">
-                            {adv.user?.avatar ? <img src={adv.user.avatar} className="w-full h-full object-cover" /> : <span className="text-slate-300 text-sm">{adv.user?.name?.charAt(0) || '?'}</span>}
+                          <div className="w-9 h-9 rounded-full bg-slate-50 flex items-center justify-center overflow-hidden border border-slate-200">
+                            {adv.user?.avatar ? <img src={adv.user.avatar} className="w-full h-full object-cover" /> : <span className="text-slate-600 text-sm">{adv.user?.name?.charAt(0) || '?'}</span>}
                           </div>
                           {i < 3 && <span className="absolute -top-1 -right-1 text-xs">{['🥇','🥈','🥉'][i]}</span>}
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-white">{adv.user?.name || 'Unknown'}</p>
-                          <p className="text-xs text-slate-400">{adv.user?.email || ''}</p>
+                          <p className="text-sm font-medium text-slate-900">{adv.user?.name || 'Unknown'}</p>
+                          <p className="text-xs text-slate-500">{adv.user?.email || ''}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="p-4 text-xs text-slate-400">
+                    <td className="p-4 text-xs text-slate-500">
                       {(adv.advocate?.specializations || []).slice(0, 2).join(', ') || '—'}
                     </td>
                     <td className="p-4">
                       <p className="font-bold text-teal-400">{formatCurrency(adv.totalEarned)}</p>
                     </td>
                     <td className="p-4">
-                      <span className="px-2 py-1 bg-slate-800 text-slate-300 rounded text-xs font-medium">
+                      <span className="px-2 py-1 bg-slate-50 text-slate-600 rounded text-xs font-medium">
                         {adv.bookingCount}
                       </span>
                     </td>
-                    <td className="p-4 text-sm font-medium text-slate-300">
+                    <td className="p-4 text-sm font-medium text-slate-600">
                       {formatCurrency(adv.avgAmount || Math.round(adv.totalEarned / (adv.bookingCount || 1)))}
                     </td>
                   </tr>

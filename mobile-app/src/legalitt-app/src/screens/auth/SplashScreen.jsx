@@ -43,7 +43,7 @@ const GavelStrike = () => (
   </Svg>
 );
 
-const ImpactRing = ({ size, delay, opacity: opacityLevel }) => {
+const ImpactRing = ({ size, delay, opacityLevel }) => {
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.3)).current;
 

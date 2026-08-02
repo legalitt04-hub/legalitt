@@ -32,9 +32,7 @@ export default ({ config }) => ({
       resizeMode: "contain",
       backgroundColor: "#FFFFFF"
     },
-    updates: {
-      fallbackToCacheTimeout: 0
-    },
+
     assetBundlePatterns: [
       "**/*"
     ],
@@ -91,9 +89,6 @@ export default ({ config }) => ({
       "expo-web-browser"
     ],
     extra: {
-      eas: {
-        projectId: "8136d29e-51a5-4de0-9ae3-cbdedc794e9b"
-      },
       API_URL: process.env.API_URL,
       SOCKET_URL: process.env.SOCKET_URL,
       GEMINI_API_KEY: process.env.GEMINI_API_KEY,

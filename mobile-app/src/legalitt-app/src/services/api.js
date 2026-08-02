@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import Constants from 'expo-constants';
 import NetInfo from '@react-native-community/netinfo';
@@ -9,7 +10,7 @@ import { addToOfflineQueue } from '../utils/offlineQueue';
 const extraApiUrl = Constants.expoConfig?.extra?.API_URL;
 const debuggerHost = Constants.expoConfig?.hostUri;
 const devHost = debuggerHost ? debuggerHost.split(':')[0] : '10.0.2.2';
-export const BASE_URL = extraApiUrl || `http://${devHost}:5001/api/v1`;
+export const BASE_URL = extraApiUrl || `http://${devHost}:5000/api/v1`;
 console.log('🌐 API Base URL:', BASE_URL);
 
 export const TOKEN_KEY = 'authToken';
@@ -23,8 +24,8 @@ const api = axios.create({
 
 api.interceptors.request.use(
   async (config) => {
-    // Certificate Pinning & MitM prevention header check
-    if (BASE_URL.startsWith('https://')) {
+    // Certificate Pinning & MitM prevention header check (Skip on Web to avoid CORS preflight issues)
+    if (BASE_URL.startsWith('https://') && Platform.OS !== 'web') {
       config.headers['X-Sec-Client-Hash'] = 'sha256/legalitt_pinned_cert_signature';
     }
     try {

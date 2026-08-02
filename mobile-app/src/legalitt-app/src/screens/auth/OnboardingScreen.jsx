@@ -3,10 +3,12 @@ import {
   View, Text, StyleSheet, FlatList, Animated,
   Dimensions, TouchableOpacity, StatusBar,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import Svg, {
   Path, G, Defs, ClipPath, Rect, Circle, Ellipse,
   LinearGradient, Stop, Polygon, Line,
 } from 'react-native-svg';
+import { COLORS } from '../../constants/theme';
 
 const { width, height } = Dimensions.get('window');
 
@@ -108,31 +110,31 @@ const Illustration1 = () => (
 // ── Illustration 2: AI chat bubbles ──────────────────────────────────────────
 const Illustration2 = () => (
   <View style={ill.wrap}>
-    <View style={[ill.bgCircle, { backgroundColor: '#e0f2f1' }]} />
+    <View style={[ill.bgCircle, { backgroundColor: 'rgba(176, 156, 133, 0.15)' }]} />
 
     {/* Phone mockup */}
     <View style={ill.phone}>
       {/* Header */}
       <View style={ill.phoneHeader}>
-        <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: TEAL, alignItems: 'center', justifyContent: 'center' }}>
+        <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' }}>
           <Text style={{ fontSize: 14 }}>⚖️</Text>
         </View>
-        <Text style={{ marginLeft: 8, fontWeight: '700', color: NAVY, fontSize: 12 }}>AI Legal Assistant</Text>
+        <Text style={{ marginLeft: 8, fontWeight: '700', color: '#0F172A', fontSize: 12 }}>AI Legal Assistant</Text>
         <View style={{ marginLeft: 'auto', width: 8, height: 8, borderRadius: 4, backgroundColor: '#22c55e' }} />
       </View>
 
       {/* Chat bubbles */}
       <View style={{ paddingHorizontal: 10, paddingTop: 8, gap: 8 }}>
         {/* User bubble */}
-        <View style={{ alignSelf: 'flex-end', backgroundColor: NAVY, borderRadius: 14, borderBottomRightRadius: 4, padding: 8, maxWidth: '75%' }}>
+        <View style={{ alignSelf: 'flex-end', backgroundColor: COLORS.primary, borderRadius: 14, borderBottomRightRadius: 4, padding: 8, maxWidth: '75%' }}>
           <Text style={{ color: '#fff', fontSize: 10 }}>Can my landlord evict me without notice?</Text>
         </View>
         {/* AI bubble */}
         <View style={{ alignSelf: 'flex-start', backgroundColor: '#f0fdf4', borderRadius: 14, borderBottomLeftRadius: 4, padding: 8, maxWidth: '80%', borderWidth: 1, borderColor: '#d1fae5' }}>
-          <Text style={{ color: NAVY, fontSize: 10, lineHeight: 15 }}>No. Under the Rent Control Act, your landlord must give proper written notice before eviction. 📋</Text>
+          <Text style={{ color: '#0F172A', fontSize: 10, lineHeight: 15 }}>No. Under the Rent Control Act, your landlord must give proper written notice before eviction. 📋</Text>
         </View>
         {/* User bubble 2 */}
-        <View style={{ alignSelf: 'flex-end', backgroundColor: TEAL, borderRadius: 14, borderBottomRightRadius: 4, padding: 8, maxWidth: '65%' }}>
+        <View style={{ alignSelf: 'flex-end', backgroundColor: COLORS.primaryDark, borderRadius: 14, borderBottomRightRadius: 4, padding: 8, maxWidth: '65%' }}>
           <Text style={{ color: '#fff', fontSize: 10 }}>What's the notice period?</Text>
         </View>
         {/* AI typing */}
@@ -146,7 +148,7 @@ const Illustration2 = () => (
       {/* Input bar */}
       <View style={ill.inputBar}>
         <Text style={{ color: '#9ca3af', fontSize: 10, flex: 1 }}>Ask a legal question…</Text>
-        <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: TEAL, alignItems: 'center', justifyContent: 'center' }}>
+        <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' }}>
           <Text style={{ color: '#fff', fontSize: 12 }}>↑</Text>
         </View>
       </View>
@@ -155,7 +157,7 @@ const Illustration2 = () => (
     {/* Floating doc badge */}
     <View style={ill.docBadge}>
       <Text style={{ fontSize: 18 }}>📄</Text>
-      <Text style={{ fontSize: 10, color: NAVY, fontWeight: '700', marginLeft: 6 }}>12 Docs saved</Text>
+      <Text style={{ fontSize: 10, color: '#0F172A', fontWeight: '700', marginLeft: 6 }}>12 Docs saved</Text>
     </View>
   </View>
 );
@@ -163,7 +165,7 @@ const Illustration2 = () => (
 // ── Illustration 3: Document / Aadhaar cards ─────────────────────────────────
 const Illustration3 = () => (
   <View style={ill.wrap}>
-    <View style={[ill.bgCircle, { backgroundColor: '#eff6ff' }]} />
+    <View style={[ill.bgCircle, { backgroundColor: 'rgba(176, 156, 133, 0.12)' }]} />
 
     {/* Stacked document cards */}
     {[
@@ -176,7 +178,7 @@ const Illustration3 = () => (
           <Text style={{ fontSize: 18 }}>{doc.icon}</Text>
         </View>
         <View style={{ marginLeft: 10, flex: 1 }}>
-          <Text style={{ fontSize: 11, color: NAVY, fontWeight: '700' }}>{doc.label}</Text>
+          <Text style={{ fontSize: 11, color: '#0F172A', fontWeight: '700' }}>{doc.label}</Text>
           <Text style={{ fontSize: 10, color: '#6b7280', marginTop: 2 }}>{doc.sub}</Text>
         </View>
         <Text style={{ fontSize: 16 }}>›</Text>
@@ -196,7 +198,7 @@ const Illustration3 = () => (
           <Text style={{ fontSize: 22 }}>👤</Text>
         </View>
         <View style={{ marginLeft: 10, flex: 1 }}>
-          <Text style={{ fontSize: 12, color: NAVY, fontWeight: '800' }}>Government of India</Text>
+          <Text style={{ fontSize: 12, color: '#0F172A', fontWeight: '800' }}>Government of India</Text>
           <Text style={{ fontSize: 10, color: '#6b7280', marginTop: 2, letterSpacing: 2 }}>XXXX  XXXX  XXXX</Text>
         </View>
         <View style={{ width: 32, height: 32 }}>
@@ -254,6 +256,14 @@ const OnboardingScreen = ({ navigation, route }) => {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
+      {/* Back button */}
+      <TouchableOpacity 
+        style={styles.backBtn} 
+        onPress={() => navigation.replace('RoleSelect')}
+      >
+        <Ionicons name="chevron-back" size={24} color="#9ca3af" />
+      </TouchableOpacity>
+
       {/* Skip button */}
       {!isLast && (
         <TouchableOpacity style={styles.skipBtn} onPress={handleSkip}>
@@ -290,7 +300,7 @@ const OnboardingScreen = ({ navigation, route }) => {
           });
           const dotColor = scrollX.interpolate({
             inputRange: [(i - 1) * width, i * width, (i + 1) * width],
-            outputRange: ['#d1d5db', NAVY, '#d1d5db'],
+            outputRange: ['#d1d5db', COLORS.primary, '#d1d5db'],
             extrapolate: 'clamp',
           });
           return (
@@ -330,7 +340,7 @@ const ill = StyleSheet.create({
     width: width * 0.78,
     height: width * 0.78,
     borderRadius: (width * 0.78) / 2,
-    backgroundColor: '#e6f4f1',
+    backgroundColor: 'rgba(176, 156, 133, 0.1)',
     top: '10%',
   },
   // Advocate cards
@@ -360,7 +370,7 @@ const ill = StyleSheet.create({
   badge: {
     position: 'absolute',
     top: -2, right: -2,
-    backgroundColor: NAVY,
+    backgroundColor: COLORS.primary,
     borderRadius: 8,
     width: 14, height: 14,
     alignItems: 'center',
@@ -368,11 +378,11 @@ const ill = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#fff',
   },
-  cardName: { fontSize: 10, fontWeight: '700', color: NAVY },
+  cardName: { fontSize: 10, fontWeight: '700', color: '#0F172A' },
   cardSpec: { fontSize: 9,  color: '#6b7280', marginTop: 1 },
   stars:    { flexDirection: 'row', marginTop: 2 },
   bookBtn: {
-    backgroundColor: TEAL,
+    backgroundColor: COLORS.primary,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 5,
@@ -474,7 +484,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: '800',
-    color: NAVY,
+    color: '#0F172A',
     textAlign: 'center',
     lineHeight: 34,
     letterSpacing: -0.3,
@@ -485,6 +495,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 12,
     lineHeight: 22,
+  },
+  backBtn: {
+    position: 'absolute',
+    top: 52,
+    left: 24,
+    zIndex: 10,
+    padding: 8,
   },
   skipBtn: {
     position: 'absolute',
@@ -514,13 +531,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   btn: {
-    backgroundColor: NAVY,
+    backgroundColor: COLORS.primary,
     borderRadius: 32,
     height: 56,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 4,
-    shadowColor: NAVY,
+    shadowColor: COLORS.primary,
     shadowOpacity: 0.3,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
