@@ -1,17 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card } from '../components/ui/card';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Clock, Video, MapPin } from 'lucide-react';
-
-const MOCK_EVENTS = [
-  { id: 1, title: 'Advocate Verification - Sameer Das', time: '09:00 AM - 09:30 AM', type: 'verification', location: 'Google Meet' },
-  { id: 2, title: 'Client Escelation Review', time: '11:00 AM - 12:00 PM', type: 'support', location: 'Internal' },
-  { id: 3, title: 'Property Docs Review', time: '02:00 PM - 03:00 PM', type: 'case', location: 'Office' },
-  { id: 4, title: 'Platform Demo', time: '04:30 PM - 05:15 PM', type: 'meeting', location: 'Zoom' },
-];
+import api from '../lib/api';
 
 export default function CalendarView() {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [events, setEvents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCasesForCalendar = async () => {
+      try {
+        const res = await api.get('/admin/cases');
+        if (res.data?.success && Array.isArray(res.data.data)) {
+          const mapped = res.data.data.map((c: any) => ({
+            id: c._id,
+            title: c.title,
+            time: '10:00 AM - 11:30 AM',
+            type: c.status === 'Hearing Scheduled' ? 'hearing' : 'case',
+            location: c.assignedAdvocate?.name ? `With Adv. ${c.assignedAdvocate.name}` : 'Online Hearing'
+          }));
+          setEvents(mapped);
+        }
+      } catch (err) {
+        console.error('Failed to load calendar events', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCasesForCalendar();
+  }, []);
 
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const today = new Date().getDate();
@@ -70,17 +89,23 @@ export default function CalendarView() {
           <Card className="bg-white border-slate-200 p-4 flex-1 overflow-hidden flex flex-col">
             <h3 className="font-bold text-slate-900 mb-4">Today's Schedule</h3>
             <div className="space-y-4 overflow-y-auto hidden-scrollbar pr-2 flex-1">
-              {MOCK_EVENTS.map(event => (
-                <div key={event.id} className="p-3 rounded-xl border border-slate-100 bg-slate-50 hover:bg-slate-100 transition-colors border-l-4 border-l-purple-500">
-                  <h4 className="text-sm font-bold text-slate-900 mb-1">{event.title}</h4>
-                  <div className="flex items-center gap-3 text-xs text-slate-500">
-                    <span className="flex items-center gap-1"><Clock className="w-3 h-3"/> {event.time}</span>
+              {loading ? (
+                <p className="text-sm text-slate-400">Loading schedule...</p>
+              ) : events.length === 0 ? (
+                <p className="text-sm text-slate-400">No scheduled events for today.</p>
+              ) : (
+                events.map(event => (
+                  <div key={event.id} className="p-3 rounded-xl border border-slate-100 bg-slate-50 hover:bg-slate-100 transition-colors border-l-4 border-l-purple-500">
+                    <h4 className="text-sm font-bold text-slate-900 mb-1">{event.title}</h4>
+                    <div className="flex items-center gap-3 text-xs text-slate-500">
+                      <span className="flex items-center gap-1"><Clock className="w-3 h-3"/> {event.time}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
+                      <span className="flex items-center gap-1"><Video className="w-3 h-3"/> {event.location}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
-                    <span className="flex items-center gap-1"><Video className="w-3 h-3"/> {event.location}</span>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </Card>
         </div>

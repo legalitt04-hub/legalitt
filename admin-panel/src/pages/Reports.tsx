@@ -1,20 +1,39 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card } from '../components/ui/card';
 import { BarChart3, Download, FileSpreadsheet, FileText, Calendar, Filter } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
-
-const mockData = [
-  { name: 'Jan', cases: 400, revenue: 240 },
-  { name: 'Feb', cases: 300, revenue: 139 },
-  { name: 'Mar', cases: 200, revenue: 980 },
-  { name: 'Apr', cases: 278, revenue: 390 },
-  { name: 'May', cases: 189, revenue: 480 },
-  { name: 'Jun', cases: 239, revenue: 380 },
-  { name: 'Jul', cases: 349, revenue: 430 },
-];
+import api from '../lib/api';
 
 export default function Reports() {
+  const [reportData, setReportData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchReports = async () => {
+      try {
+        const res = await api.get('/admin/revenue?period=monthly');
+        if (res.data?.success && Array.isArray(res.data.data)) {
+          const formatted = res.data.data.map((item: any) => {
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const monthName = months[(item._id?.month || 1) - 1];
+            return {
+              name: `${monthName}`,
+              cases: item.count || 0,
+              revenue: Math.round((item.revenue || 0) / 1000)
+            };
+          });
+          setReportData(formatted);
+        }
+      } catch (err) {
+        console.error('Failed to load reports data', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchReports();
+  }, []);
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
@@ -79,7 +98,7 @@ export default function Reports() {
           <h3 className="font-bold text-slate-900 mb-6">Cases vs Revenue (YTD)</h3>
           <div className="flex-1 min-h-0">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={mockData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <BarChart data={reportData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dy={10} />
                 <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
@@ -109,13 +128,17 @@ export default function Reports() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {mockData.map((row) => (
-                  <tr key={row.name} className="hover:bg-slate-50 transition-colors">
-                    <td className="p-3 font-medium text-slate-900">{row.name} 2026</td>
-                    <td className="p-3 text-slate-600">{row.cases}</td>
-                    <td className="p-3 text-right text-slate-600 font-medium font-mono">₹{(row.revenue * 1000).toLocaleString('en-IN')}</td>
-                  </tr>
-                ))}
+                {reportData.length === 0 ? (
+                  <tr><td colSpan={3} className="p-6 text-center text-slate-400">No report data recorded</td></tr>
+                ) : (
+                  reportData.map((row) => (
+                    <tr key={row.name} className="hover:bg-slate-50 transition-colors">
+                      <td className="p-3 font-medium text-slate-900">{row.name} 2026</td>
+                      <td className="p-3 text-slate-600">{row.cases}</td>
+                      <td className="p-3 text-right text-slate-600 font-medium font-mono">₹{(row.revenue * 1000).toLocaleString('en-IN')}</td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

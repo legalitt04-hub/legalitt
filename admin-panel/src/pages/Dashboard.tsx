@@ -14,13 +14,22 @@ import api from '../lib/api';
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<any>(null);
   
-  // We'll keep the loading state true briefly to simulate data fetching
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 800);
-    return () => clearTimeout(timer);
+    const fetchStats = async () => {
+      try {
+        const res = await api.get('/admin/stats');
+        if (res.data?.success) {
+          setStats(res.data.data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch dashboard stats', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStats();
   }, []);
 
   if (loading) {
@@ -63,12 +72,12 @@ const Dashboard = () => {
 
       {/* KPIs Row */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
-        <KPICard title="Pending Reviews" value={12} icon={AlertCircle} colorClass="text-red-500" trend={{ value: 4, isPositive: false }} />
-        <KPICard title="Documents Pending" value={45} icon={FileText} colorClass="text-amber-500" trend={{ value: 12, isPositive: false }} />
-        <KPICard title="Draft Approvals" value={8} icon={FileCheck} colorClass="text-blue-500" trend={{ value: 2, isPositive: true }} />
-        <KPICard title="Pending Payments" value="₹12.5k" icon={IndianRupee} colorClass="text-orange-500" />
-        <KPICard title="Active Requests" value={156} icon={Clock} colorClass="text-teal-500" trend={{ value: 8, isPositive: true }} />
-        <KPICard title="Cases In Progress" value={89} icon={Users} colorClass="text-indigo-500" trend={{ value: 15, isPositive: true }} />
+        <KPICard title="Pending Reviews" value={stats?.pendingVerifications ?? 0} icon={AlertCircle} colorClass="text-red-500" />
+        <KPICard title="Total Clients" value={stats?.totalClients ?? 0} icon={Users} colorClass="text-indigo-500" trend={{ value: stats?.userGrowth ?? 0, isPositive: (stats?.userGrowth ?? 0) >= 0 }} />
+        <KPICard title="Active Advocates" value={stats?.totalAdvocates ?? 0} icon={FileCheck} colorClass="text-blue-500" />
+        <KPICard title="Total Revenue" value={`₹${((stats?.totalRevenue ?? 0) / 1000).toFixed(1)}k`} icon={IndianRupee} colorClass="text-emerald-500" />
+        <KPICard title="Total Bookings" value={stats?.totalBookings ?? 0} icon={Clock} colorClass="text-teal-500" />
+        <KPICard title="Cases Pending" value={stats?.pendingCases ?? 0} icon={FileText} colorClass="text-amber-500" />
       </div>
 
       {/* Main Grid - Top Row */}
