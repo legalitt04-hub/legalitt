@@ -60,7 +60,7 @@ const Login = () => {
         <div className="flex flex-col items-center mb-10">
           <div className="w-24 h-24 mb-8 relative flex justify-center">
             <div className="absolute inset-0 bg-amber-500/20 blur-2xl rounded-full" />
-            <img src="/assets/logo.png" alt="Legalitt" className="w-full h-full object-contain relative z-10 drop-shadow-2xl" />
+            <img src="/logo.png" alt="Legalitt" className="w-full h-full object-contain relative z-10 drop-shadow-2xl" />
           </div>
           <h1 className="text-2xl font-semibold text-white mb-2 tracking-tight">Admin Portal</h1>
           <p className="text-slate-400 text-sm text-center">Enter your credentials to access the dashboard</p>
