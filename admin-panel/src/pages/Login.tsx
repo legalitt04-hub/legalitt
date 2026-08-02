@@ -58,7 +58,7 @@ const Login = () => {
         className="w-full max-w-md p-8 md:p-10 rounded-3xl bg-[#111111]/80 backdrop-blur-2xl border border-white/10 shadow-2xl z-10"
       >
         <div className="flex flex-col items-center mb-10">
-          <div className="w-24 h-24 mb-8 relative flex justify-center">
+          <div className="w-16 h-16 mb-8 relative flex justify-center">
             <div className="absolute inset-0 bg-amber-500/20 blur-2xl rounded-full" />
             <img src="/logo.png" alt="Legalitt" className="w-full h-full object-contain relative z-10 drop-shadow-2xl mix-blend-screen" />
           </div>
