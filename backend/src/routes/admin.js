@@ -21,6 +21,7 @@ router.get('/earnings',             adminController.getPlatformEarnings);
 router.get('/users',         adminController.getUsersList);
 router.get('/users/:id',     adminController.getUserDetail);
 router.patch('/users/:id/toggle', adminController.toggleUserBan);
+router.patch('/users/:id/role',   adminController.updateUserRole);
 
 // ─── Advocates Management ─────────────────────────────────────────────────────
 router.get('/advocates',              adminController.getAdvocatesList);

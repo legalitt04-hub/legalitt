@@ -86,18 +86,15 @@ const Users = () => {
     }
   }, []);
 
-  const handleUpdateRole = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleRoleChange = async (newRole: string) => {
     if (!selectedUser) return;
-    
-    setActionLoading('update-role');
+    setActionLoading('role');
     try {
-      // In a real app, you'd have a PUT endpoint. Since we only have toggle right now, 
-      // let's simulate updating the role if the endpoint doesn't exist yet.
-      // Wait, let's just make the user details read-only for now since it's a View modal.
-      setIsModalOpen(false);
+      await api.patch(`/admin/users/${selectedUser._id}/role`, { role: newRole });
+      setSelectedUser({ ...selectedUser, role: newRole });
+      setUsers(users.map(u => u._id === selectedUser._id ? { ...u, role: newRole } : u));
     } catch (err) {
-      alert('Failed to update role');
+      alert('Failed to update user role');
     } finally {
       setActionLoading(null);
     }
@@ -403,6 +400,23 @@ const Users = () => {
                 {selectedUser.address?.city ? `${selectedUser.address.city}, ` : ''}
                 {selectedUser.address?.state || 'N/A'}
               </p>
+            </div>
+
+            <div className="p-3 bg-amber-50/50 rounded-lg border border-amber-200 mt-3">
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Assign User Role</label>
+              <div className="flex gap-2">
+                <select
+                  value={selectedUser.role}
+                  onChange={(e) => handleRoleChange(e.target.value)}
+                  disabled={actionLoading === 'role'}
+                  className="w-full bg-white border border-slate-200 text-slate-900 rounded-md p-2 text-sm font-medium outline-none focus:ring-2 focus:ring-amber-500"
+                >
+                  <option value="client">Client</option>
+                  <option value="advocate">Advocate</option>
+                  <option value="support">Support Agent</option>
+                  <option value="admin">Administrator</option>
+                </select>
+              </div>
             </div>
 
             <div className="pt-4 flex gap-3">

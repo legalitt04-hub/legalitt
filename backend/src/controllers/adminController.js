@@ -264,6 +264,20 @@ exports.toggleUserBan = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+exports.updateUserRole = async (req, res, next) => {
+  try {
+    const { role } = req.body;
+    if (!['client', 'advocate', 'admin', 'support'].includes(role)) {
+      return res.status(400).json({ success: false, message: 'Invalid role' });
+    }
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    user.role = role;
+    await user.save({ validateBeforeSave: false });
+    res.json({ success: true, data: user, message: `User role updated to ${role}` });
+  } catch (err) { next(err); }
+};
+
 // ─── Advocates List ───────────────────────────────────────────────────────────
 exports.getAdvocatesList = async (req, res, next) => {
   try {
