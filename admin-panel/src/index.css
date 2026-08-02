@@ -26,10 +26,10 @@
     --radius: 0.75rem;
     
     /* Sidebar specific */
-    --sidebar-bg: 222 47% 11%;       /* Keep sidebar dark for contrast */
-    --sidebar-fg: 210 40% 98%;
-    --sidebar-border: 217 33% 17%;
-    --sidebar-accent: 43 96% 58%;
+    --sidebar-bg: 0 0% 100%;         /* White sidebar */
+    --sidebar-fg: 222 47% 11%;       /* Dark slate text */
+    --sidebar-border: 214 32% 91%;   /* Light border */
+    --sidebar-accent: 43 96% 58%;    /* Gold accent */
   }
 }
  

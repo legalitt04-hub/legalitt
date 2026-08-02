@@ -113,18 +113,18 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, setIsCollapsed }: SidebarProp
           "p-3"
         )}
       >
-        <div className="h-full w-full bg-slate-900 border border-slate-800 rounded-2xl flex flex-col shadow-2xl shadow-slate-900/50 overflow-hidden">
+        <div className="h-full w-full bg-white border border-slate-200 rounded-2xl flex flex-col shadow-xl shadow-slate-200/50 overflow-hidden">
           {/* Logo + Collapse Toggle */}
           <div className="p-4 flex items-center justify-between shrink-0">
             <div className={cn("flex items-center gap-3", isCollapsed && "justify-center w-full")}>
               <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0">
-                <img src="/assets/shield-logo.png" alt="Legalitt" className="w-full h-full object-contain" />
+                <img src="/logo.png" alt="Legalitt" className="w-full h-full object-contain" />
               </div>
               {!isCollapsed && (
                 <motion.span 
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="text-xl font-bold text-white tracking-tight"
+                  className="text-xl font-bold text-slate-900 tracking-tight"
                 >
                   Legal<span className="text-amber-500">itt</span>
                 </motion.span>
@@ -133,7 +133,7 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, setIsCollapsed }: SidebarProp
             {/* Collapse/Expand button — desktop only */}
             <button
               onClick={() => setIsCollapsed(!isCollapsed)}
-              className="hidden lg:flex w-7 h-7 items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+              className="hidden lg:flex w-7 h-7 items-center justify-center rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-400 hover:text-slate-900 transition-colors"
               title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
               {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
@@ -160,8 +160,8 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, setIsCollapsed }: SidebarProp
                       "flex items-center gap-3 rounded-xl transition-all duration-200 group relative",
                       isCollapsed ? "px-3 py-3 justify-center" : "px-3 py-2.5",
                       isActive 
-                        ? "text-white bg-slate-800/60" 
-                        : "text-slate-400 hover:text-white hover:bg-slate-800/40"
+                        ? "text-amber-700 bg-amber-500/10 font-semibold" 
+                        : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
                     )}
                   >
                     {({ isActive }) => (
@@ -172,9 +172,9 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, setIsCollapsed }: SidebarProp
                             className="absolute left-0 top-0 w-1 h-full bg-amber-500 rounded-r-full"
                           />
                         )}
-                        <item.icon className={cn("w-5 h-5 flex-shrink-0", isActive ? "text-amber-400" : "group-hover:text-amber-400 transition-colors")} />
+                        <item.icon className={cn("w-5 h-5 flex-shrink-0", isActive ? "text-amber-600" : "group-hover:text-amber-500 transition-colors")} />
                         {!isCollapsed && (
-                          <span className="font-medium text-sm">{item.label}</span>
+                          <span className="text-sm">{item.label}</span>
                         )}
                       </>
                     )}
@@ -187,7 +187,7 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, setIsCollapsed }: SidebarProp
           {/* User Profile / Logout */}
           <div className="p-3 mt-auto shrink-0">
             <div className={cn(
-              "rounded-xl bg-slate-800/40 border border-slate-700/50",
+              "rounded-xl bg-slate-50 border border-slate-200",
               isCollapsed ? "p-2" : "p-3"
             )}>
               {!isCollapsed ? (
@@ -197,13 +197,13 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, setIsCollapsed }: SidebarProp
                       <span className="font-bold text-slate-950 text-xs">AD</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-white truncate">{activeRole}</p>
-                      <p className="text-[10px] font-medium text-amber-500/80 uppercase tracking-wider">Role Preview</p>
+                      <p className="text-sm font-semibold text-slate-900 truncate">{activeRole}</p>
+                      <p className="text-[10px] font-medium text-amber-600 uppercase tracking-wider">Role Preview</p>
                     </div>
                   </div>
                   <button 
                     onClick={handleLogout}
-                    className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors border border-slate-700 text-sm"
+                    className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-white hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-colors border border-slate-200 text-sm shadow-sm"
                   >
                     <LogOut className="w-4 h-4" />
                     <span className="font-medium">Log out</span>
@@ -212,7 +212,7 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, setIsCollapsed }: SidebarProp
               ) : (
                 <button 
                   onClick={handleLogout}
-                  className="w-full flex items-center justify-center py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+                  className="w-full flex items-center justify-center py-2 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-900 transition-colors shadow-sm"
                   title="Log out"
                 >
                   <LogOut className="w-4 h-4" />
