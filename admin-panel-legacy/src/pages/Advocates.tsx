@@ -16,9 +16,9 @@ const Advocates = () => {
   const [selectedAdv, setSelectedAdv] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Bulk Upload State
+  // Bulk Upload state
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadFiles, setUploadFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadResult, setUploadResult] = useState<{success: boolean, message: string, data?: any} | null>(null);
@@ -92,29 +92,53 @@ const Advocates = () => {
   };
 
   const handleBulkUpload = async () => {
-    if (!uploadFile) return alert('Please select a CSV file');
+    if (uploadFiles.length === 0) return alert('Please select at least one file');
     setUploading(true);
     setUploadProgress(0);
     setUploadResult(null);
+    
+    let totalSuccessCount = 0;
+    let totalSkippedCount = 0;
+    let allErrors: string[] = [];
+    let filesProcessed = 0;
+
     try {
-      const formData = new FormData();
-      formData.append('file', uploadFile);
-      const res = await api.post('/admin/advocates/bulk-upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 100));
-          setUploadProgress(percentCompleted);
+      for (const file of uploadFiles) {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await api.post('/admin/advocates/bulk-upload', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          onUploadProgress: (progressEvent) => {
+            const filePercent = (progressEvent.loaded * 100) / (progressEvent.total || 100);
+            const overallPercent = Math.round(((filesProcessed * 100) + filePercent) / uploadFiles.length);
+            setUploadProgress(overallPercent);
+          }
+        });
+        
+        filesProcessed++;
+        
+        if (res.data.success && res.data.data) {
+          totalSuccessCount += res.data.data.successCount || 0;
+          totalSkippedCount += res.data.data.skippedCount || 0;
+          if (res.data.data.errors && res.data.data.errors.length > 0) {
+            allErrors = [...allErrors, ...res.data.data.errors.map((e: string) => `[${file.name}] ${e}`)];
+          }
         }
-      });
-      setUploadResult(res.data);
-      if (res.data.success) {
-        setPage(1);
-        setTimeout(() => window.location.reload(), 2000);
       }
+
+      setUploadResult({
+        success: true,
+        message: `Processed ${uploadFiles.length} file(s) successfully.`,
+        data: { successCount: totalSuccessCount, skippedCount: totalSkippedCount, errors: allErrors }
+      });
+      
+      setPage(1);
+      setTimeout(() => window.location.reload(), 3000);
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Upload failed');
+      alert(err.response?.data?.message || 'Upload failed for one or more files');
     } finally {
       setUploading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -401,7 +425,7 @@ const Advocates = () => {
       </Modal>
 
       {/* Bulk Upload Modal */}
-      <Modal isOpen={isUploadModalOpen} onClose={() => { setIsUploadModalOpen(false); setUploadResult(null); setUploadFile(null); }} title="Bulk Import Advocates">
+      <Modal isOpen={isUploadModalOpen} onClose={() => { setIsUploadModalOpen(false); setUploadResult(null); setUploadFiles([]); }} title="Bulk Import Advocates">
         <div className="space-y-4">
           <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
             <h4 className="text-sm font-bold text-slate-900 mb-2">Supported Formats: CSV or Excel (.xlsx, .xls)</h4>
@@ -434,20 +458,26 @@ const Advocates = () => {
                 <FileText className="w-10 h-10 text-slate-400 mb-3" />
                 <input 
                   type="file" 
+                  multiple
                   accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" 
-                  onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                  onChange={(e) => setUploadFiles(Array.from(e.target.files || []))}
                   className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100"
                 />
+                {uploadFiles.length > 0 && (
+                  <div className="mt-4 text-xs text-slate-600 font-medium">
+                    {uploadFiles.length} file(s) selected
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-end gap-3 mt-6">
                 <Button variant="outline" onClick={() => setIsUploadModalOpen(false)}>Cancel</Button>
                 <Button 
                   onClick={handleBulkUpload}
-                  disabled={!uploadFile || uploading}
+                  disabled={uploadFiles.length === 0 || uploading}
                   className="bg-amber-600 hover:bg-amber-700 text-white"
                 >
-                  {uploading ? 'Processing...' : 'Upload Data'}
+                  {uploading ? 'Processing...' : `Upload ${uploadFiles.length} File${uploadFiles.length !== 1 ? 's' : ''}`}
                 </Button>
               </div>
             </>
