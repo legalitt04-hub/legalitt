@@ -160,7 +160,7 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, setIsCollapsed }: SidebarProp
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-3 py-2 lg:overflow-hidden overflow-y-auto hidden-scrollbar space-y-4">
+          <nav className="flex-1 px-3 py-2 overflow-y-auto space-y-4 scrollbar-thin scrollbar-thumb-slate-200">
             {filteredNavSections.map((section, sectionIdx) => (
               <div key={sectionIdx} className="space-y-1">
                 {!isCollapsed && (
