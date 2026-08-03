@@ -12,7 +12,7 @@ const Users = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState('');
+  const [roleFilter, setRoleFilter] = useState('client');
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -120,16 +120,6 @@ const Users = () => {
             />
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <select 
-              value={roleFilter} 
-              onChange={(e) => setRoleFilter(e.target.value)}
-              className="bg-slate-50/50 border border-slate-200 text-slate-900 rounded-md p-2 text-sm focus:outline-none focus:ring-1 focus:ring-teal-500 flex-1 sm:w-32"
-            >
-              <option value="">All Roles</option>
-              <option value="client">Client</option>
-              <option value="advocate">Advocate</option>
-              <option value="admin">Admin</option>
-            </select>
             <select 
               value={statusFilter} 
               onChange={(e) => setStatusFilter(e.target.value)}
