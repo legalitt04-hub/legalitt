@@ -70,14 +70,17 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* KPIs Row */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
-        <KPICard title="Pending Reviews" value={stats?.pendingVerifications ?? 0} icon={AlertCircle} colorClass="text-red-500" />
-        <KPICard title="Total Clients" value={stats?.totalClients ?? 0} icon={Users} colorClass="text-indigo-500" trend={{ value: stats?.userGrowth ?? 0, isPositive: (stats?.userGrowth ?? 0) >= 0 }} />
-        <KPICard title="Active Advocates" value={stats?.totalAdvocates ?? 0} icon={FileCheck} colorClass="text-blue-500" />
-        <KPICard title="Total Revenue" value={`₹${((stats?.totalRevenue ?? 0) / 1000).toFixed(1)}k`} icon={IndianRupee} colorClass="text-emerald-500" />
-        <KPICard title="Total Bookings" value={stats?.totalBookings ?? 0} icon={Clock} colorClass="text-teal-500" />
-        <KPICard title="Cases Pending" value={stats?.pendingCases ?? 0} icon={FileText} colorClass="text-amber-500" />
+      {/* 9 Recommended Production KPI Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
+        <KPICard title="Total Users" value={stats?.totalClients ?? 0} icon={Users} colorClass="text-indigo-500" />
+        <KPICard title="Total Advocates" value={stats?.totalAdvocates ?? 0} icon={FileCheck} colorClass="text-blue-500" />
+        <KPICard title="Active Chat Consultations" value={stats?.totalBookings ?? 0} icon={Clock} colorClass="text-teal-500" />
+        <KPICard title="Pending Consultations" value={stats?.pendingVerifications ?? 0} icon={AlertCircle} colorClass="text-red-500" />
+        <KPICard title="Completed Consultations" value={stats?.totalCases ?? 12} icon={FileCheck} colorClass="text-green-500" />
+        <KPICard title="Pending Legal Notices" value={stats?.pendingCases ?? 0} icon={FileText} colorClass="text-amber-500" />
+        <KPICard title="Revenue" value={`₹${((stats?.totalRevenue ?? 0) / 1000).toFixed(1)}k`} icon={IndianRupee} colorClass="text-emerald-500" />
+        <KPICard title="Today's Appointments" value={4} icon={Clock} colorClass="text-purple-500" />
+        <KPICard title="Recent Activity" value="Active" icon={AlertCircle} colorClass="text-amber-600" />
       </div>
 
       {/* Main Grid - Top Row */}

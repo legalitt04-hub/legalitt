@@ -45,4 +45,20 @@ router.put('/support-tickets/:id',    adminModuleController.updateSupportTicket)
 router.get('/ai-drafts',              adminModuleController.getAIDrafts);
 router.get('/notifications/templates',adminModuleController.getNotificationTemplates);
 
+// ─── Production 17-Module Routes ─────────────────────────────────────────────
+router.get('/categories',             adminModuleController.getCategories);
+router.post('/categories',            adminModuleController.createCategory);
+router.put('/categories/:id',         adminModuleController.updateCategory);
+router.delete('/categories/:id',      adminModuleController.deleteCategory);
+
+router.get('/coupons',                adminModuleController.getCoupons);
+router.post('/coupons',               adminModuleController.createCoupon);
+router.delete('/coupons/:id',         adminModuleController.deleteCoupon);
+
+router.get('/reviews',                adminModuleController.getReviews);
+router.delete('/reviews/:id',         adminModuleController.deleteReview);
+
+router.get('/audit-logs',             adminModuleController.getAuditLogs);
+router.get('/admins',                 adminModuleController.getAdmins);
+
 module.exports = router;

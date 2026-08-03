@@ -4,6 +4,11 @@ const Document = require('../models/Document');
 const SupportTicket = require('../models/SupportTicket');
 const NotificationTemplate = require('../models/NotificationTemplate');
 const FIRDraft = require('../models/FIRDraft');
+const Category = require('../models/Category');
+const Coupon = require('../models/Coupon');
+const AuditLog = require('../models/AuditLog');
+const Review = require('../models/Review');
+const User = require('../models/User');
 const { AppError } = require('../middlewares/errorHandler');
 
 // ─── Cases ────────────────────────────────────────────────────────────────────
@@ -123,4 +128,101 @@ exports.getAIDrafts = async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+};
+
+// ─── Categories ──────────────────────────────────────────────────────────────
+exports.getCategories = async (req, res, next) => {
+  try {
+    let categories = await Category.find().sort('displayOrder');
+    if (categories.length === 0) {
+      // Seed default categories if empty
+      const defaultCats = [
+        { name: 'Property Law', slug: 'property-law', description: 'Real estate, titles, property disputes', basePrice: 999 },
+        { name: 'Criminal Law', slug: 'criminal-law', description: 'Bail, FIR, criminal defense', basePrice: 1499 },
+        { name: 'Family Law', slug: 'family-law', description: 'Divorce, custody, maintenance', basePrice: 899 },
+        { name: 'Cyber Crime', slug: 'cyber-crime', description: 'Online fraud, data theft, IT Act', basePrice: 1199 },
+        { name: 'Employment', slug: 'employment', description: 'Labor disputes, wrongful termination', basePrice: 799 },
+        { name: 'Consumer Law', slug: 'consumer-law', description: 'Defective products, service claims', basePrice: 499 }
+      ];
+      categories = await Category.insertMany(defaultCats);
+    }
+    res.json({ success: true, data: categories });
+  } catch (err) { next(err); }
+};
+
+exports.createCategory = async (req, res, next) => {
+  try {
+    const category = await Category.create(req.body);
+    res.json({ success: true, data: category });
+  } catch (err) { next(err); }
+};
+
+exports.updateCategory = async (req, res, next) => {
+  try {
+    const category = await Category.findByIdAndUpdate(req.params.id, { $set: req.body }, { new: true });
+    res.json({ success: true, data: category });
+  } catch (err) { next(err); }
+};
+
+exports.deleteCategory = async (req, res, next) => {
+  try {
+    await Category.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: 'Category deleted' });
+  } catch (err) { next(err); }
+};
+
+// ─── Coupons ─────────────────────────────────────────────────────────────────
+exports.getCoupons = async (req, res, next) => {
+  try {
+    const coupons = await Coupon.find().sort('-createdAt');
+    res.json({ success: true, data: coupons });
+  } catch (err) { next(err); }
+};
+
+exports.createCoupon = async (req, res, next) => {
+  try {
+    const coupon = await Coupon.create(req.body);
+    res.json({ success: true, data: coupon });
+  } catch (err) { next(err); }
+};
+
+exports.deleteCoupon = async (req, res, next) => {
+  try {
+    await Coupon.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: 'Coupon deleted' });
+  } catch (err) { next(err); }
+};
+
+// ─── Reviews ─────────────────────────────────────────────────────────────────
+exports.getReviews = async (req, res, next) => {
+  try {
+    const reviews = await Review.find()
+      .populate('user', 'name avatar')
+      .populate('advocate', 'name')
+      .sort('-createdAt');
+    res.json({ success: true, data: reviews });
+  } catch (err) { next(err); }
+};
+
+exports.deleteReview = async (req, res, next) => {
+  try {
+    await Review.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: 'Review deleted' });
+  } catch (err) { next(err); }
+};
+
+// ─── Audit Logs ──────────────────────────────────────────────────────────────
+exports.getAuditLogs = async (req, res, next) => {
+  try {
+    const logs = await AuditLog.find().populate('user', 'name email role').sort('-createdAt').limit(100);
+    res.json({ success: true, data: logs });
+  } catch (err) { next(err); }
+};
+
+// ─── Admin Management ────────────────────────────────────────────────────────
+exports.getAdmins = async (req, res, next) => {
+  try {
+    const admins = await User.find({ role: 'admin' }).select('-password').sort('-createdAt');
+    res.json({ success: true, data: admins });
+  } catch (err) { next(err); }
 };

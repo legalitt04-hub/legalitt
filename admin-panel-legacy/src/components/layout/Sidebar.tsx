@@ -18,7 +18,15 @@ import {
   LifeBuoy,
   BarChart3,
   Calendar,
-  Bell
+  Bell,
+  MessageSquare,
+  MessageCircle,
+  Tag,
+  Star,
+  Ticket,
+  UserCog,
+  History,
+  Grid
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRole } from '../../contexts/RoleContext';
@@ -33,35 +41,46 @@ const navSections = [
     ]
   },
   {
-    title: 'Operations',
+    title: 'Consultations & Ops',
     items: [
-      { icon: Briefcase, label: 'Cases', path: '/cases' },
-      { icon: Layers, label: 'Services', path: '/services' },
+      { icon: MessageSquare, label: 'Chat Consultations ⭐', path: '/consultations' },
+      { icon: MessageCircle, label: 'Chat Management', path: '/chats' },
+      { icon: Briefcase, label: 'Legal Notice Requests', path: '/cases' },
+      { icon: Grid, label: 'Categories', path: '/categories' },
       { icon: Bot, label: 'AI Drafts', path: '/ai-drafts' },
       { icon: FileText, label: 'Documents', path: '/documents' },
     ]
   },
   {
-    title: 'Network',
+    title: 'Network & Team',
     items: [
       { icon: Users, label: 'Users', path: '/users' },
       { icon: UserCheck, label: 'Advocates', path: '/advocates' },
       { icon: ShieldCheck, label: 'Verification', path: '/verification' },
+      { icon: UserCog, label: 'Admin Team', path: '/admins' },
     ]
   },
   {
-    title: 'Workspace',
+    title: 'Financials',
     items: [
-      { icon: LifeBuoy, label: 'Support', path: '/support' },
+      { icon: CreditCard, label: 'Payments & Revenue', path: '/earnings' },
+      { icon: Tag, label: 'Coupons & Promos', path: '/coupons' },
+    ]
+  },
+  {
+    title: 'Workspace & Desk',
+    items: [
+      { icon: LifeBuoy, label: 'Support Desk', path: '/support' },
+      { icon: Star, label: 'Reviews & Ratings', path: '/reviews' },
       { icon: Calendar, label: 'Calendar', path: '/calendar' },
       { icon: Bell, label: 'Notifications', path: '/notifications' },
     ]
   },
   {
-    title: 'System',
+    title: 'System & Intelligence',
     items: [
-      { icon: CreditCard, label: 'Earnings', path: '/earnings' },
-      { icon: BarChart3, label: 'Reports', path: '/reports' },
+      { icon: BarChart3, label: 'Reports & Analytics', path: '/reports' },
+      { icon: History, label: 'Audit Logs', path: '/audit-logs' },
       { icon: Settings, label: 'Settings', path: '/settings' },
     ]
   }
