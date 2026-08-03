@@ -194,6 +194,7 @@ exports.getUsersList = async (req, res, next) => {
       },
       {
         $addFields: {
+          isActive: { $ifNull: ['$isActive', true] },
           totalBookings: { $size: '$bookings' },
           totalCases: { $size: '$cases' },
           totalSpent: {
@@ -411,12 +412,21 @@ exports.getAdvocatesList = async (req, res, next) => {
       }).select('_id').lean();
       filter.user = { $in: matchingUsers.map(u => u._id) };
     }
-    const [advocates, total] = await Promise.all([
+    const [advocatesRaw, total] = await Promise.all([
       Advocate.find(filter)
         .populate('user', 'name email phone avatar isActive createdAt')
         .sort({ createdAt: -1 }).skip((page - 1) * limit).limit(Number(limit)).lean(),
       Advocate.countDocuments(filter),
     ]);
+    
+    // Ensure older users without isActive field default to true
+    const advocates = advocatesRaw.map(adv => {
+      if (adv.user && adv.user.isActive === undefined) {
+        adv.user.isActive = true;
+      }
+      return adv;
+    });
+
     res.json({ success: true, data: advocates, pagination: { total, page: Number(page), limit: Number(limit), pages: Math.ceil(total / limit) } });
   } catch (err) { next(err); }
 };

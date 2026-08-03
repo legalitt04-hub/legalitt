@@ -16,7 +16,7 @@ exports.getCases = async (req, res, next) => {
   try {
     const cases = await Case.find()
       .populate('client', 'name email avatar')
-      .populate('assignedAdvocate', 'name email avatar')
+      .populate('advocate', 'name email avatar')
       .sort('-createdAt');
     res.json({ success: true, data: cases });
   } catch (err) {
@@ -32,7 +32,7 @@ exports.updateCase = async (req, res, next) => {
       { new: true, runValidators: true }
     )
       .populate('client', 'name email avatar')
-      .populate('assignedAdvocate', 'name email avatar');
+      .populate('advocate', 'name email avatar');
       
     if (!updatedCase) return next(new AppError('Case not found', 404));
     res.json({ success: true, data: updatedCase });
