@@ -2,10 +2,12 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-// Ensure uploads directory exists
-const uploadDir = 'uploads';
+const os = require('os');
+
+// Ensure uploads directory exists in a writable temp folder
+const uploadDir = path.join(os.tmpdir(), 'legalitt-uploads');
 if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir);
+  fs.mkdirSync(uploadDir, { recursive: true });
 }
 
 const storage = multer.diskStorage({
