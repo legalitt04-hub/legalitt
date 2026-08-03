@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const User = require('../models/User');
+const AuditLog = require('../models/AuditLog');
 const { AppError } = require('../middlewares/errorHandler');
 const logger = require('../utils/logger');
 const crypto = require('crypto');
@@ -99,13 +100,32 @@ exports.login = async (req, res, next) => {
     }
 
     const isMatch = await user.comparePassword(password);
-    if (!isMatch) return next(new AppError('Incorrect password.', 401));
+    if (!isMatch) {
+      try {
+        await AuditLog.create({
+          user: user._id,
+          action: 'FAILED_LOGIN_WRONG_PASSWORD',
+          details: `Failed login attempt for ${user.email} (Incorrect Password)`,
+          ipAddress: req.ip || req.headers['x-forwarded-for'] || ''
+        });
+      } catch (e) {}
+      return next(new AppError('Incorrect password.', 401));
+    }
 
     if (req.body.role === 'admin' && user.role !== 'admin') {
       return next(new AppError('Access denied. You do not have admin privileges.', 403));
     }
 
     if (!user.isActive) return next(new AppError('Account deactivated.', 403));
+
+    try {
+      await AuditLog.create({
+        user: user._id,
+        action: 'ADMIN_LOGIN_SUCCESS',
+        details: `Successful login for ${user.email}`,
+        ipAddress: req.ip || req.headers['x-forwarded-for'] || ''
+      });
+    } catch (e) {}
 
     logger.info(`User logged in: ${user.email}`);
     await sendTokens(user, 200, res);
