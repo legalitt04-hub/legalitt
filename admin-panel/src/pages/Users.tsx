@@ -79,7 +79,13 @@ const Users = () => {
   const handleViewUser = useCallback(async (id: string) => {
     try {
       const res = await api.get(`/admin/users/${id}`);
-      setSelectedUser(res.data.data);
+      const data = res.data.data;
+      // The API returns { user, recentBookings, bookingStats }
+      // We merge them into a single object for the selectedUser state
+      const userToSet = data.user ? { ...data.user, recentBookings: data.recentBookings, bookingStats: data.bookingStats } : data;
+      // Ensure isActive fallback for older users
+      if (userToSet.isActive === undefined) userToSet.isActive = true;
+      setSelectedUser(userToSet);
       setIsModalOpen(true);
     } catch (err) {
       alert('Failed to load user details');
