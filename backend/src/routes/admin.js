@@ -4,7 +4,8 @@ const multer  = require('multer');
 const { protect, authorize } = require('../middlewares/auth');
 const adminController = require('../controllers/adminController');
 
-const upload = multer({ dest: 'uploads/' });
+const os = require('os');
+const upload = multer({ dest: os.tmpdir() });
 
 // All admin routes require auth + admin role
 router.use(protect, authorize('admin'));
