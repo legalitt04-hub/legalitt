@@ -1,18 +1,44 @@
 {
   "version": 2,
-  "functions": {
-    "api/v1/[...path].js": {
-      "runtime": "@vercel/node@3.x"
-    }
-  },
-  "routes": [
+  "headers": [
     {
-      "src": "/api/v1/(.*)",
-      "dest": "/api/v1/$1"
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=31536000; includeSubDomains; preload"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://legalitt-growth.onrender.com wss://legalitt-growth.onrender.com"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/v1/(.*)",
+      "destination": "https://legalitt-growth.onrender.com/api/v1/$1"
     },
     {
-      "src": "/(.*)",
-      "dest": "/$1"
+      "source": "/((?!api/.*).*)",
+      "destination": "/index.html"
     }
   ]
 }
