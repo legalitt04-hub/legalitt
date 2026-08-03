@@ -1,7 +1,10 @@
 const express = require('express');
 const router  = express.Router();
+const multer  = require('multer');
 const { protect, authorize } = require('../middlewares/auth');
 const adminController = require('../controllers/adminController');
+
+const upload = multer({ dest: 'uploads/' });
 
 // All admin routes require auth + admin role
 router.use(protect, authorize('admin'));
@@ -25,6 +28,7 @@ router.patch('/users/:id/role',   adminController.updateUserRole);
 
 // ─── Advocates Management ─────────────────────────────────────────────────────
 router.get('/advocates',              adminController.getAdvocatesList);
+router.post('/advocates/bulk-upload', upload.single('file'), adminController.bulkUploadAdvocates);
 router.get('/advocates/:id',          adminController.getAdvocateDetail);
 router.get('/advocates/:id/earnings', adminController.getAdvocateEarnings);
 router.patch('/advocates/:id/verify', adminController.verifyAdvocate);

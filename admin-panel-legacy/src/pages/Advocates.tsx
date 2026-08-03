@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '../components/ui/card';
-import { UserCheck, Search, ShieldCheck, X, ChevronLeft, ChevronRight, Ban } from 'lucide-react';
+import { UserCheck, Search, ShieldCheck, X, ChevronLeft, ChevronRight, Ban, Upload, FileText } from 'lucide-react';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { Modal } from '../components/ui/Modal';
@@ -15,6 +15,12 @@ const Advocates = () => {
   const [verificationFilter, setVerificationFilter] = useState('');
   const [selectedAdv, setSelectedAdv] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Bulk Upload State
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadResult, setUploadResult] = useState<any>(null);
   
   // Pagination state
   const [page, setPage] = useState(1);
@@ -84,6 +90,28 @@ const Advocates = () => {
     }
   };
 
+  const handleBulkUpload = async () => {
+    if (!uploadFile) return alert('Please select a CSV file');
+    setUploading(true);
+    setUploadResult(null);
+    try {
+      const formData = new FormData();
+      formData.append('file', uploadFile);
+      const res = await api.post('/admin/advocates/bulk-upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setUploadResult(res.data);
+      if (res.data.success) {
+        setPage(1);
+        setTimeout(() => window.location.reload(), 2000);
+      }
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
@@ -102,7 +130,7 @@ const Advocates = () => {
               className="pl-9 bg-slate-50/50 border-slate-200 text-slate-900 w-full focus-visible:ring-amber-500/50"
             />
           </div>
-          <div className="w-full md:w-auto">
+          <div className="w-full md:w-auto flex gap-2">
             <select 
               value={verificationFilter} 
               onChange={(e) => setVerificationFilter(e.target.value)}
@@ -114,6 +142,10 @@ const Advocates = () => {
               <option value="under_review">Under Review</option>
               <option value="rejected">Rejected</option>
             </select>
+            
+            <Button onClick={() => setIsUploadModalOpen(true)} className="bg-amber-600 hover:bg-amber-700 text-white flex gap-2">
+              <Upload className="w-4 h-4" /> Import CSV
+            </Button>
           </div>
         </div>
         
@@ -361,6 +393,61 @@ const Advocates = () => {
           </div>
         )}
       </Modal>
+      {/* Bulk Upload Modal */}
+      <Modal isOpen={isUploadModalOpen} onClose={() => { setIsUploadModalOpen(false); setUploadResult(null); setUploadFile(null); }} title="Bulk Import Advocates">
+        <div className="space-y-4">
+          <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+            <h4 className="text-sm font-bold text-slate-900 mb-2">CSV Format Requirements:</h4>
+            <ul className="text-xs text-slate-600 list-disc pl-4 space-y-1">
+              <li><b>name</b>: Full name</li>
+              <li><b>email</b>: Valid unique email</li>
+              <li><b>phone</b>: Valid phone number</li>
+              <li><b>barCouncilNumber</b>: Unique Bar Council ID</li>
+              <li><b>experience</b>: Number of years</li>
+              <li><b>consultationFee</b>: Amount in INR</li>
+              <li><b>city</b>: City name</li>
+              <li><b>specializations</b>: Comma-separated (e.g. Criminal Law, Family Law)</li>
+            </ul>
+            <p className="text-[10px] text-amber-600 mt-2 font-medium bg-amber-50 inline-block px-2 py-1 rounded">Note: Default password will be set to Legalitt@123 for all imported advocates.</p>
+          </div>
+
+          {!uploadResult ? (
+            <>
+              <div className="flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-xl p-8 bg-slate-50/50 hover:bg-slate-50 transition-colors">
+                <FileText className="w-10 h-10 text-slate-400 mb-3" />
+                <input 
+                  type="file" 
+                  accept=".csv" 
+                  onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                  className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                <Button variant="outline" onClick={() => setIsUploadModalOpen(false)}>Cancel</Button>
+                <Button onClick={handleBulkUpload} disabled={!uploadFile || uploading} className="bg-amber-600 hover:bg-amber-700 text-white">
+                  {uploading ? 'Processing...' : 'Upload & Import'}
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-6">
+              <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <ShieldCheck className="w-8 h-8" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">Import Successful</h3>
+              <p className="text-slate-600 mb-4">{uploadResult.message}</p>
+              {uploadResult.data?.errors?.length > 0 && (
+                <div className="text-left bg-red-50 p-3 rounded-lg border border-red-100 max-h-40 overflow-y-auto mb-4 text-xs text-red-600 font-mono">
+                  {uploadResult.data.errors.map((e: string, i: number) => <div key={i}>{e}</div>)}
+                </div>
+              )}
+              <Button onClick={() => setIsUploadModalOpen(false)} className="w-full bg-slate-900 text-white">Close Workspace</Button>
+            </div>
+          )}
+        </div>
+      </Modal>
+
     </motion.div>
   );
 };

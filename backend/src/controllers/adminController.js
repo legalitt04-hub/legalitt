@@ -294,6 +294,91 @@ exports.updateUserRole = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+// ─── Advocates Bulk Upload ───────────────────────────────────────────────────────────
+const fs = require('fs');
+const csvParser = require('csv-parser');
+
+exports.bulkUploadAdvocates = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'Please upload a CSV file' });
+    }
+
+    const results = [];
+    fs.createReadStream(req.file.path)
+      .pipe(csvParser())
+      .on('data', (data) => results.push(data))
+      .on('end', async () => {
+        let successCount = 0;
+        let skippedCount = 0;
+        const errors = [];
+
+        for (const row of results) {
+          try {
+            // Check if user or advocate already exists
+            const existingUser = await User.findOne({ email: row.email });
+            const existingAdvocate = await Advocate.findOne({ barCouncilNumber: row.barCouncilNumber });
+
+            if (existingUser || existingAdvocate) {
+              skippedCount++;
+              errors.push(`Row skipped: Email ${row.email} or Bar Council ${row.barCouncilNumber} already exists.`);
+              continue;
+            }
+
+            // Create User
+            const user = await User.create({
+              name: row.name,
+              email: row.email,
+              phone: row.phone || undefined,
+              password: 'Legalitt@123',
+              role: 'advocate',
+              isActive: true,
+              isEmailVerified: true
+            });
+
+            // Create Advocate Profile
+            let specializations = [];
+            if (row.specializations) {
+               specializations = row.specializations.split(',').map(s => s.trim()).filter(s => s);
+            }
+
+            await Advocate.create({
+              user: user._id,
+              barCouncilNumber: row.barCouncilNumber,
+              experience: parseInt(row.experience) || 0,
+              consultationFee: parseInt(row.consultationFee) || 1000,
+              specializations: specializations,
+              location: {
+                type: 'Point',
+                coordinates: [72.8777, 19.0760], // default to mumbai
+                address: { city: row.city || 'Mumbai' }
+              },
+              isVerified: true,
+              verificationStatus: 'approved'
+            });
+
+            successCount++;
+          } catch (err) {
+            skippedCount++;
+            errors.push(`Error processing ${row.email}: ${err.message}`);
+          }
+        }
+
+        // Clean up file
+        fs.unlinkSync(req.file.path);
+
+        res.json({
+          success: true,
+          message: `Bulk upload completed. Uploaded: ${successCount}, Skipped: ${skippedCount}`,
+          data: { successCount, skippedCount, errors }
+        });
+      });
+  } catch (err) {
+    if (req.file) fs.unlinkSync(req.file.path);
+    next(err);
+  }
+};
+
 // ─── Advocates List ───────────────────────────────────────────────────────────
 exports.getAdvocatesList = async (req, res, next) => {
   try {
