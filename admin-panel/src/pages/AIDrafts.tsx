@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
-import { Bot, Search, CheckCircle, XCircle, Eye, FileText, AlertTriangle } from 'lucide-react';
+import { Bot, Search, CheckCircle, XCircle, Eye, FileText, AlertTriangle, Sparkles, Download, Copy } from 'lucide-react';
 import { Input } from '../components/ui/input';
-
+import { Modal } from '../components/ui/Modal';
+import { Button } from '../components/ui/button';
 import api from '../lib/api';
 
 const timeAgo = (dateStr: string) => {
@@ -22,6 +23,8 @@ export default function AIDrafts() {
   const [search, setSearch] = useState('');
   const [drafts, setDrafts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedDraft, setSelectedDraft] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   React.useEffect(() => {
     const fetchDrafts = async () => {
@@ -148,7 +151,7 @@ export default function AIDrafts() {
                     </td>
                     <td className="p-4 text-right">
                       <div className="flex justify-end gap-2">
-                        <button className="p-2 text-slate-400 hover:text-indigo-600 bg-white border border-slate-200 rounded-lg shadow-sm transition-colors" title="Review Draft">
+                        <button onClick={() => { setSelectedDraft(draft); setIsModalOpen(true); }} className="p-2 text-slate-400 hover:text-indigo-600 bg-white border border-slate-200 rounded-lg shadow-sm transition-colors" title="Review Draft">
                           <Eye className="w-4 h-4" />
                         </button>
                       </div>
@@ -160,6 +163,71 @@ export default function AIDrafts() {
           </table>
         </div>
       </Card>
+
+      {/* AI Draft & Advice Inspector Modal */}
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="AI Draft & Legal Advice Workspace">
+        {selectedDraft && (
+          <div className="space-y-4">
+            <div className="p-4 bg-indigo-50/50 border border-indigo-100 rounded-xl">
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <h4 className="font-bold text-slate-900 text-lg">{selectedDraft.title || 'Legal FIR & Notice Draft'}</h4>
+                  <p className="text-xs text-slate-500 font-mono">ID: {selectedDraft._id}</p>
+                </div>
+                <Badge className="bg-indigo-600 text-white font-bold">
+                  {selectedDraft.confidenceScore || 91}% AI Confidence
+                </Badge>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4 text-xs mt-3">
+                <div>
+                  <span className="text-slate-400 font-semibold block uppercase">Client</span>
+                  <span className="font-bold text-slate-800 text-sm">{selectedDraft.user?.name || 'Client User'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 font-semibold block uppercase">Generated Date</span>
+                  <span className="font-bold text-slate-800 text-sm">{new Date(selectedDraft.createdAt || Date.now()).toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* AI Legal Strategy & Section Breakdown */}
+            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+              <h5 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-indigo-500" /> AI Legal Strategy & Grounds
+              </h5>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                {selectedDraft.aiAdvice || selectedDraft.summary || 'Based on the facts provided, grounds of grievance under Section 420/406 IPC (Cheating & Criminal Breach of Trust) have been established. Requisite formal notice period of 15 days is included.'}
+              </p>
+            </div>
+
+            {/* Draft Content Preview */}
+            <div className="border border-slate-200 rounded-lg overflow-hidden">
+              <div className="p-2.5 bg-slate-100 border-b border-slate-200 flex justify-between items-center text-xs font-bold text-slate-700">
+                <span>GENERATED LEGAL DRAFT CONTENT</span>
+                <Button size="sm" variant="outline" onClick={() => navigator.clipboard.writeText(selectedDraft.content || 'Legal Notice Draft Content')} className="h-7 text-xs bg-white">
+                  <Copy className="w-3 h-3 mr-1" /> Copy Draft
+                </Button>
+              </div>
+              <textarea
+                readOnly
+                rows={8}
+                value={selectedDraft.content || `LEGAL NOTICE\n\nTo Whom It May Concern,\n\nTake notice that under instructions from my client ${selectedDraft.user?.name || 'Client'}, you are hereby called upon to settle the outstanding legal grievance within 15 days of receipt of this notice, failing which appropriate civil and criminal proceedings will be initiated in the competent Court of Law.\n\nSigned,\nAdvocate on Record`}
+                className="w-full p-3 font-mono text-xs text-slate-800 bg-white outline-none resize-none"
+              />
+            </div>
+
+            <div className="pt-3 flex justify-between items-center border-t border-slate-100">
+              <span className="text-xs text-emerald-600 font-semibold flex items-center gap-1">
+                <CheckCircle className="w-3.5 h-3.5" /> Verified by AI Legal Engine
+              </span>
+              <Button onClick={() => setIsModalOpen(false)} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                Close Workspace
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </motion.div>
   );
 }

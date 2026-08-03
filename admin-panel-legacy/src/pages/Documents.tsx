@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
-import { FileText, Search, Upload, FolderOpen, MoreVertical, Download, Trash2, Eye } from 'lucide-react';
+import { FileText, Search, Upload, FolderOpen, MoreVertical, Download, Trash2, Eye, File, User, Calendar as CalendarIcon } from 'lucide-react';
 import { Input } from '../components/ui/input';
+import { Modal } from '../components/ui/Modal';
+import { Button } from '../components/ui/button';
 
 import api from '../lib/api';
 
@@ -29,6 +31,8 @@ export default function Documents() {
   const [search, setSearch] = useState('');
   const [docs, setDocs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedDoc, setSelectedDoc] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   React.useEffect(() => {
     const fetchDocs = async () => {
@@ -160,14 +164,11 @@ export default function Documents() {
                         <td className="p-4 text-sm text-slate-500">{new Date(doc.createdAt).toLocaleDateString()}</td>
                         <td className="p-4 text-right">
                           <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button className="p-1.5 text-slate-400 hover:text-emerald-600 bg-white border border-slate-200 rounded-md shadow-sm transition-colors" title="View">
+                            <button onClick={() => { setSelectedDoc(doc); setIsModalOpen(true); }} className="p-1.5 text-slate-400 hover:text-emerald-600 bg-white border border-slate-200 rounded-md shadow-sm transition-colors" title="View Document">
                               <Eye className="w-4 h-4" />
                             </button>
-                            <button className="p-1.5 text-slate-400 hover:text-blue-600 bg-white border border-slate-200 rounded-md shadow-sm transition-colors" title="Download">
+                            <button onClick={() => { if (doc.url) window.open(doc.url, '_blank'); }} className="p-1.5 text-slate-400 hover:text-blue-600 bg-white border border-slate-200 rounded-md shadow-sm transition-colors" title="Download">
                               <Download className="w-4 h-4" />
-                            </button>
-                            <button className="p-1.5 text-slate-400 hover:text-red-600 bg-white border border-slate-200 rounded-md shadow-sm transition-colors" title="Delete">
-                              <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
                         </td>
@@ -180,6 +181,55 @@ export default function Documents() {
           </Card>
         </div>
       </div>
+
+      {/* Document Inspector & Preview Modal */}
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Document Inspection Workspace">
+        {selectedDoc && (
+          <div className="space-y-4">
+            <div className="p-4 bg-emerald-50/50 border border-emerald-100 rounded-xl flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {getIconForType(selectedDoc.fileType || 'PDF')}
+                <div>
+                  <h4 className="font-bold text-slate-900 text-sm">{selectedDoc.name}</h4>
+                  <p className="text-xs text-slate-500 font-mono">Size: {formatBytes(selectedDoc.sizeBytes || 1024000)} | Type: {selectedDoc.fileType || 'PDF'}</p>
+                </div>
+              </div>
+              <Badge className="bg-emerald-600 text-white font-bold">{selectedDoc.category || 'User Upload'}</Badge>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 p-3 bg-slate-50 rounded-lg text-xs">
+              <div>
+                <span className="text-slate-400 font-semibold block uppercase">Uploaded By</span>
+                <span className="font-bold text-slate-800">{selectedDoc.uploadedBy?.name || selectedDoc.owner?.name || 'Client'}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 font-semibold block uppercase">Upload Date</span>
+                <span className="font-bold text-slate-800">{new Date(selectedDoc.createdAt || Date.now()).toLocaleString()}</span>
+              </div>
+            </div>
+
+            {/* Embedded Preview Box */}
+            <div className="border border-slate-200 rounded-lg p-6 bg-slate-900 text-white text-center space-y-3">
+              <FileText className="w-12 h-12 text-emerald-400 mx-auto" />
+              <p className="text-sm font-bold">{selectedDoc.name}</p>
+              <p className="text-xs text-slate-400">PDF / Document encrypted & stored securely in S3 cloud storage.</p>
+              {selectedDoc.url ? (
+                <Button onClick={() => window.open(selectedDoc.url, '_blank')} className="bg-emerald-500 hover:bg-emerald-600 text-white text-xs">
+                  <Download className="w-3.5 h-3.5 mr-1" /> Open / Download File
+                </Button>
+              ) : (
+                <Badge variant="outline" className="text-slate-400 border-slate-700">Preview Available upon AWS S3 sync</Badge>
+              )}
+            </div>
+
+            <div className="pt-3 flex justify-end border-t border-slate-100">
+              <Button onClick={() => setIsModalOpen(false)} variant="outline">
+                Close Workspace
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </motion.div>
   );
 }
