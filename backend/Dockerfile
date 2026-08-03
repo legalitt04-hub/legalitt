@@ -2,7 +2,7 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --include=dev && npm cache clean --force
+RUN npm install && npm cache clean --force
 
 # Stage 2 — prune to prod only
 FROM node:20-alpine AS builder

@@ -1,0 +1,15 @@
+{
+  "name": "legalitt-workspace",
+  "version": "1.0.0",
+  "description": "Legalitt Full Stack Workspace",
+  "scripts": {
+    "install:all": "npm i -C backend && npm i -C admin-panel && npm i -C mobile-app",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:admin": "npm run dev --prefix admin-panel",
+    "dev:mobile": "npm start --prefix mobile-app",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:admin\" \"npm run dev:mobile\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
