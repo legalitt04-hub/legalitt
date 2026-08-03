@@ -144,7 +144,7 @@ const Advocates = () => {
             </select>
             
             <Button onClick={() => setIsUploadModalOpen(true)} className="bg-amber-600 hover:bg-amber-700 text-white flex gap-2">
-              <Upload className="w-4 h-4" /> Import CSV
+              <Upload className="w-4 h-4" /> Import Data
             </Button>
           </div>
         </div>
@@ -397,7 +397,7 @@ const Advocates = () => {
       <Modal isOpen={isUploadModalOpen} onClose={() => { setIsUploadModalOpen(false); setUploadResult(null); setUploadFile(null); }} title="Bulk Import Advocates">
         <div className="space-y-4">
           <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-            <h4 className="text-sm font-bold text-slate-900 mb-2">CSV Format Requirements:</h4>
+            <h4 className="text-sm font-bold text-slate-900 mb-2">Supported Formats: CSV or Excel (.xlsx, .xls)</h4>
             <ul className="text-xs text-slate-600 list-disc pl-4 space-y-1">
               <li><b>name</b>: Full name</li>
               <li><b>email</b>: Valid unique email</li>
@@ -417,7 +417,7 @@ const Advocates = () => {
                 <FileText className="w-10 h-10 text-slate-400 mb-3" />
                 <input 
                   type="file" 
-                  accept=".csv" 
+                  accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" 
                   onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
                   className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100"
                 />

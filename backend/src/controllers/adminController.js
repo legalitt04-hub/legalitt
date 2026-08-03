@@ -297,21 +297,42 @@ exports.updateUserRole = async (req, res, next) => {
 // ─── Advocates Bulk Upload ───────────────────────────────────────────────────────────
 const fs = require('fs');
 const csvParser = require('csv-parser');
+const xlsx = require('xlsx');
 
 exports.bulkUploadAdvocates = async (req, res, next) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ success: false, message: 'Please upload a CSV file' });
+      return res.status(400).json({ success: false, message: 'Please upload a CSV or Excel file' });
     }
 
-    const results = [];
-    fs.createReadStream(req.file.path)
-      .pipe(csvParser())
-      .on('data', (data) => results.push(data))
-      .on('end', async () => {
-        let successCount = 0;
-        let skippedCount = 0;
-        const errors = [];
+    let results = [];
+    const ext = req.file.originalname.split('.').pop().toLowerCase();
+
+    try {
+      if (ext === 'csv') {
+        await new Promise((resolve, reject) => {
+          fs.createReadStream(req.file.path)
+            .pipe(csvParser())
+            .on('data', (data) => results.push(data))
+            .on('end', resolve)
+            .on('error', reject);
+        });
+      } else if (ext === 'xls' || ext === 'xlsx') {
+        const workbook = xlsx.readFile(req.file.path);
+        const sheetName = workbook.SheetNames[0];
+        results = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
+      } else {
+        fs.unlinkSync(req.file.path);
+        return res.status(400).json({ success: false, message: 'Unsupported file format. Please upload CSV or Excel file.' });
+      }
+    } catch (parseErr) {
+      fs.unlinkSync(req.file.path);
+      return res.status(400).json({ success: false, message: 'Failed to parse file: ' + parseErr.message });
+    }
+
+    let successCount = 0;
+    let skippedCount = 0;
+    const errors = [];
 
         for (const row of results) {
           try {
@@ -364,15 +385,14 @@ exports.bulkUploadAdvocates = async (req, res, next) => {
           }
         }
 
-        // Clean up file
-        fs.unlinkSync(req.file.path);
+    // Clean up file
+    fs.unlinkSync(req.file.path);
 
-        res.json({
-          success: true,
-          message: `Bulk upload completed. Uploaded: ${successCount}, Skipped: ${skippedCount}`,
-          data: { successCount, skippedCount, errors }
-        });
-      });
+    res.json({
+      success: true,
+      message: `Bulk upload completed. Uploaded: ${successCount}, Skipped: ${skippedCount}`,
+      data: { successCount, skippedCount, errors }
+    });
   } catch (err) {
     if (req.file) fs.unlinkSync(req.file.path);
     next(err);
