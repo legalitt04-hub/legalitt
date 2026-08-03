@@ -402,19 +402,23 @@ const Users = () => {
               </p>
             </div>
 
-            <div className="p-3 bg-amber-50/50 rounded-lg border border-amber-200 mt-3">
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Assign User Role</label>
+            <div className="p-3.5 bg-amber-50/70 rounded-xl border border-amber-200 mt-3">
+              <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                <span>Assign User System Role</span>
+                <span className="text-[10px] text-amber-700 bg-amber-100 px-2 py-0.5 rounded font-mono">Real-time DB Sync</span>
+              </label>
               <div className="flex gap-2">
                 <select
                   value={selectedUser.role}
                   onChange={(e) => handleRoleChange(e.target.value)}
                   disabled={actionLoading === 'role'}
-                  className="w-full bg-white border border-slate-200 text-slate-900 rounded-md p-2 text-sm font-medium outline-none focus:ring-2 focus:ring-amber-500"
+                  className="w-full bg-white border border-amber-300 text-slate-900 rounded-lg p-2.5 text-sm font-semibold outline-none focus:ring-2 focus:ring-amber-500 shadow-sm"
                 >
                   <option value="client">Client</option>
                   <option value="advocate">Advocate</option>
-                  <option value="support">Support Agent</option>
+                  <option value="support">Support Executive</option>
                   <option value="admin">Administrator</option>
+                  <option value="superadmin">Super Admin ⭐</option>
                 </select>
               </div>
             </div>

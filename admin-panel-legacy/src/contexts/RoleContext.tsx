@@ -19,12 +19,12 @@ const RoleContext = createContext<RoleContextType | undefined>(undefined);
 
 const rolePermissions: Record<Role, string[]> = {
   'Super Admin': ['*'],
-  'Admin': ['/', '/cases', '/services', '/ai-drafts', '/documents', '/users', '/advocates', '/verification', '/support', '/calendar', '/notifications', '/reports'],
+  'Admin': ['*'],
   'Advocate': ['/', '/cases', '/documents', '/calendar', '/support', '/earnings'],
-  'Support Executive': ['/', '/support', '/users', '/cases'],
-  'Accounts': ['/', '/earnings', '/reports'],
-  'Forensic Expert': ['/', '/documents', '/cases'],
-  'Property Verification Executive': ['/', '/documents', '/services']
+  'Support Executive': ['/', '/support', '/users', '/cases', '/chats', '/consultations'],
+  'Accounts': ['/', '/earnings', '/reports', '/coupons'],
+  'Forensic Expert': ['/', '/documents', '/cases', '/ai-drafts'],
+  'Property Verification Executive': ['/', '/documents', '/services', '/categories']
 };
 
 export const RoleProvider = ({ children }: { children: ReactNode }) => {

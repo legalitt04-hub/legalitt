@@ -267,13 +267,29 @@ exports.toggleUserBan = async (req, res, next) => {
 exports.updateUserRole = async (req, res, next) => {
   try {
     const { role } = req.body;
-    if (!['client', 'advocate', 'admin', 'support'].includes(role)) {
+    const validRoles = ['client', 'advocate', 'support', 'admin', 'superadmin'];
+    if (!validRoles.includes(role)) {
       return res.status(400).json({ success: false, message: 'Invalid role' });
     }
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    
+    const oldRole = user.role;
     user.role = role;
     await user.save({ validateBeforeSave: false });
+
+    try {
+      const AuditLog = require('../models/AuditLog');
+      await AuditLog.create({
+        user: req.user?._id || user._id,
+        action: 'ROLE_CHANGE',
+        targetModel: 'User',
+        targetId: user._id.toString(),
+        details: `Role for ${user.email} changed from '${oldRole}' to '${role}'`,
+        ipAddress: req.ip || ''
+      });
+    } catch (e) {}
+
     res.json({ success: true, data: user, message: `User role updated to ${role}` });
   } catch (err) { next(err); }
 };
