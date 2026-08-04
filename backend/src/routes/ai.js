@@ -49,8 +49,20 @@ router.post('/chat', protect, aiRateLimiter, async (req, res, next) => {
 
     if (!messages?.length) return next(new AppError('Messages are required.', 400));
 
-    const userMessage = messages[messages.length - 1].content;
-    const systemMsg = 'You are a helpful legal assistant specializing in Indian law. Provide clear, practical guidance. Always add a disclaimer that this is not legal advice.';
+const SYSTEM_PROMPT = `You are an expert AI Legal Assistant specializing in Indian law.
+Provide accurate, structured, and clear legal guidance formatted professionally.
+
+REQUIRED RESPONSE FORMATTING RULES:
+1. Main Title & Headings: Begin with a major bold title (e.g. # Title or **Title**). Use clear section headings (e.g., Types of Documents, Process of Analysis, Applicable Laws, Important Notes, Conclusion).
+2. Numbered & Bullet Lists: Organize lists with numbered items (1., 2.) or bullet points (•). Ensure clear spacing between items.
+3. Legal Terms & References: Explicitly highlight key legal terms and statutes (e.g., Public Documents, Private Documents, Indian Evidence Act, Registration Act, Supreme Court, District Court, Section 17, Article 300A, IPC Section 420, BNSS, FIR).
+4. Callouts: Format critical warnings, notes, or tips using Note:, Warning:, Important:, or Tip:.
+5. Comparison Tables: Use Markdown tables whenever comparing documents, laws, or procedures.
+6. Paragraph Length: Keep paragraphs concise (3-4 lines max).
+7. Summary Section: End detailed responses with a 'Summary' section containing 3-5 concise bullet points.
+8. Follow-up Questions: Conclude with a 'You may also ask' section offering 3 relevant follow-up questions formatted as bullets.`;
+
+    const systemMsg = SYSTEM_PROMPT;
 
     const contextMessages = messages.slice(-5);
     if (contextMessages.length > 0) {
@@ -130,7 +142,7 @@ router.get('/stream', protect, aiRateLimiter, async (req, res, next) => {
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
 
-    const systemMsg = 'You are a helpful legal assistant specializing in Indian law. Provide clear, practical guidance. Always add a disclaimer that this is not legal advice.';
+    const systemMsg = SYSTEM_PROMPT;
     
     let fullReply = '';
     

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
   FlatList, KeyboardAvoidingView, Platform, StatusBar, ActivityIndicator,
-  Alert, Modal, Linking,
+  Alert, Modal, Linking, Keyboard, TouchableWithoutFeedback,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,15 +16,9 @@ import EventSource from 'react-native-sse';
 import { COLORS, SIZES, SHADOWS } from '../../constants/theme';
 import api, { BASE_URL } from '../../services/api';
 
-const DISCLAIMER = '⚠️ AI responses are for informational purposes only and do not constitute legal advice.';
+import { FormattedAIResponse } from '../../components/ai/FormattedAIResponse';
 
-const SUGGESTIONS = [
-  'What is an FIR and how to file it?',
-  'Explain tenant rights in India',
-  'What are bail provisions under BNSS?',
-  'Steps to file a consumer complaint',
-  'How to transfer property in India?',
-];
+const DISCLAIMER = '⚠️ AI responses are for informational purposes only and do not constitute legal advice.';
 
 const AIAssistantScreen = ({ navigation }) => {
   const [messages, setMessages] = useState([
@@ -36,8 +30,6 @@ const AIAssistantScreen = ({ navigation }) => {
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [recording, setRecording] = useState(null);
   const [uploadedDoc, setUploadedDoc] = useState(null);
   const [currentConversationId, setCurrentConversationId] = useState(null);
   const [showHistory, setShowHistory] = useState(false);
@@ -48,6 +40,17 @@ const AIAssistantScreen = ({ navigation }) => {
   useEffect(() => {
     fetchHistory();
     requestAudioPermission();
+
+    const keyboardShowEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const showSub = Keyboard.addListener(keyboardShowEvent, () => {
+      setTimeout(() => {
+        flatRef.current?.scrollToEnd({ animated: true });
+      }, 50);
+    });
+
+    return () => {
+      showSub.remove();
+    };
   }, []);
 
   const requestAudioPermission = async () => {
@@ -74,7 +77,6 @@ const AIAssistantScreen = ({ navigation }) => {
   };
 
   const loadSession = (session) => {
-    // Convert backend messages to frontend format
     const formattedMsgs = session.messages.map(m => ({
       id: m._id,
       role: m.role,
@@ -124,6 +126,7 @@ const AIAssistantScreen = ({ navigation }) => {
             setMessages(prev => prev.map(m => 
               m.id === 'streaming' ? { ...m, content: fullReply } : m
             ));
+            setTimeout(() => flatRef.current?.scrollToEnd({ animated: false }), 20);
           }
 
           if (data.done) {
@@ -135,6 +138,7 @@ const AIAssistantScreen = ({ navigation }) => {
               m.id === 'streaming' ? { ...m, id: Date.now().toString() + '_ai', content: fullReply + DISCLAIMER } : m
             ));
             es.close();
+            setTimeout(() => flatRef.current?.scrollToEnd({ animated: true }), 50);
             resolve(true);
           }
 
@@ -165,6 +169,8 @@ const AIAssistantScreen = ({ navigation }) => {
     setInput('');
     setLoading(true);
 
+    setTimeout(() => flatRef.current?.scrollToEnd({ animated: true }), 50);
+
     try {
       await sendToAI(q, uploadedDoc?.content);
       setUploadedDoc(null);
@@ -194,7 +200,11 @@ const AIAssistantScreen = ({ navigation }) => {
     <View style={[styles.msgWrap, item.role === 'user' && styles.msgWrapUser]}>
       {item.role !== 'user' && <View style={styles.aiAvatar}><Text>🤖</Text></View>}
       <View style={[styles.msgBubble, item.role === 'user' ? styles.msgBubbleUser : styles.msgBubbleAI]}>
-        <Text style={[styles.msgText, item.role === 'user' && styles.msgTextUser]}>{item.content}</Text>
+        {item.role === 'user' ? (
+          <Text style={[styles.msgText, styles.msgTextUser]}>{item.content}</Text>
+        ) : (
+          <FormattedAIResponse content={item.content} onSelectFollowUp={(q) => send(q)} />
+        )}
       </View>
     </View>
   );
@@ -204,12 +214,9 @@ const AIAssistantScreen = ({ navigation }) => {
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.background }}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      <KeyboardAvoidingView 
-        style={{ flex: 1 }} 
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-      >
-        <LinearGradient colors={[COLORS.primary, COLORS.primaryDark || '#8D7865']} style={[styles.header, { paddingTop: insets.top + 10 }]}>
+
+      {/* Header stays pinned at top outside KeyboardAvoidingView */}
+      <LinearGradient colors={[COLORS.primary, COLORS.primaryDark || '#8D7865']} style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <View style={styles.headerInner}>
           <TouchableOpacity onPress={() => navigation.goBack()}><Ionicons name="arrow-back" size={24} color="#fff" /></TouchableOpacity>
           <View style={{ flex: 1, marginLeft: 15 }}>
@@ -220,73 +227,96 @@ const AIAssistantScreen = ({ navigation }) => {
         </View>
       </LinearGradient>
 
-      <FlatList
-        ref={flatRef}
-        data={messages}
-        keyExtractor={(item) => item.id}
-        renderItem={renderMsg}
-        contentContainerStyle={styles.msgList}
-        ListFooterComponent={loading && <ActivityIndicator color={COLORS.primary} style={{ margin: 10 }} />}
-      />
+      {/* KeyboardAvoidingView adjusts view layout dynamically on iOS & Android */}
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }} 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <View style={{ flex: 1 }}>
+            <FlatList
+              ref={flatRef}
+              data={messages}
+              keyExtractor={(item) => item.id}
+              renderItem={renderMsg}
+              contentContainerStyle={styles.msgList}
+              keyboardShouldPersistTaps="handled"
+              onContentSizeChange={() => flatRef.current?.scrollToEnd({ animated: true })}
+              ListFooterComponent={loading && <ActivityIndicator color={COLORS.primary} style={{ margin: 10 }} />}
+            />
+          </View>
+        </TouchableWithoutFeedback>
 
-      {uploadedDoc && (
-        <View style={styles.docIndicator}>
-          <Text style={styles.docIndicatorText}>{uploadedDoc.name}</Text>
-          <TouchableOpacity onPress={() => setUploadedDoc(null)}>
-            <Ionicons name="close-circle" size={18} color={COLORS.primary} />
-          </TouchableOpacity>
-        </View>
-      )}
-
-      <View style={styles.inputBar}>
-        <TouchableOpacity onPress={pickDocument}><Ionicons name="attach" size={28} color={COLORS.textSecondary} /></TouchableOpacity>
-        <TextInput
-          value={input}
-          onChangeText={setInput}
-          placeholder="Type message..."
-          style={styles.input}
-          multiline
-        />
-        <TouchableOpacity onPress={() => send()} style={styles.sendBtn}><Ionicons name="send" size={20} color="#fff" /></TouchableOpacity>
-      </View>
-
-      <Modal visible={showHistory} animationType="slide">
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Chat History</Text>
-            <TouchableOpacity onPress={() => setShowHistory(false)}>
-              <Ionicons name="close" size={24} color="#333" />
+        {uploadedDoc && (
+          <View style={styles.docIndicator}>
+            <Text style={styles.docIndicatorText}>{uploadedDoc.name}</Text>
+            <TouchableOpacity onPress={() => setUploadedDoc(null)}>
+              <Ionicons name="close-circle" size={18} color={COLORS.primary} />
             </TouchableOpacity>
           </View>
+        )}
 
-          <FlatList
-            data={chatHistory}
-            keyExtractor={(item) => item._id}
-            renderItem={({ item }) => (
-              <View style={styles.historyItemRow}>
-                <TouchableOpacity style={styles.historyItem} onPress={() => loadSession(item)}>
-                  <View style={styles.historyInfo}>
-                    <Text style={styles.historyTitle} numberOfLines={1}>{item.title}</Text>
-                    <Text style={styles.historyDate}>{new Date(item.lastUpdated).toLocaleDateString()}</Text>
-                  </View>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => deleteSession(item._id)} style={styles.deleteBtn}>
-                  <Ionicons name="trash-outline" size={20} color="#ff4444" />
-                </TouchableOpacity>
-              </View>
-            )}
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>No history found</Text>
-              </View>
-            }
+        <View style={[styles.inputBar, { paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom, 12) : 12 }]}>
+          <TouchableOpacity onPress={pickDocument} activeOpacity={0.7}>
+            <Ionicons name="attach" size={28} color={COLORS.textSecondary || '#6B7280'} />
+          </TouchableOpacity>
+          <TextInput
+            value={input}
+            onChangeText={(txt) => {
+              setInput(txt);
+              flatRef.current?.scrollToEnd({ animated: true });
+            }}
+            onFocus={() => {
+              setTimeout(() => flatRef.current?.scrollToEnd({ animated: true }), 100);
+            }}
+            placeholder="Type message..."
+            placeholderTextColor="#9CA3AF"
+            style={styles.input}
+            multiline
           />
-          
-          <TouchableOpacity style={styles.newChatBtn} onPress={startNewChat}>
-            <Text style={styles.newChatBtnText}>+ Start New Conversation</Text>
+          <TouchableOpacity onPress={() => send()} style={styles.sendBtn} activeOpacity={0.8}>
+            <Ionicons name="send" size={20} color="#fff" />
           </TouchableOpacity>
         </View>
-      </Modal>
+
+        <Modal visible={showHistory} animationType="slide">
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Chat History</Text>
+              <TouchableOpacity onPress={() => setShowHistory(false)}>
+                <Ionicons name="close" size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+
+            <FlatList
+              data={chatHistory}
+              keyExtractor={(item) => item._id}
+              renderItem={({ item }) => (
+                <View style={styles.historyItemRow}>
+                  <TouchableOpacity style={styles.historyItem} onPress={() => loadSession(item)}>
+                    <View style={styles.historyInfo}>
+                      <Text style={styles.historyTitle} numberOfLines={1}>{item.title}</Text>
+                      <Text style={styles.historyDate}>{new Date(item.lastUpdated).toLocaleDateString()}</Text>
+                    </View>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => deleteSession(item._id)} style={styles.deleteBtn}>
+                    <Ionicons name="trash-outline" size={20} color="#ff4444" />
+                  </TouchableOpacity>
+                </View>
+              )}
+              ListEmptyComponent={
+                <View style={styles.emptyContainer}>
+                  <Text style={styles.emptyText}>No history found</Text>
+                </View>
+              }
+            />
+            
+            <TouchableOpacity style={styles.newChatBtn} onPress={startNewChat}>
+              <Text style={styles.newChatBtnText}>+ Start New Conversation</Text>
+            </TouchableOpacity>
+          </View>
+        </Modal>
       </KeyboardAvoidingView>
     </View>
   );
@@ -297,7 +327,7 @@ const styles = StyleSheet.create({
   headerInner: { flexDirection: 'row', alignItems: 'center' },
   headerTitle: { fontSize: 18, fontWeight: '700', color: '#fff' },
   headerSub: { fontSize: 12, color: 'rgba(255,255,255,0.7)' },
-  msgList: { padding: 20 },
+  msgList: { padding: 20, paddingBottom: 10 },
   msgWrap: { flexDirection: 'row', marginBottom: 15, alignItems: 'flex-end' },
   msgWrapUser: { flexDirection: 'row-reverse' },
   aiAvatar: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#f0f0f0', alignItems: 'center', justifyContent: 'center', marginRight: 10 },
@@ -306,8 +336,34 @@ const styles = StyleSheet.create({
   msgBubbleUser: { backgroundColor: COLORS.primary },
   msgText: { fontSize: 14, color: '#333' },
   msgTextUser: { color: '#fff' },
-  inputBar: { flexDirection: 'row', alignItems: 'center', padding: 15, backgroundColor: '#fff', borderTopWidth: 1, borderColor: '#eee' },
-  input: { flex: 1, marginHorizontal: 10, padding: 10, backgroundColor: '#f9f9f9', borderRadius: 20, maxHeight: 100 },
+  inputBar: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    paddingHorizontal: 14, 
+    paddingVertical: 10, 
+    backgroundColor: '#FFFFFF', 
+    borderTopWidth: 1, 
+    borderColor: '#E8E2D9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  input: { 
+    flex: 1, 
+    marginHorizontal: 10, 
+    paddingHorizontal: 16, 
+    paddingVertical: 10, 
+    backgroundColor: '#FAFAF8', 
+    borderRadius: 22, 
+    borderWidth: 1, 
+    borderColor: '#E8E2D9', 
+    fontSize: 14, 
+    color: '#1F2937', 
+    maxHeight: 110, 
+    minHeight: 44,
+  },
   sendBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' },
   docIndicator: { padding: 10, backgroundColor: 'rgba(176, 156, 133, 0.15)', flexDirection: 'row', justifyContent: 'space-between' },
   docIndicatorText: { color: COLORS.primary, fontSize: 12, fontWeight: '600' },

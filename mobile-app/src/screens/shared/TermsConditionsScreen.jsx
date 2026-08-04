@@ -6,16 +6,17 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { COLORS } from '../../constants/theme';
 
 const LAST_UPDATED = 'May 24, 2026';
-const NAVY = '#012464';
-const TEAL = '#0D9488';
+const PRIMARY_COLOR = COLORS.primary || '#B09C85';
+const PRIMARY_DARK = COLORS.primaryDark || '#8D7865';
 
 const Section = ({ icon, number, title, children }) => (
   <View style={styles.section}>
     <View style={styles.sectionHeader}>
       <View style={styles.sectionIconWrap}>
-        <Ionicons name={icon} size={16} color={TEAL} />
+        <Ionicons name={icon} size={16} color={PRIMARY_COLOR} />
       </View>
       <Text style={styles.sectionTitle}>{number}. {title}</Text>
     </View>
@@ -37,15 +38,15 @@ export default function TermsConditionsScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={NAVY} />
+      <StatusBar barStyle="light-content" backgroundColor={PRIMARY_DARK} />
 
       {/* Header */}
-      <LinearGradient colors={[NAVY, '#1a3a8a']} style={styles.header}>
+      <LinearGradient colors={[PRIMARY_COLOR, PRIMARY_DARK]} style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Ionicons name="document-text" size={20} color={TEAL} style={{ marginBottom: 2 }} />
+          <Ionicons name="document-text" size={20} color="#FFFFFF" style={{ marginBottom: 2 }} />
           <Text style={styles.headerTitle}>Terms & Conditions</Text>
           <Text style={styles.headerSub}>Last updated {LAST_UPDATED}</Text>
         </View>
@@ -64,7 +65,7 @@ export default function TermsConditionsScreen({ navigation }) {
       >
         {/* Intro */}
         <View style={styles.introBanner}>
-          <Ionicons name="scale-outline" size={28} color={TEAL} />
+          <Ionicons name="scale-outline" size={28} color={PRIMARY_COLOR} />
           <Text style={styles.introText}>
             These Terms & Conditions ("Terms") govern your use of the Legalitt platform. By
             creating an account, you agree to be bound by these Terms. Please read them carefully.
@@ -79,7 +80,7 @@ export default function TermsConditionsScreen({ navigation }) {
             { icon: 'flag', label: 'Governed by Indian Law' },
           ].map((item, i) => (
             <View key={i} style={styles.keyInfoItem}>
-              <Ionicons name={item.icon} size={18} color={TEAL} />
+              <Ionicons name={item.icon} size={18} color={PRIMARY_COLOR} />
               <Text style={styles.keyInfoLabel}>{item.label}</Text>
             </View>
           ))}
@@ -221,7 +222,7 @@ export default function TermsConditionsScreen({ navigation }) {
         </Section>
 
         <View style={styles.bottomCard}>
-          <Ionicons name="checkmark-circle" size={24} color={TEAL} />
+          <Ionicons name="checkmark-circle" size={24} color={PRIMARY_COLOR} />
           <Text style={styles.bottomCardText}>
             By using Legalitt, you agree to these Terms & Conditions in full.
           </Text>
@@ -244,12 +245,12 @@ const styles = StyleSheet.create({
   },
   backBtn: {
     width: 38, height: 38, borderRadius: 19,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center', justifyContent: 'center',
   },
   headerCenter: { flex: 1, alignItems: 'center' },
   headerTitle: { fontSize: 17, fontWeight: '700', color: '#FFFFFF', marginTop: 2 },
-  headerSub: { fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 2 },
+  headerSub: { fontSize: 11, color: 'rgba(255,255,255,0.85)', marginTop: 2 },
 
   scroll: { flex: 1 },
   scrollContent: { padding: 16 },
@@ -257,13 +258,13 @@ const styles = StyleSheet.create({
   introBanner: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: '#FFF7ED',
+    backgroundColor: '#FAF9F8',
     borderRadius: 14,
     padding: 16,
     gap: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#FED7AA',
+    borderColor: 'rgba(176, 156, 133, 0.3)',
   },
   introText: { flex: 1, fontSize: 13, color: '#374151', lineHeight: 20 },
 
@@ -276,14 +277,14 @@ const styles = StyleSheet.create({
   keyInfoItem: {
     flex: 1,
     alignItems: 'center',
-    backgroundColor: '#F0FDFA',
+    backgroundColor: 'rgba(176, 156, 133, 0.1)',
     borderRadius: 12,
     paddingVertical: 12,
     gap: 6,
     borderWidth: 1,
-    borderColor: '#CCFBF1',
+    borderColor: 'rgba(176, 156, 133, 0.25)',
   },
-  keyInfoLabel: { fontSize: 10, fontWeight: '700', color: NAVY, textAlign: 'center' },
+  keyInfoLabel: { fontSize: 10, fontWeight: '700', color: PRIMARY_DARK, textAlign: 'center' },
 
   section: {
     backgroundColor: '#FFFFFF',
@@ -299,31 +300,31 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
   sectionIconWrap: {
     width: 28, height: 28, borderRadius: 8,
-    backgroundColor: '#F0FDFA',
+    backgroundColor: 'rgba(176, 156, 133, 0.12)',
     alignItems: 'center', justifyContent: 'center',
     marginRight: 8,
   },
-  sectionTitle: { fontSize: 14, fontWeight: '700', color: NAVY, flex: 1 },
+  sectionTitle: { fontSize: 14, fontWeight: '700', color: PRIMARY_DARK, flex: 1 },
 
   para: { fontSize: 13, color: '#374151', lineHeight: 20, marginBottom: 8 },
 
   bulletRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6, gap: 8 },
   bulletDot: {
     width: 6, height: 6, borderRadius: 3,
-    backgroundColor: TEAL, marginTop: 7,
+    backgroundColor: PRIMARY_COLOR, marginTop: 7,
   },
   bulletText: { flex: 1, fontSize: 13, color: '#374151', lineHeight: 20 },
-  link: { color: TEAL, fontWeight: '600' },
+  link: { color: PRIMARY_COLOR, fontWeight: '600' },
 
   bottomCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: '#F0FDFA',
+    backgroundColor: 'rgba(176, 156, 133, 0.1)',
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#CCFBF1',
+    borderColor: 'rgba(176, 156, 133, 0.25)',
     marginTop: 8,
   },
   bottomCardText: { flex: 1, fontSize: 13, color: '#374151', lineHeight: 19 },

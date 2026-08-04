@@ -106,7 +106,12 @@ const OTPScreen = ({ navigation, route }) => {
         Alert.alert('Verification Failed', 'Incorrect OTP entered.');
       }
     } catch (error) {
-      Alert.alert('Verification failed', error.response?.data?.message || 'Incorrect OTP or connection issue.');
+      const serverMsg = error.response?.data?.message;
+      if (serverMsg) {
+        Alert.alert('Verification Failed', serverMsg);
+      } else {
+        Alert.alert('Server Waking Up', 'The cloud server is waking up. Please tap Verify once more.');
+      }
     }
   };
 

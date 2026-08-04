@@ -192,7 +192,7 @@ api.interceptors.response.use(
       if (originalRequest.retryCount < originalRequest.retry) {
         originalRequest.retryCount += 1;
         const delay = Math.pow(2, originalRequest.retryCount) * 1000;
-        console.log(`📡 Connection issue. Retrying ${originalRequest.url} (${originalRequest.retryCount}/${originalRequest.retry}) in ${delay}ms...`);
+        console.log(`📡 Waking up server / retrying ${originalRequest.url} (${originalRequest.retryCount}/${originalRequest.retry}) in ${delay}ms...`);
         
         await new Promise(resolve => setTimeout(resolve, delay));
         return api(originalRequest);

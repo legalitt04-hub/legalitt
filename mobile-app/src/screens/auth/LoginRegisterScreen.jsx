@@ -84,9 +84,9 @@ const LoginRegisterScreen = ({ navigation, route }) => {
   const handleNext = async () => {
     if (!validateForm()) return;
 
-    // Sanitize inputs before submission (XSS prevention)
+    // Sanitize email input before submission (XSS prevention)
     const safeEmail = sanitizeInput(email.trim().toLowerCase());
-    const safePassword = sanitizeInput(password.trim());
+    const safePassword = password.trim();
 
     setLoading(true);
     try {

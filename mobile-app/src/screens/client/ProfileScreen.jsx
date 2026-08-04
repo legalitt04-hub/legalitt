@@ -48,7 +48,7 @@ const ProfileScreen = ({ navigation }) => {
       title: 'My FIR Drafts',
       subtitle: 'View your saved legal drafts',
       screen: 'MyDrafts',
-      color: '#0d9488',
+      color: COLORS.primary,
     },
     {
       id: '1',
@@ -72,7 +72,7 @@ const ProfileScreen = ({ navigation }) => {
       title: 'Saved Advocates',
       subtitle: 'Your bookmarked lawyers',
       screen: 'SavedAdvocates',
-      color: '#0D9488',
+      color: COLORS.primary,
     },
     {
       id: '4',
@@ -117,7 +117,7 @@ const ProfileScreen = ({ navigation }) => {
 
   if (loading) return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <ActivityIndicator size="large" color="#0d9488" />
+      <ActivityIndicator size="large" color={COLORS.primary} />
     </View>
   );
 
@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#F0FDFA',
+    backgroundColor: 'rgba(176, 156, 133, 0.12)',
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 16,
@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
   completenessValue: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#0d9488',
+    color: COLORS.primary,
   },
   progressBarBg: {
     height: 8,
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: '#0d9488',
+    backgroundColor: COLORS.primary,
     borderRadius: 4,
   },
   completenessHint: {

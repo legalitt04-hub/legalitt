@@ -6,16 +6,17 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { COLORS } from '../../constants/theme';
 
 const LAST_UPDATED = 'May 24, 2026';
-const NAVY = '#012464';
-const TEAL = '#0D9488';
+const PRIMARY_COLOR = COLORS.primary || '#B09C85';
+const PRIMARY_DARK = COLORS.primaryDark || '#8D7865';
 
 const Section = ({ icon, title, children }) => (
   <View style={styles.section}>
     <View style={styles.sectionHeader}>
       <View style={styles.sectionIconWrap}>
-        <Ionicons name={icon} size={16} color={TEAL} />
+        <Ionicons name={icon} size={16} color={PRIMARY_COLOR} />
       </View>
       <Text style={styles.sectionTitle}>{title}</Text>
     </View>
@@ -45,23 +46,17 @@ const GDPRRight = ({ emoji, title, desc }) => (
 export default function PrivacyPolicyScreen({ navigation }) {
   const scrollY = useRef(new Animated.Value(0)).current;
 
-  const headerElevation = scrollY.interpolate({
-    inputRange: [0, 40],
-    outputRange: [0, 8],
-    extrapolate: 'clamp',
-  });
-
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={NAVY} />
+      <StatusBar barStyle="light-content" backgroundColor={PRIMARY_DARK} />
 
       {/* Header */}
-      <LinearGradient colors={[NAVY, '#1a3a8a']} style={styles.header}>
+      <LinearGradient colors={[PRIMARY_COLOR, PRIMARY_DARK]} style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Ionicons name="shield-checkmark" size={20} color={TEAL} style={{ marginBottom: 2 }} />
+          <Ionicons name="shield-checkmark" size={20} color="#FFFFFF" style={{ marginBottom: 2 }} />
           <Text style={styles.headerTitle}>Privacy Policy</Text>
           <Text style={styles.headerSub}>Last updated {LAST_UPDATED}</Text>
         </View>
@@ -80,7 +75,7 @@ export default function PrivacyPolicyScreen({ navigation }) {
       >
         {/* Intro banner */}
         <View style={styles.introBanner}>
-          <Ionicons name="shield-half-outline" size={28} color={TEAL} />
+          <Ionicons name="shield-half-outline" size={28} color={PRIMARY_COLOR} />
           <Text style={styles.introText}>
             Legalitt is committed to protecting your privacy. This policy explains how we collect,
             use, store and protect your personal information in compliance with the GDPR, IT Act 2000,
@@ -215,7 +210,7 @@ export default function PrivacyPolicyScreen({ navigation }) {
         </Section>
 
         <View style={styles.bottomCard}>
-          <Ionicons name="checkmark-circle" size={24} color={TEAL} />
+          <Ionicons name="checkmark-circle" size={24} color={PRIMARY_COLOR} />
           <Text style={styles.bottomCardText}>
             By using Legalitt, you acknowledge that you have read and understood this Privacy Policy.
           </Text>
@@ -238,12 +233,12 @@ const styles = StyleSheet.create({
   },
   backBtn: {
     width: 38, height: 38, borderRadius: 19,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center', justifyContent: 'center',
   },
   headerCenter: { flex: 1, alignItems: 'center' },
   headerTitle: { fontSize: 17, fontWeight: '700', color: '#FFFFFF', marginTop: 2 },
-  headerSub: { fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 2 },
+  headerSub: { fontSize: 11, color: 'rgba(255,255,255,0.85)', marginTop: 2 },
 
   scroll: { flex: 1 },
   scrollContent: { padding: 16 },
@@ -251,25 +246,25 @@ const styles = StyleSheet.create({
   introBanner: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: '#F0FDFA',
+    backgroundColor: '#FAF9F8',
     borderRadius: 14,
     padding: 16,
     gap: 12,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#CCFBF1',
+    borderColor: 'rgba(176, 156, 133, 0.3)',
   },
   introText: { flex: 1, fontSize: 13, color: '#374151', lineHeight: 20 },
 
   gdprBox: {
-    backgroundColor: '#EEF2FF',
+    backgroundColor: '#FAF9F8',
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#C7D2FE',
+    borderColor: 'rgba(176, 156, 133, 0.3)',
   },
-  gdprBoxTitle: { fontSize: 15, fontWeight: '800', color: NAVY, marginBottom: 4 },
+  gdprBoxTitle: { fontSize: 15, fontWeight: '800', color: PRIMARY_DARK, marginBottom: 4 },
   gdprBoxSub: { fontSize: 12, color: '#4B5563', marginBottom: 12 },
   gdprCard: {
     flexDirection: 'row',
@@ -279,12 +274,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
     padding: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(176, 156, 133, 0.15)',
   },
   gdprEmoji: { fontSize: 18, marginTop: 1 },
-  gdprTitle: { fontSize: 12, fontWeight: '700', color: NAVY, marginBottom: 2 },
+  gdprTitle: { fontSize: 12, fontWeight: '700', color: PRIMARY_DARK, marginBottom: 2 },
   gdprDesc: { fontSize: 11, color: '#6B7280', lineHeight: 17 },
   gdprExercise: { fontSize: 11, color: '#374151', marginTop: 10, lineHeight: 17 },
-  gdprLink: { color: TEAL, fontWeight: '700' },
+  gdprLink: { color: PRIMARY_COLOR, fontWeight: '700' },
 
   section: {
     backgroundColor: '#FFFFFF',
@@ -300,32 +297,32 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
   sectionIconWrap: {
     width: 28, height: 28, borderRadius: 8,
-    backgroundColor: '#F0FDFA',
+    backgroundColor: 'rgba(176, 156, 133, 0.12)',
     alignItems: 'center', justifyContent: 'center',
     marginRight: 8,
   },
-  sectionTitle: { fontSize: 14, fontWeight: '700', color: NAVY },
+  sectionTitle: { fontSize: 14, fontWeight: '700', color: PRIMARY_DARK },
 
   para: { fontSize: 13, color: '#374151', lineHeight: 20, marginBottom: 8 },
 
   bulletRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6, gap: 8 },
   bulletDot: {
     width: 6, height: 6, borderRadius: 3,
-    backgroundColor: TEAL, marginTop: 7,
+    backgroundColor: PRIMARY_COLOR, marginTop: 7,
   },
   bulletText: { flex: 1, fontSize: 13, color: '#374151', lineHeight: 20 },
 
-  link: { color: TEAL, fontWeight: '600' },
+  link: { color: PRIMARY_COLOR, fontWeight: '600' },
 
   bottomCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: '#F0FDFA',
+    backgroundColor: 'rgba(176, 156, 133, 0.1)',
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#CCFBF1',
+    borderColor: 'rgba(176, 156, 133, 0.25)',
     marginTop: 8,
   },
   bottomCardText: { flex: 1, fontSize: 13, color: '#374151', lineHeight: 19 },

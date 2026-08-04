@@ -117,14 +117,14 @@ const ProfileEditScreen = ({ navigation }) => {
 
   if (loading) return (
     <View style={styles.center}>
-      <ActivityIndicator size="large" color="#0d9488" />
+      <ActivityIndicator size="large" color={COLORS.primary} />
     </View>
   );
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      <LinearGradient colors={['#14B8A6', '#0D9488']} style={[styles.header, { paddingTop: insets.top + normalize(5) }]}>
+      <LinearGradient colors={[COLORS.primary, COLORS.primaryDark || '#8D7865']} style={[styles.header, { paddingTop: insets.top + normalize(5) }]}>
         <View style={styles.headerInner}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Ionicons name="close" size={24} color="#fff" />
@@ -265,17 +265,17 @@ const styles = StyleSheet.create({
   avatarSection: { alignItems: 'center', marginBottom: normalize(25) },
   avatarWrapper: { width: normalize(100), height: normalize(100), borderRadius: normalize(50), position: 'relative' },
   avatar: { width: normalize(100), height: normalize(100), borderRadius: normalize(50), backgroundColor: '#e2e8f0' },
-  cameraBtn: { position: 'absolute', bottom: 0, right: 0, backgroundColor: '#0d9488', width: normalize(32), height: normalize(32), borderRadius: normalize(16), alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#fff' },
+  cameraBtn: { position: 'absolute', bottom: 0, right: 0, backgroundColor: COLORS.primary, width: normalize(32), height: normalize(32), borderRadius: normalize(16), alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#fff' },
   uploadingOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: normalize(50), alignItems: 'center', justifyContent: 'center' },
   avatarHint: { fontSize: normalize(12), color: '#64748b', marginTop: normalize(10), fontWeight: '500' },
   section: { backgroundColor: '#fff', borderRadius: normalize(16), padding: normalize(16), marginBottom: normalize(20), shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, elevation: 2 },
-  sectionTitle: { fontSize: normalize(16), fontWeight: '700', color: '#0d9488', marginBottom: normalize(15) },
+  sectionTitle: { fontSize: normalize(16), fontWeight: '700', color: COLORS.primary, marginBottom: normalize(15) },
   label: { fontSize: normalize(13), fontWeight: '600', color: '#64748b', marginBottom: normalize(8), marginTop: normalize(10) },
   input: { backgroundColor: '#f1f5f9', borderRadius: normalize(12), padding: normalize(12), fontSize: normalize(15), color: '#1e293b' },
   row: { flexDirection: 'row' },
   genderRow: { flexDirection: 'row', marginTop: normalize(5) },
   genderBtn: { paddingHorizontal: normalize(15), paddingVertical: normalize(8), borderRadius: normalize(10), backgroundColor: '#f1f5f9', marginRight: normalize(10) },
-  genderBtnActive: { backgroundColor: '#0d9488' },
+  genderBtnActive: { backgroundColor: COLORS.primary },
   genderText: { fontSize: normalize(14), fontWeight: '600', color: '#64748b' },
   genderTextActive: { color: '#fff' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' }
