@@ -52,6 +52,15 @@ import PropertyResearchTrackScreen from '../screens/client/PropertyResearchTrack
 import PropertyResearchChecklistScreen from '../screens/client/PropertyResearchChecklistScreen';
 import PropertyResearchLockScreen from '../screens/client/PropertyResearchLockScreen';
 
+// LEGAL ADVICE CONSULTATION SCREENS
+import LegalAdviceLandingScreen from '../screens/client/LegalAdviceLandingScreen';
+import LegalMatterScreen from '../screens/client/LegalMatterScreen';
+import ConsultationDetailsScreen from '../screens/client/ConsultationDetailsScreen';
+import ReviewPaymentScreen from '../screens/client/ReviewPaymentScreen';
+import ConsultationScheduledScreen from '../screens/client/ConsultationScheduledScreen';
+import TrackConsultationScreen from '../screens/client/TrackConsultationScreen';
+import ConsultationCompletedScreen from '../screens/client/ConsultationCompletedScreen';
+
 // SHARED SCREENS
 import ChatScreen from '../screens/shared/ChatScreen';
 import ChatListScreen from '../screens/shared/ChatListScreen';
@@ -296,6 +305,16 @@ const AppNavigator = () => {
               <Stack.Screen name="PropertyResearchTrack" component={PropertyResearchTrackScreen} />
               <Stack.Screen name="PropertyResearchChecklist" component={PropertyResearchChecklistScreen} />
               <Stack.Screen name="PropertyResearchLock" component={PropertyResearchLockScreen} />
+
+              {/* LEGAL ADVICE CONSULTATION FLOW */}
+              <Stack.Screen name="LegalAdviceLanding" component={LegalAdviceLandingScreen} />
+              <Stack.Screen name="LegalMatter" component={LegalMatterScreen} />
+              <Stack.Screen name="ConsultationDetails" component={ConsultationDetailsScreen} />
+              <Stack.Screen name="ReviewPayment" component={ReviewPaymentScreen} />
+              <Stack.Screen name="ConsultationScheduled" component={ConsultationScheduledScreen} />
+              <Stack.Screen name="TrackConsultation" component={TrackConsultationScreen} />
+              <Stack.Screen name="ConsultationCompleted" component={ConsultationCompletedScreen} />
+
               <Stack.Screen name="Settings" component={SettingsScreen} />
               <Stack.Screen name="Notifications" component={NotificationsScreen} />
               <Stack.Screen 

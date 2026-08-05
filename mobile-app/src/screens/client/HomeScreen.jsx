@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, Image,
-  Dimensions, ActivityIndicator, RefreshControl, Alert
+  Dimensions, ActivityIndicator, RefreshControl, Alert,
+  LayoutAnimation, Platform, UIManager
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -13,6 +14,10 @@ import { advocateAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useChatList } from '../../hooks/useChat';
 import { getCachedData } from '../../utils/offlineCache';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 const transformNearbyAdvocates = (rawAdvocates) => {
   if (!rawAdvocates || !Array.isArray(rawAdvocates)) return [];
@@ -144,13 +149,24 @@ export default function HomeScreen({ navigation }) {
     setRefreshing(false);
   };
 
-  const quickActions = [
+  const [isMoreServicesOpen, setIsMoreServicesOpen] = useState(false);
+
+  const toggleMoreServices = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setIsMoreServicesOpen(!isMoreServicesOpen);
+  };
+
+  const fourMainCards = [
     { id: '1', icon: 'location-outline', title: 'Find Nearby Advocates', subtitle: 'Search by Location', cta: 'Open', screen: 'Map' },
     { id: '2', icon: 'home-outline', title: 'Property Research Report', subtitle: 'Verify Ownership & Records', cta: 'Get Report', screen: 'PropertyResearchLanding' },
-    { id: '3', icon: 'scale-outline', title: 'Legal Notice', subtitle: 'Create Legal Notice', cta: 'Create', screen: 'AILegalNotice' },
-    { id: '4', icon: 'document-text-outline', title: 'FIR Draft Generator', subtitle: 'Generate Drafts', cta: 'Generate', screen: 'FIRTypeSelector' },
-    { id: '5', icon: 'calendar-outline', title: 'My Bookings', subtitle: 'Track Consultations', cta: 'View', screen: 'MyBookings' },
-    { id: '6', icon: 'bookmark-outline', title: 'Saved Advocates', subtitle: 'Bookmarked Lawyers', cta: 'View', screen: 'SavedAdvocates' },
+    { id: '3', icon: 'scale-outline', title: 'Legal Advice', subtitle: 'Get Expert Legal Guidance', cta: 'Get Advice', screen: 'LegalAdviceLanding' },
+    { id: '4', icon: 'document-text-outline', title: 'Legal Notice', subtitle: 'Create Legal Notice', cta: 'Create', screen: 'AILegalNotice' },
+  ];
+
+  const moreServicesList = [
+    { id: '5', icon: 'document-text-outline', title: 'FIR Draft Generator', subtitle: 'Generate Drafts', screen: 'FIRTypeSelector' },
+    { id: '6', icon: 'calendar-outline', title: 'My Bookings', subtitle: 'Track Consultations', screen: 'MyBookings' },
+    { id: '7', icon: 'bookmark-outline', title: 'Saved Advocates', subtitle: 'Bookmarked Lawyers', screen: 'SavedAdvocates' },
   ];
 
   return (
@@ -194,7 +210,7 @@ export default function HomeScreen({ navigation }) {
           </View>
         </View>
 
-        {/* AI Hero Card */}
+        {/* AI Hero Card - First Card Below Greeting */}
         <TouchableOpacity style={styles.aiHero} onPress={() => navigation.navigate('AI')} activeOpacity={0.9}>
           <View style={styles.aiHeroContent}>
             <View style={styles.aiIcon}>
@@ -210,9 +226,9 @@ export default function HomeScreen({ navigation }) {
           </View>
         </TouchableOpacity>
 
-        {/* Quick Actions Grid */}
+        {/* 4 Main Feature Cards Grid */}
         <View style={styles.quickGrid}>
-          {quickActions.map((action) => (
+          {fourMainCards.map((action) => (
             <QuickCard
               key={action.id}
               icon={action.icon}
@@ -222,6 +238,44 @@ export default function HomeScreen({ navigation }) {
               onPress={() => navigation.navigate(action.screen)}
             />
           ))}
+        </View>
+
+        {/* View All / More Services Dropdown Accordion */}
+        <View style={styles.moreServicesSection}>
+          <View style={styles.moreServicesHeaderRow}>
+            <Text style={styles.moreServicesTitle}>More Services</Text>
+            <TouchableOpacity
+              onPress={toggleMoreServices}
+              style={styles.viewAllToggleBtn}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.viewAllToggleText}>
+                View All {isMoreServicesOpen ? '▲' : '▼'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {isMoreServicesOpen && (
+            <View style={styles.moreServicesDropdownContainer}>
+              {moreServicesList.map((service) => (
+                <TouchableOpacity
+                  key={service.id}
+                  style={styles.moreServiceItemCard}
+                  onPress={() => navigation.navigate(service.screen)}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.moreServiceIconCircle}>
+                    <Ionicons name={service.icon} size={20} color={COLORS.primary} />
+                  </View>
+                  <View style={styles.moreServiceTextCol}>
+                    <Text style={styles.moreServiceItemTitle}>{service.title}</Text>
+                    <Text style={styles.moreServiceItemSubtitle}>{service.subtitle}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
 
 
@@ -435,6 +489,73 @@ const styles = StyleSheet.create({
     height: 10,
     borderWidth: 1.5,
     borderColor: '#FFFFFF',
+  },
+  moreServicesSection: {
+    marginHorizontal: 20,
+    marginBottom: 16,
+  },
+  moreServicesHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  moreServicesTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+  viewAllToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  viewAllToggleText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.primary,
+  },
+  moreServicesDropdownContainer: {
+    gap: 10,
+    marginTop: 6,
+  },
+  moreServiceItemCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#E8E2D8',
+  },
+  moreServiceIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F8F4EC',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  moreServiceTextCol: {
+    flex: 1,
+  },
+  moreServiceItemTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0F172A',
+    marginBottom: 2,
+  },
+  moreServiceItemSubtitle: {
+    fontSize: 11,
+    color: '#6B7280',
   },
 });
 
