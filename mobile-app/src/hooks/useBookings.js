@@ -32,7 +32,7 @@ export const useMyBookings = (status) => {
 /**
  * Hook for an advocate's incoming bookings.
  */
-export const useAdvocateBookings = (status) => {
+export const useAdvocateBookings = (status, today) => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -43,14 +43,15 @@ export const useAdvocateBookings = (status) => {
     try {
       const params = {};
       if (status) params.status = status;
-      const { data } = await bookingAPI.getAdvocate(params);
+      if (today) params.today = 'true';
+      const { data } = await bookingAPI.getAdvocateBookings(params);
       setBookings(data.data || []);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load bookings');
     } finally {
       setLoading(false);
     }
-  }, [status]);
+  }, [status, today]);
 
   useEffect(() => { fetch(); }, [fetch]);
 

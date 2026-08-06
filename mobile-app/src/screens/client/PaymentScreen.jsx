@@ -6,17 +6,23 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  SafeAreaView,
   StatusBar,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/theme';
+import { paymentAPI, bookingAPI } from '../../services/api';
 
 const PaymentScreen = ({ navigation, route }) => {
   const [selectedMethod, setSelectedMethod] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState('select'); // 'select' | 'processing' | 'verifying'
 
-  // Get consultation fee from route params or use default
-  const consultationFee = route?.params?.fee || 800;
+  // Get parameters
+  const { bookingId, amount, advocateName, advocateAvatar, advocateId } = route?.params || {};
+  const consultationFee = amount || route?.params?.fee || 800;
   const platformFee = 0;
   const totalAmount = consultationFee + platformFee;
 
@@ -41,24 +47,87 @@ const PaymentScreen = ({ navigation, route }) => {
     },
   ];
 
-  const handlePayment = () => {
+  const handlePayment = async () => {
     if (!selectedMethod) {
-      alert('Please select a payment method');
+      Alert.alert('Selection Required', 'Please select a payment method');
+      return;
+    }
+    if (!bookingId) {
+      Alert.alert('Error', 'Invalid booking. Please go back and try again.');
       return;
     }
 
-    // TODO: Integrate Razorpay payment gateway
-    console.log('Processing payment:', {
-      method: selectedMethod,
-      amount: totalAmount,
-    });
+    setLoading(true);
+    setStep('processing');
+    try {
+      // ── Step 1: Create Razorpay order on backend ──────────────────────────
+      const orderRes = await paymentAPI.createOrder(bookingId);
+      if (!orderRes.data?.success) {
+        throw new Error('Failed to create payment order. Please try again.');
+      }
 
-    // Navigate to success screen
-    navigation.navigate('PaymentSuccess', {
-      amount: totalAmount,
-      method: selectedMethod,
-    });
+      const { orderId, amount: orderAmount, currency, keyId } = orderRes.data.data;
+
+      // ── Step 2: In production, open Razorpay payment sheet here ───────────
+      // RazorpayCheckout.open({ key: keyId, order_id: orderId, ... })
+      // For development: use test IDs that bypass the HMAC check on dev backend
+      const isDev = __DEV__;
+      const razorpay_payment_id = isDev
+        ? 'pay_dev_' + Math.random().toString(36).substring(2, 11)
+        : null; // production: received from RazorpayCheckout.open success callback
+
+      // If not dev and no real payment ID, exit (payment sheet not implemented yet)
+      if (!razorpay_payment_id) {
+        setLoading(false);
+        setStep('select');
+        Alert.alert('Coming Soon', 'Live payment gateway will be enabled soon.');
+        return;
+      }
+
+      setStep('verifying');
+
+      // ── Step 3: Verify HMAC signature on backend ──────────────────────────
+      const verifyRes = await paymentAPI.verifyPayment({
+        razorpay_order_id: orderId,
+        razorpay_payment_id,
+        // In dev, backend accepts any signature when NODE_ENV=development
+        razorpay_signature: isDev ? 'dev_bypass' : null,
+        bookingId,
+      });
+
+      if (verifyRes.data?.success) {
+        const updatedBooking = verifyRes.data?.data?.booking;
+        const chatId = updatedBooking?.chat;
+
+        navigation.replace('PaymentSuccess', {
+          amount: totalAmount,
+          method: selectedMethod,
+          chatId,
+          advocateName,
+          advocateAvatar,
+          advocateId,
+          bookingId,
+        });
+      } else {
+        throw new Error('Payment verification failed. Contact support if amount was deducted.');
+      }
+    } catch (error) {
+      const msg =
+        error.response?.data?.message ||
+        error.message ||
+        'Payment could not be completed. Please try again.';
+      Alert.alert('Payment Failed', msg);
+    } finally {
+      setLoading(false);
+      setStep('select');
+    }
   };
+
+  const stepLabel = step === 'processing'
+    ? 'Creating order…'
+    : step === 'verifying'
+    ? 'Verifying payment…'
+    : null;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -68,9 +137,10 @@ const PaymentScreen = ({ navigation, route }) => {
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => navigation.goBack()}
+          onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home')}
+          disabled={loading}
         >
-          <Ionicons name="chevron-back" size={24} color="#1F2937" />
+          <Ionicons name="chevron-back" size={24} color={loading ? '#D1D5DB' : '#1F2937'} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Payment</Text>
         <View style={{ width: 24 }} />
@@ -109,6 +179,7 @@ const PaymentScreen = ({ navigation, route }) => {
               ]}
               onPress={() => setSelectedMethod(method.id)}
               activeOpacity={0.7}
+              disabled={loading}
             >
               <View style={styles.methodIcon}>
                 <Ionicons name={method.icon} size={20} color={COLORS.primary} />
@@ -139,13 +210,20 @@ const PaymentScreen = ({ navigation, route }) => {
         <TouchableOpacity
           style={[
             styles.payButton,
-            !selectedMethod && styles.payButtonDisabled,
+            (!selectedMethod || loading) && styles.payButtonDisabled,
           ]}
           onPress={handlePayment}
-          disabled={!selectedMethod}
+          disabled={!selectedMethod || loading}
           activeOpacity={0.8}
         >
-          <Text style={styles.payButtonText}>Pay ₹{totalAmount}</Text>
+          {loading ? (
+            <View style={styles.loadingRow}>
+              <ActivityIndicator color="#FFFFFF" size="small" />
+              {stepLabel && <Text style={styles.payButtonText}>{stepLabel}</Text>}
+            </View>
+          ) : (
+            <Text style={styles.payButtonText}>Pay ₹{totalAmount}</Text>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -295,7 +373,7 @@ const styles = StyleSheet.create({
   payButton: {
     backgroundColor: COLORS.primary,
     height: 56,
-    borderRadius: 28,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: COLORS.primary,
@@ -309,6 +387,11 @@ const styles = StyleSheet.create({
     opacity: 0.5,
     shadowOpacity: 0,
     elevation: 0,
+  },
+  loadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   payButtonText: {
     fontSize: 16,

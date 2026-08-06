@@ -20,6 +20,7 @@ const Input = ({
         focused && styles.focused,
         error && styles.error,
         !editable && styles.disabled,
+        multiline && { height: undefined, minHeight: 120, paddingVertical: 12, alignItems: 'flex-start' },
       ]}>
         {leftIcon && <View style={styles.leftIcon}>{leftIcon}</View>}
         <TextInput

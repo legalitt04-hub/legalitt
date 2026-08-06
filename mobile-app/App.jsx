@@ -5,6 +5,7 @@ import Toast from 'react-native-toast-message';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Notifications from 'expo-notifications';
 import { AuthProvider } from './src/context/AuthContext';
+import { NetworkProvider } from './src/context/NetworkContext';
 import AppNavigator from './src/navigation/AppNavigator';
 
 // Keep splash screen visible while we load
@@ -21,18 +22,18 @@ Notifications.setNotificationHandler({
 
 export default function App() {
   useEffect(() => {
-    // Hide splash once auth check completes (handled inside AuthContext)
-    const timer = setTimeout(() => SplashScreen.hideAsync(), 2000);
-    return () => clearTimeout(timer);
+    // Native splash screen hiding is managed smoothly when intro screen assets are ready
   }, []);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <AuthProvider>
-          <AppNavigator />
-          <Toast />
-        </AuthProvider>
+        <NetworkProvider>
+          <AuthProvider>
+            <AppNavigator />
+            <Toast />
+          </AuthProvider>
+        </NetworkProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

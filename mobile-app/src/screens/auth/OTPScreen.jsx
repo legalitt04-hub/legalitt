@@ -4,19 +4,25 @@ import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
-  SafeAreaView,
+  TextInput,
   StatusBar,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/theme';
+import { useAuth } from '../../context/AuthContext';
+import { authAPI } from '../../services/api';
+import Constants from 'expo-constants';
 
 const OTPScreen = ({ navigation, route }) => {
-  const { email, role, mode, password: loginPassword } = route.params;
-  
+  const { email, role, mode, password: loginPassword, registerData } = route.params;
+  const { register, login } = useAuth();
+
   // OTP Input
   const [otp, setOtp] = useState(['', '', '', '']);
   const inputRefs = useRef([]);
@@ -26,17 +32,27 @@ const OTPScreen = ({ navigation, route }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
+
   // Flow control
   const [otpVerified, setOtpVerified] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Live password validation criteria
+  const hasMinLength = newPassword.length >= 8;
+  const hasUpper = /[A-Z]/.test(newPassword);
+  const hasLower = /[a-z]/.test(newPassword);
+  const hasNumber = /\d/.test(newPassword);
+  const hasSpecial = /[#?!@$%^&*-]/.test(newPassword);
+  const passwordsMatch = newPassword.length > 0 && newPassword === confirmPassword;
 
   useEffect(() => {
     // Auto-focus first input
     inputRefs.current[0]?.focus();
+    // Send initial OTP E2E
+    handleResendOTP();
   }, []);
 
   const handleOtpChange = (text, index) => {
-    // Only allow numbers
     if (text && !/^\d+$/.test(text)) return;
 
     const newOtp = [...otp];
@@ -55,52 +71,104 @@ const OTPScreen = ({ navigation, route }) => {
     }
   };
 
-  const handleVerifyOTP = () => {
+  const validatePasswordSchema = (pwd) => {
+    return pwd.length >= 8 && /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[#?!@$%^&*-]).{8,}$/.test(pwd);
+  };
+
+  const handleVerifyOTP = async () => {
     const otpCode = otp.join('');
     if (otpCode.length !== 4) return;
 
-    // TODO: Verify OTP with backend
-    console.log('Verifying OTP:', otpCode);
+    console.log('Verifying OTP E2E:', otpCode);
 
-    if (mode === 'login') {
-      // LOGIN MODE: OTP verified → Navigate to home
-      // TODO: Call login API and save token
-      navigateToHome();
-    } else {
-      // REGISTER MODE: OTP verified → Show password setup
-      setOtpVerified(true);
+    try {
+      // 1. Call E2E verify-otp endpoint on backend
+      const { data } = await authAPI.verifyOTP(email.trim().toLowerCase(), otpCode, role);
+
+      if (data.success) {
+        if (mode === 'login') {
+          // LOGIN MODE: OTP verified -> Call login API via context
+          const response = await login(
+            email.trim().toLowerCase(),
+            loginPassword
+          );
+          if (!response.success) {
+            Alert.alert('Verification failed', response.message || 'OTP verification failed');
+          }
+        } else if (registerData?.password) {
+          // REGISTER MODE with pre-entered password (Advocate flow) -> Auto complete registration
+          await handleCompleteRegistration(registerData.password);
+        } else {
+          // REGISTER MODE without pre-entered password (Client flow) -> Show password setup
+          setOtpVerified(true);
+        }
+      } else {
+        Alert.alert('Verification Failed', 'Incorrect OTP entered.');
+      }
+    } catch (error) {
+      const serverMsg = error.response?.data?.message;
+      if (serverMsg) {
+        Alert.alert('Verification Failed', serverMsg);
+      } else {
+        Alert.alert('Server Waking Up', 'The cloud server is waking up. Please tap Verify once more.');
+      }
     }
   };
 
-  const handleCompleteRegistration = () => {
-    if (!newPassword || !confirmPassword) return;
-    if (newPassword !== confirmPassword) {
-      alert('Passwords do not match!');
-      return;
-    }
-    if (newPassword.length < 6) {
-      alert('Password must be at least 6 characters!');
-      return;
+  const handleCompleteRegistration = async (overridePassword) => {
+    if (submitting) return;
+
+    const passToUse = overridePassword || newPassword;
+    if (!overridePassword) {
+      if (!newPassword || !confirmPassword) return;
+      if (newPassword !== confirmPassword) {
+        Alert.alert('Error', 'Passwords do not match!');
+        return;
+      }
+      if (!validatePasswordSchema(newPassword)) {
+        Alert.alert(
+          'Password Invalid',
+          'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character (#?!@$%^&*-).'
+        );
+        return;
+      }
     }
 
-    // TODO: Call registration API with email, otp, password, role
-    console.log('Registering:', { email, otp: otp.join(''), password: newPassword, role });
+    setSubmitting(true);
+    try {
+      const mobileAppSecret = Constants.expoConfig?.extra?.MOBILE_APP_SECRET || 'mock_captcha_token';
+      const rawName = registerData?.name || email.split('@')[0];
+      const cleanName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
 
-    navigateToHome();
+      const response = await register({
+        name: cleanName,
+        email: email.trim().toLowerCase(),
+        password: passToUse,
+        role: role || 'client',
+        barCouncilId: registerData?.barCouncilId || undefined,
+        captchaToken: mobileAppSecret,
+      });
+
+      if (!response.success) {
+        Alert.alert('Registration Failed', response.message || 'Registration failed');
+      } else if (role === 'advocate') {
+        // Advocates go to document upload after registration
+        navigation.replace('DocumentUpload', { registerData });
+      }
+    } catch (error) {
+      Alert.alert('Registration Error', error.message || 'Registration encountered an error');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const navigateToHome = () => {
-    // Navigate based on role
-    if (role === 'advocate') {
-      navigation.replace('AdvocateMain');
-    } else {
-      navigation.replace('ClientMain');
+  const handleResendOTP = async () => {
+    console.log('Sending Email OTP to:', email);
+    try {
+      await authAPI.sendOTP(email.trim().toLowerCase());
+    } catch (err) {
+      console.log('Error triggering OTP resend:', err.message);
     }
-  };
-
-  const handleResendOTP = () => {
-    console.log('Resending OTP to:', email);
-    // TODO: Call resend OTP API
     setOtp(['', '', '', '']);
     inputRefs.current[0]?.focus();
   };
@@ -235,12 +303,38 @@ const OTPScreen = ({ navigation, route }) => {
 
           {/* Password Requirements */}
           <View style={styles.requirementsContainer}>
-            <Text style={styles.requirementText}>
-              • At least 6 characters
-            </Text>
-            <Text style={styles.requirementText}>
-              • Passwords must match
-            </Text>
+            <View style={styles.requirementRow}>
+              <Ionicons 
+                name={hasMinLength ? "checkmark-circle" : "ellipse-outline"} 
+                size={16} 
+                color={hasMinLength ? "#10B981" : "#9CA3AF"} 
+              />
+              <Text style={[styles.requirementText, hasMinLength && styles.requirementTextValid]}>
+                At least 8 characters
+              </Text>
+            </View>
+
+            <View style={styles.requirementRow}>
+              <Ionicons 
+                name={(hasUpper && hasLower && hasNumber && hasSpecial) ? "checkmark-circle" : "ellipse-outline"} 
+                size={16} 
+                color={(hasUpper && hasLower && hasNumber && hasSpecial) ? "#10B981" : "#9CA3AF"} 
+              />
+              <Text style={[styles.requirementText, (hasUpper && hasLower && hasNumber && hasSpecial) && styles.requirementTextValid]}>
+                Uppercase, lowercase, number &amp; special char (#?!@$%^&amp;*-)
+              </Text>
+            </View>
+
+            <View style={styles.requirementRow}>
+              <Ionicons 
+                name={passwordsMatch ? "checkmark-circle" : "ellipse-outline"} 
+                size={16} 
+                color={passwordsMatch ? "#10B981" : "#9CA3AF"} 
+              />
+              <Text style={[styles.requirementText, passwordsMatch && styles.requirementTextValid]}>
+                Passwords match
+              </Text>
+            </View>
           </View>
 
           {/* Spacer */}
@@ -250,12 +344,16 @@ const OTPScreen = ({ navigation, route }) => {
           <TouchableOpacity
             style={[
               styles.nextButton,
-              (!newPassword || !confirmPassword) && styles.nextButtonDisabled,
+              (!newPassword || !confirmPassword || submitting) && styles.nextButtonDisabled,
             ]}
-            onPress={handleCompleteRegistration}
-            disabled={!newPassword || !confirmPassword}
+            onPress={() => handleCompleteRegistration()}
+            disabled={!newPassword || !confirmPassword || submitting}
           >
-            <Text style={styles.nextButtonText}>Complete Registration</Text>
+            {submitting ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <Text style={styles.nextButtonText}>Complete Registration</Text>
+            )}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -342,13 +440,22 @@ const styles = StyleSheet.create({
     top: 18,
   },
   requirementsContainer: {
-    paddingLeft: 24,
+    paddingLeft: 12,
     marginBottom: 24,
+  },
+  requirementRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
   },
   requirementText: {
     fontSize: 12,
     color: '#6B7280',
-    marginBottom: 6,
+  },
+  requirementTextValid: {
+    color: '#10B981',
+    fontWeight: '600',
   },
   nextButton: {
     backgroundColor: COLORS.primary,

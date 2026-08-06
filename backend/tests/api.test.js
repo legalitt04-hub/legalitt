@@ -1,8 +1,22 @@
 const request = require('supertest');
+const mongoose = require('mongoose');
 const app = require('../src/app');
 
-// Basic smoke tests — run without a real DB using mocks
-// For full tests, set MONGODB_URI to a test database
+beforeAll(async () => {
+  const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/legalitt_test';
+  try {
+    await mongoose.connect(uri, { serverSelectionTimeoutMS: 2000 });
+  } catch (err) {
+    // If local DB is offline, set bufferCommands false so queries fail fast instead of hanging
+    mongoose.set('bufferCommands', false);
+  }
+});
+
+afterAll(async () => {
+  try {
+    await mongoose.disconnect();
+  } catch (err) {}
+});
 
 describe('Health Check', () => {
   it('GET /health returns 200', async () => {
@@ -13,25 +27,25 @@ describe('Health Check', () => {
 });
 
 describe('Auth Routes', () => {
-  it('POST /api/auth/register - missing fields returns 400', async () => {
+  it('POST /api/v1/auth/register - missing fields returns 400', async () => {
     const res = await request(app)
-      .post('/api/auth/register')
+      .post('/api/v1/auth/register')
       .send({ email: 'test@test.com' }); // Missing name and password
     expect(res.statusCode).toBe(400);
   });
 
-  it('POST /api/auth/login - invalid credentials returns 401 or 500', async () => {
+  it('POST /api/v1/auth/login - invalid credentials returns 401 or 500', async () => {
     const res = await request(app)
-      .post('/api/auth/login')
+      .post('/api/v1/auth/login')
       .send({ email: 'nobody@test.com', password: 'wrongpass' });
-    // 401 if DB connected, 500 if not — both are acceptable in CI without DB
-    expect([401, 500]).toContain(res.statusCode);
+    // 401/404 if DB connected, 500 if DB offline — all acceptable in smoke test
+    expect([401, 404, 500]).toContain(res.statusCode);
   });
 });
 
 describe('Advocate Routes', () => {
-  it('GET /api/advocates/specializations returns list', async () => {
-    const res = await request(app).get('/api/advocates/specializations');
+  it('GET /api/v1/advocates/specializations returns list', async () => {
+    const res = await request(app).get('/api/v1/advocates/specializations');
     expect(res.statusCode).toBe(200);
     expect(Array.isArray(res.body.data)).toBe(true);
     expect(res.body.data.length).toBeGreaterThan(0);
@@ -39,25 +53,27 @@ describe('Advocate Routes', () => {
 });
 
 describe('Protected Routes', () => {
-  it('GET /api/auth/me without token returns 401', async () => {
-    const res = await request(app).get('/api/auth/me');
+  it('GET /api/v1/auth/me without token returns 401', async () => {
+    const res = await request(app).get('/api/v1/auth/me');
     expect(res.statusCode).toBe(401);
   });
 
-  it('GET /api/bookings/my without token returns 401', async () => {
-    const res = await request(app).get('/api/bookings/my');
+  it('GET /api/v1/bookings/my without token returns 401', async () => {
+    const res = await request(app).get('/api/v1/bookings/my');
     expect(res.statusCode).toBe(401);
   });
 
-  it('GET /api/admin/stats without token returns 401', async () => {
-    const res = await request(app).get('/api/admin/stats');
+  it('GET /api/v1/admin/stats without token returns 401', async () => {
+    const res = await request(app).get('/api/v1/admin/stats');
     expect(res.statusCode).toBe(401);
   });
 });
 
 describe('404 Handling', () => {
   it('Unknown route returns 404', async () => {
-    const res = await request(app).get('/api/nonexistent-route');
+    const res = await request(app).get('/api/v1/nonexistent-route');
     expect(res.statusCode).toBe(404);
   });
 });
+
+

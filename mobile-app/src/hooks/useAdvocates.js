@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { advocateAPI } from '../services/api';
+import { getCachedData } from '../utils/offlineCache';
 
 /**
  * Hook for fetching and filtering advocate listings.
@@ -48,6 +49,17 @@ export const useAdvocates = (initialFilters = {}) => {
   }, [filters]);
 
   useEffect(() => {
+    const loadCached = async () => {
+      try {
+        const cached = await getCachedData('cached_advocates_all');
+        if (cached && cached.data) {
+          setAdvocates(cached.data);
+        }
+      } catch (err) {
+        console.log('Error reading cached advocates_all:', err);
+      }
+    };
+    loadCached();
     fetch(1, true);
     return () => { abortRef.current = false; };
   }, [fetch]);
@@ -101,7 +113,22 @@ export const useAdvocateProfile = (advocateId) => {
     }
   }, [advocateId]);
 
-  useEffect(() => { refetch(); }, [refetch]);
+  useEffect(() => {
+    const loadCached = async () => {
+      try {
+        const cached = await getCachedData(`cached_advocate_${advocateId}`);
+        if (cached && cached.data) {
+          setAdvocate(cached.data);
+        }
+      } catch (err) {
+        console.log('Error reading cached advocate profile:', err);
+      }
+    };
+    if (advocateId) {
+      loadCached();
+    }
+    refetch();
+  }, [advocateId, refetch]);
 
   return { advocate, loading, error, refetch };
 };

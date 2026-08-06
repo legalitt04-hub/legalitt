@@ -43,7 +43,7 @@ const GavelStrike = () => (
   </Svg>
 );
 
-const ImpactRing = ({ size, delay, opacity: opacityLevel }) => {
+const ImpactRing = ({ size, delay, opacityLevel }) => {
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.3)).current;
 
@@ -88,6 +88,13 @@ export default function SplashScreen({ navigation }) {
     StatusBar.setBarStyle('light-content');
 
     Animated.sequence([
+      // 0. SCREEN FADE-IN (seamless from native splash)
+      Animated.timing(screenOpacity, { 
+        toValue: 1, 
+        duration: 300, 
+        useNativeDriver: true 
+      }),
+      
       // 1. STATIC GAVEL appears (smooth fade + scale)
       Animated.parallel([
         Animated.timing(staticOpacity, { 
@@ -141,7 +148,7 @@ export default function SplashScreen({ navigation }) {
         useNativeDriver: true 
       }),
     ]).start(() => {
-      navigation?.replace('Logo');
+      navigation?.replace('LegalittIntro');
     });
 
     // Show impact rings when gavel strikes

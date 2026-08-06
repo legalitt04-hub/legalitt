@@ -1,5 +1,5 @@
 // screens/client/ProfileScreen.jsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,21 +7,49 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  SafeAreaView,
   StatusBar,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/theme';
+import { useAuth } from '../../context/AuthContext';
 
 const ProfileScreen = ({ navigation }) => {
-  const user = {
-    name: 'Suresh Chohan',
-    email: 'sureshchohan@gmail.com',
-    avatar: 'https://i.pravatar.cc/200?img=15',
+  const { user, refreshUser, logout } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [completeness, setCompleteness] = useState(user?.completeness || 0);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      handleRefresh();
+    });
+    return unsubscribe;
+  }, [navigation]);
+
+  useEffect(() => {
+    if (user) {
+      setCompleteness(user.completeness || 0);
+    }
+  }, [user]);
+
+  const handleRefresh = async () => {
+    // Only show loading if we don't have user data yet
+    if (!user) setLoading(true);
+    await refreshUser();
+    setLoading(false);
   };
 
   const menuItems = [
+    {
+      id: '0',
+      icon: 'time-outline',
+      title: 'My FIR Drafts',
+      subtitle: 'View your saved legal drafts',
+      screen: 'MyDrafts',
+      color: COLORS.primary,
+    },
     {
       id: '1',
       icon: 'chatbubble-outline',
@@ -42,9 +70,9 @@ const ProfileScreen = ({ navigation }) => {
       id: '3',
       icon: 'bookmark-outline',
       title: 'Saved Advocates',
-      subtitle: 'Users can bookmark lawyers',
-      screen: 'Search',
-      color: COLORS.primaryDark || '#0D9488',
+      subtitle: 'Your bookmarked lawyers',
+      screen: 'SavedAdvocates',
+      color: COLORS.primary,
     },
     {
       id: '4',
@@ -59,7 +87,7 @@ const ProfileScreen = ({ navigation }) => {
       icon: 'card-outline',
       title: 'Payments',
       subtitle: 'Consultation Payments & invoice',
-      screen: 'Payment',
+      screen: 'MyBookings',
       color: COLORS.primary,
     },
   ];
@@ -76,9 +104,10 @@ const ProfileScreen = ({ navigation }) => {
         {
           text: 'Logout',
           style: 'destructive',
-          onPress: () => {
-            // TODO: Clear auth token and user data
-            navigation.replace('Splash');
+          onPress: async () => {
+            setLoading(true);
+            await logout();
+            setLoading(false);
           },
         },
       ],
@@ -86,13 +115,17 @@ const ProfileScreen = ({ navigation }) => {
     );
   };
 
+  if (loading) return (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <ActivityIndicator size="large" color={COLORS.primary} />
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Profile</Text>
+        <Text style={styles.headerTitle}>My Profile</Text>
       </View>
 
       <ScrollView
@@ -102,17 +135,34 @@ const ProfileScreen = ({ navigation }) => {
       >
         {/* User Info Section */}
         <View style={styles.userSection}>
-          <Image source={{ uri: user.avatar }} style={styles.avatar} />
-          <Text style={styles.userName}>{user.name}</Text>
-          <Text style={styles.userEmail}>{user.email}</Text>
+          <Image 
+            source={{ uri: user?.avatar || user?.user?.avatar || 'https://i.pravatar.cc/200?img=1' }} 
+            style={styles.avatar} 
+          />
+          <Text style={styles.userName}>{user?.name || user?.user?.name || 'Legalitt User'}</Text>
+          <Text style={styles.userEmail}>{user?.email || user?.user?.email || 'user@legalitt.com'}</Text>
 
           <TouchableOpacity
             style={styles.editButton}
-            onPress={() => navigation.navigate('EditProfile')}
+            onPress={() => navigation.navigate('ProfileEdit')}
           >
-            <Ionicons name="pencil-outline" size={12} color={COLORS.primary} />
+            <Ionicons name="pencil-outline" size={14} color={COLORS.primary} />
             <Text style={styles.editButtonText}>Edit Profile</Text>
           </TouchableOpacity>
+        </View>
+
+        {/* Completeness Bar */}
+        <View style={styles.completenessContainer}>
+           <View style={styles.completenessHeader}>
+              <Text style={styles.completenessTitle}>Profile Completeness</Text>
+              <Text style={styles.completenessValue}>{completeness}%</Text>
+           </View>
+           <View style={styles.progressBarBg}>
+              <View style={[styles.progressBarFill, { width: `${completeness}%` }]} />
+           </View>
+           {completeness < 100 && (
+             <Text style={styles.completenessHint}>Complete your profile to get better legal recommendations.</Text>
+           )}
         </View>
 
         {/* Menu Items */}
@@ -121,14 +171,7 @@ const ProfileScreen = ({ navigation }) => {
             <TouchableOpacity
               key={item.id}
               style={styles.menuItem}
-              onPress={() => {
-                if (item.screen === 'Settings') {
-                  // Settings screen doesn't exist yet
-                  Alert.alert('Coming Soon', 'Settings screen is under development');
-                } else {
-                  navigation.navigate(item.screen);
-                }
-              }}
+              onPress={() => navigation.navigate(item.screen)}
               activeOpacity={0.7}
             >
               <View style={[styles.menuIcon, { backgroundColor: item.color }]}>
@@ -176,7 +219,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
@@ -218,7 +261,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#F0FDFA',
+    backgroundColor: 'rgba(176, 156, 133, 0.12)',
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 16,
@@ -228,6 +271,43 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: COLORS.primary,
+  },
+  completenessContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 25,
+  },
+  completenessHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  completenessTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1f2937',
+  },
+  completenessValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  progressBarBg: {
+    height: 8,
+    backgroundColor: '#e5e7eb',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: COLORS.primary,
+    borderRadius: 4,
+  },
+  completenessHint: {
+    fontSize: 11,
+    color: '#6b7280',
+    marginTop: 8,
+    fontStyle: 'italic',
   },
   menuSection: {
     paddingHorizontal: 20,

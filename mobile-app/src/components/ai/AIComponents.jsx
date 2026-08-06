@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../../constants/theme';
+import { FormattedAIResponse } from './FormattedAIResponse';
 
 // ─── AI Disclaimer Banner ─────────────────────────────────────────────────────
 
@@ -34,7 +35,7 @@ export const SuggestionChips = ({ suggestions, onSelect }) => (
 
 // ─── AI Response Card ─────────────────────────────────────────────────────────
 
-export const AIResponseCard = ({ content, loading }) => {
+export const AIResponseCard = ({ content, loading, onSelectFollowUp }) => {
   if (loading) {
     return (
       <View style={styles.aiCard}>
@@ -57,7 +58,7 @@ export const AIResponseCard = ({ content, loading }) => {
         <Text style={{ fontSize: 20 }}>🤖</Text>
         <Text style={styles.aiCardTitle}>AI Legal Assistant</Text>
       </View>
-      <Text style={styles.aiCardContent}>{content}</Text>
+      <FormattedAIResponse content={content} onSelectFollowUp={onSelectFollowUp} />
       <AIDisclaimer compact />
     </View>
   );

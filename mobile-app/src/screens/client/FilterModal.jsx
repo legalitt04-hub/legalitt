@@ -1,14 +1,12 @@
 // screens/client/FilterModal.jsx - NO SLIDER, SIMPLE BUTTONS
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
   Modal,
   TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../constants/theme';
@@ -53,6 +51,7 @@ const FilterModal = ({ visible, onClose, onApplyFilters, onShowOnMap, initialFil
   const [maxFee, setMaxFee] = useState(initialFilters?.maxFee || null);
   const [minExperience, setMinExperience] = useState(initialFilters?.minExperience || 0);
   const [radius, setRadius] = useState(initialFilters?.radius || 10);
+  const insets = useSafeAreaInsets();
 
   const toggleSpecialization = (spec) => {
     if (selectedSpecializations.includes(spec)) {
@@ -108,7 +107,10 @@ const FilterModal = ({ visible, onClose, onApplyFilters, onShowOnMap, initialFil
       onRequestClose={onClose}
     >
       <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalContent}
+        >
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Filter Advocates</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -274,7 +276,7 @@ const FilterModal = ({ visible, onClose, onApplyFilters, onShowOnMap, initialFil
           </ScrollView>
 
           {/* Footer */}
-          <View style={styles.footer}>
+          <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 20) }]}>
             <TouchableOpacity style={styles.resetButton} onPress={handleReset}>
               <Text style={styles.resetButtonText}>Reset</Text>
             </TouchableOpacity>
@@ -292,7 +294,8 @@ const FilterModal = ({ visible, onClose, onApplyFilters, onShowOnMap, initialFil
               </LinearGradient>
             </TouchableOpacity>
           </View>
-        </View>
+          </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
