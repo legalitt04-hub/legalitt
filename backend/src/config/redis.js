@@ -9,21 +9,25 @@ let isConnected = false;
  * Falls back gracefully if Redis is unavailable (dev without Redis).
  */
 const getClient = async () => {
+  if (!process.env.REDIS_URL) {
+    // No Redis configured on Render/Production — use in-memory fallback instantly
+    return null;
+  }
   if (client && isConnected) return client;
 
-  const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+  const redisUrl = process.env.REDIS_URL;
 
   client = createClient({
     url: redisUrl,
     socket: {
       reconnectStrategy: (retries) => {
-        if (retries > 10) {
+        if (retries > 5) {
           logger.error('Redis: too many reconnect attempts, giving up');
           return new Error('Redis connection failed');
         }
-        return Math.min(retries * 100, 3000);
+        return Math.min(retries * 100, 1000);
       },
-      connectTimeout: 5000,
+      connectTimeout: 2000,
     },
   });
 

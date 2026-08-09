@@ -327,7 +327,10 @@ exports.sendOTP = async (req, res, next) => {
       user.emailOTPExpires = otpExpires;
       await user.save({ validateBeforeSave: false });
 
-      await sendEmailOTP({ toEmail: email, userName: user.name, otp });
+      sendEmailOTP({ toEmail: email, userName: user.name, otp }).catch(err => {
+        logger.error('Failed to send email OTP:', err.message);
+      });
+      logger.info(`OTP generated for ${email}: ${otp}`);
     }
 
     res.json({ success: true, message: 'OTP sent successfully.' });
