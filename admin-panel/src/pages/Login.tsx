@@ -100,8 +100,10 @@ const Login: React.FC = () => {
     setLoading(true);
     try {
       const res = await api.post('/auth/login', { email: email.toLowerCase().trim(), password });
-      if (res.data?.success) {
-        finishLogin(res.data.token, res.data.data?.user || res.data.data);
+      const token = res.data.data?.accessToken || res.data.token || res.data.accessToken;
+      const userData = res.data.data?.user || res.data.data;
+      if (res.data?.success && token) {
+        finishLogin(token, userData);
       } else {
         setError(res.data?.message || 'Login failed.');
       }
@@ -136,26 +138,27 @@ const Login: React.FC = () => {
     setError('');
     setLoading(true);
     try {
-      // verifyOTP endpoint already calls sendTokens → returns { success, token, data }
       const res = await api.post('/auth/verify-otp', {
         email: otpEmail.toLowerCase().trim(),
         otp: code,
       });
 
-      if (!res.data?.success || !res.data?.token) {
+      const token = res.data.data?.accessToken || res.data.token || res.data.accessToken;
+      const user = res.data.data?.user || res.data.data;
+
+      if (!res.data?.success || !token) {
         setError(res.data?.message || 'OTP verification failed.');
         setLoading(false);
         return;
       }
 
-      const user = res.data.data?.user || res.data.data;
       const adminRoles = ['admin', 'super_admin', 'support_executive', 'accounts', 'forensic_expert', 'property_verification'];
       if (!adminRoles.includes(user?.role)) {
         setError('This account does not have admin access. Contact your Super Admin.');
         setLoading(false);
         return;
       }
-      finishLogin(res.data.token, user);
+      finishLogin(token, user);
     } catch (err: any) {
       setError(err?.response?.data?.message || 'Invalid or expired OTP.');
     } finally {
@@ -189,15 +192,16 @@ const Login: React.FC = () => {
         const res = await api.post('/auth/google', {
           accessToken: tokenResponse.access_token,
         });
-        if (res.data?.success) {
-          const user = res.data.data?.user || res.data.data;
+        const token = res.data.data?.accessToken || res.data.token || res.data.accessToken;
+        const user = res.data.data?.user || res.data.data;
+        if (res.data?.success && token) {
           const adminRoles = ['admin', 'super_admin', 'support_executive', 'accounts', 'forensic_expert', 'property_verification'];
           if (!adminRoles.includes(user?.role)) {
             setError('This Google account is not registered as an admin. Please contact your Super Admin.');
             setLoading(false);
             return;
           }
-          finishLogin(res.data.token, user);
+          finishLogin(token, user);
         } else {
           setError(res.data?.message || 'Google login failed.');
         }
