@@ -17,8 +17,15 @@ exports.getPendingBookings = async (req, res, next) => {
     const { status, page = 1, limit = 20, serviceType } = req.query;
 
     const filter = {};
-    if (status) filter.status = status;
-    else filter.status = { $in: ['pending_assignment', 'pending', 'confirmed', 'in_progress'] };
+    if (status) {
+      if (status.includes(',')) {
+        filter.status = { $in: status.split(',').map(s => s.trim()) };
+      } else {
+        filter.status = status;
+      }
+    } else {
+      filter.status = { $in: ['pending_assignment', 'pending', 'confirmed', 'in_progress'] };
+    }
     if (serviceType) filter.serviceType = serviceType;
 
     const skip = (Number(page) - 1) * Number(limit);

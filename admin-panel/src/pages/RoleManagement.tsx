@@ -75,16 +75,26 @@ export default function RoleManagement() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  const [formError, setFormError] = useState('');
+
   const handleCreate = async () => {
-    if (!form.name || !form.email || !form.password) return alert('Name, email, and password are required.');
+    setFormError('');
+    if (!form.name || !form.email || !form.password) {
+      setFormError('Name, email, and password are required.');
+      return;
+    }
     setSaving(true);
     try {
       await api.post('/admin/roles/accounts', form);
       setShowForm(false);
       setForm(EMPTY_FORM);
+      setFormError('');
       fetchData();
-    } catch (e: any) { alert(e?.response?.data?.message || 'Failed to create.'); }
-    finally { setSaving(false); }
+    } catch (e: any) {
+      setFormError(e?.response?.data?.message || 'Failed to create admin account.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleToggleStatus = async (acc: AdminAccount) => {
@@ -261,6 +271,12 @@ export default function RoleManagement() {
                 <button onClick={() => setShowForm(false)}><X className="w-5 h-5 text-gray-400" /></button>
               </div>
               <div className="p-5 space-y-4">
+                {formError && (
+                  <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs font-semibold rounded-xl flex items-center justify-between">
+                    <span>{formError}</span>
+                    <button onClick={() => setFormError('')}><X className="w-4 h-4 text-red-500" /></button>
+                  </div>
+                )}
                 {[
                   { label: 'Full Name *', key: 'name', type: 'text', placeholder: 'e.g. Rahul Sharma' },
                   { label: 'Email *', key: 'email', type: 'email', placeholder: 'admin@legalitt.com' },
