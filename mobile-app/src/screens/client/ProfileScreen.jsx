@@ -16,14 +16,18 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 
+import { bookingAPI, firAPI, chatAPI } from '../../services/api';
+
 const ProfileScreen = ({ navigation }) => {
   const { user, refreshUser, logout } = useAuth();
   const [loading, setLoading] = useState(false);
   const [completeness, setCompleteness] = useState(user?.completeness || 0);
+  const [stats, setStats] = useState({ consultations: 0, drafts: 0, chats: 0 });
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
       handleRefresh();
+      fetchRealStats();
     });
     return unsubscribe;
   }, [navigation]);
@@ -34,8 +38,23 @@ const ProfileScreen = ({ navigation }) => {
     }
   }, [user]);
 
+  const fetchRealStats = async () => {
+    try {
+      const [bookingsRes, draftsRes, chatsRes] = await Promise.allSettled([
+        bookingAPI.getMy(),
+        firAPI.getMyDrafts(),
+        chatAPI.getChats(),
+      ]);
+      const consultations = bookingsRes.status === 'fulfilled' ? (bookingsRes.value.data?.data?.length || 0) : 0;
+      const drafts = draftsRes.status === 'fulfilled' ? (draftsRes.value.data?.data?.length || 0) : 0;
+      const chats = chatsRes.status === 'fulfilled' ? (chatsRes.value.data?.data?.length || chatsRes.value.data?.length || 0) : 0;
+      setStats({ consultations, drafts, chats });
+    } catch (err) {
+      console.log('Error fetching profile stats:', err);
+    }
+  };
+
   const handleRefresh = async () => {
-    // Only show loading if we don't have user data yet
     if (!user) setLoading(true);
     await refreshUser();
     setLoading(false);
@@ -148,6 +167,24 @@ const ProfileScreen = ({ navigation }) => {
           >
             <Ionicons name="pencil-outline" size={14} color={COLORS.primary} />
             <Text style={styles.editButtonText}>Edit Profile</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Real Live Stats Bar */}
+        <View style={styles.statsCardContainer}>
+          <TouchableOpacity style={styles.statBox} onPress={() => navigation.navigate('MyBookings')} activeOpacity={0.7}>
+            <Text style={styles.statNumText}>{stats.consultations}</Text>
+            <Text style={styles.statLabelText}>Bookings</Text>
+          </TouchableOpacity>
+          <View style={styles.statVLine} />
+          <TouchableOpacity style={styles.statBox} onPress={() => navigation.navigate('MyDrafts')} activeOpacity={0.7}>
+            <Text style={styles.statNumText}>{stats.drafts}</Text>
+            <Text style={styles.statLabelText}>FIR Drafts</Text>
+          </TouchableOpacity>
+          <View style={styles.statVLine} />
+          <TouchableOpacity style={styles.statBox} onPress={() => navigation.navigate('ChatList')} activeOpacity={0.7}>
+            <Text style={styles.statNumText}>{stats.chats}</Text>
+            <Text style={styles.statLabelText}>Chats</Text>
           </TouchableOpacity>
         </View>
 
@@ -346,6 +383,39 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     color: '#EF4444',
+  },
+  statsCardContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    backgroundColor: '#F8FAF5',
+    marginHorizontal: 20,
+    marginBottom: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E8E2D8',
+  },
+  statBox: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  statNumText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: COLORS.primary,
+  },
+  statLabelText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  statVLine: {
+    width: 1,
+    height: 24,
+    backgroundColor: '#E2E8F0',
   },
 });
 

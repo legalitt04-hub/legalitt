@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import SafeScreen from '../../components/SafeScreen';
 import { LEGAL_THEME } from '../../constants/legalAdviceTheme';
@@ -8,13 +8,15 @@ import { LawyerCard } from '../../components/legalAdvice/LawyerCard';
 import { StatusTimeline } from '../../components/legalAdvice/StatusTimeline';
 import { PrimaryButton } from '../../components/legalAdvice/PrimaryButton';
 import { SecondaryButton } from '../../components/legalAdvice/SecondaryButton';
+import { bookingAPI, legalAdviceAPI } from '../../services/api';
 
 export default function TrackConsultationScreen({ navigation, route }) {
-  const bookingData = route?.params?.bookingData || {
+  const initialData = route?.params?.bookingData || {
     requestId: 'LEG-2026-8492',
     selectedType: { title: 'Audio Consultation' },
     selectedMatter: { title: 'Property Law' },
     scheduledTime: 'Tomorrow, 10:30 AM',
+    status: 'scheduled',
     lawyer: {
       name: 'Adv. Rajesh Kumar',
       title: 'Senior Supreme Court Advocate',
@@ -24,6 +26,51 @@ export default function TrackConsultationScreen({ navigation, route }) {
       avatarUri: 'https://i.pravatar.cc/150?img=11',
     },
   };
+
+  const [bookingData, setBookingData] = useState(initialData);
+  const [loading, setLoading] = useState(false);
+
+  const fetchLiveConsultation = async () => {
+    const id = route?.params?.bookingId || route?.params?.id || route?.params?.requestId || route?.params?.bookingData?._id || route?.params?.bookingData?.id;
+    if (!id || id.startsWith('LEG-2026')) return;
+    setLoading(true);
+    try {
+      let res;
+      try {
+        res = await bookingAPI.getBooking(id);
+      } catch {
+        res = await legalAdviceAPI.getRequestDetail(id);
+      }
+      if (res.data?.success && res.data?.data) {
+        const live = res.data.data;
+        setBookingData({
+          _id: live._id,
+          requestId: live.requestId || live._id?.slice(-8)?.toUpperCase() || 'LEG-2026',
+          selectedType: { title: live.consultationType || live.type || 'Audio Consultation' },
+          selectedMatter: { title: live.legalMatter || live.category || 'Legal Advice' },
+          scheduledTime: live.scheduledAt ? new Date(live.scheduledAt).toLocaleString() : 'Scheduled Slot',
+          status: live.status || 'scheduled',
+          lawyer: {
+            id: live.advocate?._id || live.advocate?.user?._id,
+            name: live.advocate?.user?.name || live.advocate?.name || 'Assigned Advocate',
+            title: live.advocate?.title || 'High Court Advocate',
+            experience: live.advocate?.experience ? `${live.advocate.experience}+ Years Exp.` : '10+ Years Exp.',
+            rating: live.advocate?.rating?.average ? live.advocate.rating.average.toFixed(1) : '4.8',
+            reviewsCount: live.advocate?.rating?.count ? `${live.advocate.rating.count}+` : '100+',
+            avatarUri: live.advocate?.user?.avatar || live.advocate?.avatar || 'https://i.pravatar.cc/150?img=11',
+          },
+        });
+      }
+    } catch (err) {
+      console.log('Error fetching live consultation:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLiveConsultation();
+  }, []);
 
   const handleJoin = () => {
     Alert.alert(
