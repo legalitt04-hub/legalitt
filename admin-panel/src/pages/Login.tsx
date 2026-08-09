@@ -248,7 +248,7 @@ const Login: React.FC = () => {
           ] as { key: LoginMode; label: string }[]).map(tab => (
             <button
               key={tab.key}
-              onClick={() => { setMode(tab.key); setError(''); setOtpStep('email'); setOtp(['','','','','','']); }}
+              onClick={() => { setMode(tab.key); setError(''); setOtpStep('email'); setOtp(['','','','','','']); setLoading(false); }}
               className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all ${mode === tab.key ? 'bg-amber-500 text-[#0A0A0A] shadow' : 'text-slate-400 hover:text-white'}`}
             >
               {tab.label}
