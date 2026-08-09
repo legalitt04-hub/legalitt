@@ -77,7 +77,7 @@ export default function UsersPage() {
     try {
       await api.patch(`/admin/users/${editUser!._id}`, form);
       setEditUser(null); fetchUsers();
-    } catch (e: any) { alert(e?.response?.data?.message || 'Failed.'); }
+    } catch (e: any) { console.error('Update failed:', e); }
     finally { setSaving(false); }
   };
 
@@ -85,14 +85,14 @@ export default function UsersPage() {
     try {
       await api.patch(`/admin/users/${user._id}/toggle`);
       fetchUsers();
-    } catch { alert('Failed.'); }
+    } catch (e: any) { console.error('Toggle ban failed:', e); }
   };
 
   const handleDelete = async (id: string) => {
     try {
       await api.delete(`/admin/users/${id}`);
       setDeleteId(null); fetchUsers();
-    } catch { alert('Delete failed.'); }
+    } catch (e: any) { console.error('Delete failed:', e); }
   };
 
   const handleResetPassword = async () => {
@@ -182,9 +182,13 @@ export default function UsersPage() {
                   <tr key={user._id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 ${user.isActive ? 'bg-gradient-to-br from-indigo-400 to-teal-400' : 'bg-gray-300'}`}>
-                          {user.name?.[0]?.toUpperCase()}
-                        </div>
+                        {user.avatar ? (
+                          <img src={user.avatar} alt={user.name} className="w-8 h-8 rounded-full object-cover border border-slate-200 flex-shrink-0" />
+                        ) : (
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 ${user.isActive ? 'bg-gradient-to-br from-indigo-400 to-teal-400' : 'bg-gray-300'}`}>
+                            {user.name?.[0]?.toUpperCase()}
+                          </div>
+                        )}
                         <div>
                           <p className="font-semibold text-gray-900">{user.name}</p>
                           <p className="text-xs text-gray-400">{user.email}</p>
@@ -241,7 +245,11 @@ export default function UsersPage() {
             <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
               <div className="flex items-center justify-between mb-4"><h3 className="text-lg font-bold">User Profile</h3><button onClick={() => setSelectedUser(null)}><X className="w-5 h-5 text-gray-400" /></button></div>
               <div className="flex items-center gap-3 mb-5">
-                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-400 to-teal-400 flex items-center justify-center text-white text-xl font-bold">{selectedUser.name?.[0]}</div>
+                {selectedUser.avatar ? (
+                  <img src={selectedUser.avatar} alt={selectedUser.name} className="w-14 h-14 rounded-full object-cover border-2 border-slate-200 flex-shrink-0 shadow-md" />
+                ) : (
+                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-400 to-teal-400 flex items-center justify-center text-white text-xl font-bold flex-shrink-0 shadow-md">{selectedUser.name?.[0]}</div>
+                )}
                 <div>
                   <p className="font-bold text-gray-900">{selectedUser.name}</p>
                   <p className="text-sm text-gray-500">{selectedUser.email}</p>

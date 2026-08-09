@@ -90,14 +90,14 @@ export default function Advocates() {
     try {
       await api.patch(`/admin/pending-advocates/${id}/${action}`);
       fetchAdvocates();
-    } catch { alert('Action failed.'); }
+    } catch (e: any) { console.error('Verification update failed:', e); }
   };
 
   const handleSuspend = async (id: string) => {
     try {
       await api.patch(`/admin/advocates/${id}/suspend`);
       fetchAdvocates();
-    } catch { alert('Failed to update status.'); }
+    } catch (e: any) { console.error('Suspend failed:', e); }
   };
 
   const handleDelete = async (id: string) => {
@@ -105,7 +105,7 @@ export default function Advocates() {
       await api.delete(`/admin/advocates/${id}`);
       setDeleteId(null);
       fetchAdvocates();
-    } catch { alert('Failed to delete.'); }
+    } catch (e: any) { console.error('Delete failed:', e); }
   };
 
   const exportCSV = () => {
@@ -178,9 +178,13 @@ export default function Advocates() {
                     <tr key={adv._id} className="hover:bg-gray-50/50 transition-colors">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
+                        {adv.user.avatar ? (
+                          <img src={adv.user.avatar} alt={adv.user.name} className="w-8 h-8 rounded-full object-cover border border-slate-200 flex-shrink-0" />
+                        ) : (
                           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-400 to-indigo-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                             {adv.user.name?.[0]?.toUpperCase()}
                           </div>
+                        )}
                           <div>
                             <p className="font-semibold text-gray-900">{adv.user.name}</p>
                             <p className="text-xs text-gray-400">{adv.user.email}</p>
@@ -255,7 +259,11 @@ export default function Advocates() {
                 <button onClick={() => setSelectedAdv(null)}><X className="w-5 h-5 text-gray-400" /></button>
               </div>
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-teal-400 to-indigo-500 flex items-center justify-center text-white text-xl font-bold">{selectedAdv.user.name?.[0]}</div>
+                {selectedAdv.user.avatar ? (
+                  <img src={selectedAdv.user.avatar} alt={selectedAdv.user.name} className="w-14 h-14 rounded-full object-cover border-2 border-slate-200 flex-shrink-0 shadow-md" />
+                ) : (
+                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-teal-400 to-indigo-500 flex items-center justify-center text-white text-xl font-bold flex-shrink-0 shadow-md">{selectedAdv.user.name?.[0]}</div>
+                )}
                 <div>
                   <p className="font-bold text-gray-900">{selectedAdv.user.name}</p>
                   <p className="text-sm text-gray-500">{selectedAdv.user.email}</p>
