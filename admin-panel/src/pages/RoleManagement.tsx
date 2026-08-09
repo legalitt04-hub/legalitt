@@ -278,13 +278,14 @@ export default function RoleManagement() {
                   </div>
                 )}
                 {[
-                  { label: 'Full Name *', key: 'name', type: 'text', placeholder: 'e.g. Rahul Sharma' },
-                  { label: 'Email *', key: 'email', type: 'email', placeholder: 'admin@legalitt.com' },
-                  { label: 'Phone', key: 'phone', type: 'tel', placeholder: '9876543210' },
+                  { label: 'Full Name *', key: 'name', type: 'text', placeholder: 'e.g. Rahul Sharma', autoComplete: 'off' },
+                  { label: 'Email *', key: 'email', type: 'email', placeholder: 'admin@legalitt.com', autoComplete: 'off' },
+                  { label: 'Phone', key: 'phone', type: 'tel', placeholder: '9876543210', autoComplete: 'off' },
                 ].map(f => (
                   <div key={f.key}>
                     <label className="block text-xs font-semibold text-gray-700 mb-1">{f.label}</label>
                     <input type={f.type} value={form[f.key] || ''} onChange={e => setForm((p: any) => ({ ...p, [f.key]: e.target.value }))}
+                      autoComplete={f.autoComplete}
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder={f.placeholder} />
                   </div>
                 ))}

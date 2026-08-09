@@ -55,18 +55,26 @@ exports.createAdminAccount = async (req, res, next) => {
     if (!ROLE_PERMISSIONS[role]) {
       return next(new AppError('Invalid role.', 400));
     }
-    const exists = await User.findOne({ email: email.toLowerCase() });
-    if (exists) return next(new AppError('Email already registered.', 409));
-
-    const user = await User.create({
-      name: name.trim(),
-      email: email.toLowerCase(),
-      phone,
-      password,
-      role,
-      isVerified: true,
-      isActive: true,
-    });
+    let user = await User.findOne({ email: email.toLowerCase() });
+    if (user) {
+      // Update existing user role and details to grant admin access
+      user.role = role;
+      user.isActive = true;
+      if (name) user.name = name.trim();
+      if (phone) user.phone = phone;
+      if (password) user.password = password; // mongoose pre-save will hash password
+      await user.save();
+    } else {
+      user = await User.create({
+        name: name.trim(),
+        email: email.toLowerCase(),
+        phone,
+        password,
+        role,
+        isVerified: true,
+        isActive: true,
+      });
+    }
 
     res.status(201).json({
       success: true,
