@@ -8,32 +8,39 @@ const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString()
 
 // ─── Email sender: SMTP (primary) or Resend (fallback) ────────────────────────
 const sendEmail = async ({ to, subject, text, html }) => {
-  // 1️⃣ Try SMTP first (works for ALL email addresses, no domain needed)
-  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
-    const nodemailer = require('nodemailer');
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '587', 10),
-      secure: process.env.SMTP_PORT === '465',
-      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-    });
-    const from = process.env.SMTP_FROM || '"Legalitt" <no-reply@legalitt.com>';
-    const info = await transporter.sendMail({ from, to, subject, text, html });
-    return { provider: 'smtp', id: info.messageId };
-  }
+  const sendTask = async () => {
+    // 1️⃣ Try SMTP first (works for ALL email addresses, no domain needed)
+    if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+      const nodemailer = require('nodemailer');
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: parseInt(process.env.SMTP_PORT || '587', 10),
+        secure: process.env.SMTP_PORT === '465',
+        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+      });
+      const from = process.env.SMTP_FROM || '"Legalitt" <no-reply@legalitt.com>';
+      const info = await transporter.sendMail({ from, to, subject, text, html });
+      return { provider: 'smtp', id: info.messageId };
+    }
 
-  // 2️⃣ Fall back to Resend
-  if (process.env.RESEND_API_KEY) {
-    const { Resend } = require('resend');
-    const resend = new Resend(process.env.RESEND_API_KEY);
-    const from = process.env.RESEND_FROM || 'Legalitt <onboarding@resend.dev>';
-    const result = await resend.emails.send({ from, to, subject, text, html });
-    if (result.error) throw new Error(result.error.message);
-    return { provider: 'resend', id: result.data?.id };
-  }
+    // 2️⃣ Fall back to Resend
+    if (process.env.RESEND_API_KEY) {
+      const { Resend } = require('resend');
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      const from = process.env.RESEND_FROM || 'Legalitt <onboarding@resend.dev>';
+      const result = await resend.emails.send({ from, to, subject, text, html });
+      if (result.error) throw new Error(result.error.message);
+      return { provider: 'resend', id: result.data?.id };
+    }
 
-  // 3️⃣ No email provider configured
-  throw new Error('No email provider configured (SMTP_* or RESEND_API_KEY)');
+    // 3️⃣ No email provider configured
+    throw new Error('No email provider configured (SMTP_* or RESEND_API_KEY)');
+  };
+
+  return Promise.race([
+    sendTask(),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Email provider connection timed out')), 5000))
+  ]);
 };
 
 /**
