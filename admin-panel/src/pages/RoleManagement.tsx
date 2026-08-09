@@ -271,6 +271,10 @@ export default function RoleManagement() {
                 <button onClick={() => setShowForm(false)}><X className="w-5 h-5 text-gray-400" /></button>
               </div>
               <div className="p-5 space-y-4">
+                {/* Anti Chrome Autofill Dummy Inputs */}
+                <input type="text" name="prevent_autofill_email" style={{ display: 'none' }} tabIndex={-1} autoComplete="off" />
+                <input type="password" name="prevent_autofill_pass" style={{ display: 'none' }} tabIndex={-1} autoComplete="off" />
+
                 {formError && (
                   <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs font-semibold rounded-xl flex items-center justify-between">
                     <span>{formError}</span>
@@ -278,14 +282,14 @@ export default function RoleManagement() {
                   </div>
                 )}
                 {[
-                  { label: 'Full Name *', key: 'name', type: 'text', placeholder: 'e.g. Rahul Sharma', autoComplete: 'off' },
-                  { label: 'Email *', key: 'email', type: 'email', placeholder: 'admin@legalitt.com', autoComplete: 'off' },
-                  { label: 'Phone', key: 'phone', type: 'tel', placeholder: '9876543210', autoComplete: 'off' },
+                  { label: 'Full Name *', key: 'name', type: 'text', placeholder: 'e.g. Rahul Sharma', name: 'new_admin_fullname' },
+                  { label: 'Email *', key: 'email', type: 'email', placeholder: 'e.g. rahul@legalitt.com', name: 'new_admin_user_email' },
+                  { label: 'Phone', key: 'phone', type: 'tel', placeholder: 'e.g. 9876543210', name: 'new_admin_user_phone' },
                 ].map(f => (
                   <div key={f.key}>
                     <label className="block text-xs font-semibold text-gray-700 mb-1">{f.label}</label>
-                    <input type={f.type} value={form[f.key] || ''} onChange={e => setForm((p: any) => ({ ...p, [f.key]: e.target.value }))}
-                      autoComplete={f.autoComplete}
+                    <input type={f.type} name={f.name} value={form[f.key] || ''} onChange={e => setForm((p: any) => ({ ...p, [f.key]: e.target.value }))}
+                      autoComplete="new-password"
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder={f.placeholder} />
                   </div>
                 ))}
@@ -306,7 +310,7 @@ export default function RoleManagement() {
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Password *</label>
                   <div className="relative">
-                    <input type={showPw ? 'text' : 'password'} value={form.password || ''} onChange={e => setForm((p: any) => ({ ...p, password: e.target.value }))}
+                    <input type={showPw ? 'text' : 'password'} name="new_admin_password_sec" autoComplete="new-password" value={form.password || ''} onChange={e => setForm((p: any) => ({ ...p, password: e.target.value }))}
                       className="w-full px-3 py-2 pr-10 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder="Min 8 characters" />
                     <button onClick={() => setShowPw(p => !p)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">{showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>
                   </div>
