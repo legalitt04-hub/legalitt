@@ -28,9 +28,7 @@ exports.getPendingBookings = async (req, res, next) => {
     }
     if (serviceType) filter.serviceType = serviceType;
 
-    const skip = (Number(page) - 1) * Number(limit);
-
-    const [bookings, total] = await Promise.all([
+    const [bookings, total, pendingCount, activeCount, completedCount, totalCount, paidPayments] = await Promise.all([
       Booking.find(filter)
         .populate('client', 'name email phone avatar address')
         .populate({ path: 'advocate', populate: { path: 'user', select: 'name avatar phone' } })
@@ -40,6 +38,14 @@ exports.getPendingBookings = async (req, res, next) => {
         .limit(Number(limit))
         .lean(),
       Booking.countDocuments(filter),
+      Booking.countDocuments({ status: 'pending_assignment' }),
+      Booking.countDocuments({ status: { $in: ['confirmed', 'in_progress'] } }),
+      Booking.countDocuments({ status: 'completed' }),
+      Booking.countDocuments({}),
+      Booking.aggregate([
+        { $match: { 'payment.status': 'paid' } },
+        { $group: { _id: null, totalRevenue: { $sum: '$payment.amount' } } },
+      ]),
     ]);
 
     // Add SLA info to each booking
@@ -61,6 +67,13 @@ exports.getPendingBookings = async (req, res, next) => {
     res.json({
       success: true,
       data: bookingsWithSLA,
+      summary: {
+        pending: pendingCount,
+        active: activeCount,
+        completed: completedCount,
+        total: totalCount,
+        revenue: paidPayments[0]?.totalRevenue || 0,
+      },
       pagination: { total, page: Number(page), pages: Math.ceil(total / Number(limit)) },
     });
   } catch (err) {

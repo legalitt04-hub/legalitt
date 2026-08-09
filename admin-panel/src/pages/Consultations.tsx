@@ -113,6 +113,8 @@ export default function Consultations() {
   const [panelOpen, setPanelOpen] = useState(false);
   const [loadingNearby, setLoadingNearby] = useState(false);
 
+  const [summary, setSummary] = useState({ pending: 0, active: 0, completed: 0, total: 0, revenue: 0 });
+
   const wsRef = useRef<WebSocket | null>(null);
   const [newBookingAlert, setNewBookingAlert] = useState<{ clientName: string; serviceType: string } | null>(null);
 
@@ -126,7 +128,12 @@ export default function Consultations() {
       else if (activeTab === 'completed') statusParam = 'completed';
 
       const res = await api.get('/admin/bookings', { params: { status: statusParam, limit: 100 } });
-      if (res.data?.success) setBookings(res.data.data || []);
+      if (res.data?.success) {
+        setBookings(res.data.data || []);
+        if (res.data.summary) {
+          setSummary(res.data.summary);
+        }
+      }
     } catch (err) {
       console.error('Failed to load bookings', err);
     } finally {
@@ -290,10 +297,10 @@ export default function Consultations() {
         {/* Tabs */}
         <div className="flex gap-1 mt-4 bg-gray-100 p-1 rounded-xl w-fit flex-wrap">
           {[
-            { key: 'pending_assignment', label: 'Needs Assignment', count: bookings.filter(b => b.status === 'pending_assignment').length, isUrgent: true },
-            { key: 'active_cases', label: 'Active Cases', count: bookings.filter(b => b.status === 'confirmed' || b.status === 'in_progress').length },
-            { key: 'completed', label: 'Completed Cases', count: bookings.filter(b => b.status === 'completed').length },
-            { key: 'all', label: 'All Requests', count: bookings.length }
+            { key: 'pending_assignment', label: 'Needs Assignment', count: summary.pending, isUrgent: true },
+            { key: 'active_cases', label: 'Active Cases', count: summary.active },
+            { key: 'completed', label: 'Completed Cases', count: summary.completed },
+            { key: 'all', label: 'All Requests', count: summary.total }
           ].map(tab => (
             <button key={tab.key}
               onClick={() => setActiveTab(tab.key as any)}
@@ -331,10 +338,10 @@ export default function Consultations() {
       {/* Overview KPI Cards */}
       <div className="px-6 mb-5 grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: 'Pending Assignment', count: bookings.filter(b => b.status === 'pending_assignment').length, color: 'text-amber-600', bg: 'bg-amber-50 border-amber-200' },
-          { label: 'Active Assigned Cases', count: bookings.filter(b => b.status === 'confirmed' || b.status === 'in_progress').length, color: 'text-indigo-600', bg: 'bg-indigo-50 border-indigo-200' },
-          { label: 'Completed Cases', count: bookings.filter(b => b.status === 'completed').length, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200' },
-          { label: 'Paid Revenue', count: `₹${bookings.filter(b => b.payment?.status === 'paid').reduce((sum, b) => sum + (b.payment?.amount || 0), 0)}`, color: 'text-cyan-700', bg: 'bg-cyan-50 border-cyan-200' },
+          { label: 'Pending Assignment', count: summary.pending, color: 'text-amber-600', bg: 'bg-amber-50 border-amber-200' },
+          { label: 'Active Assigned Cases', count: summary.active, color: 'text-indigo-600', bg: 'bg-indigo-50 border-indigo-200' },
+          { label: 'Completed Cases', count: summary.completed, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200' },
+          { label: 'Paid Revenue', count: `₹${summary.revenue}`, color: 'text-cyan-700', bg: 'bg-cyan-50 border-cyan-200' },
         ].map(s => (
           <div key={s.label} className={`${s.bg} border rounded-2xl p-4 flex flex-col justify-between shadow-sm`}>
             <span className="text-xs font-semibold text-gray-500">{s.label}</span>
