@@ -406,13 +406,34 @@ export default function Consultations() {
                       {booking.issue}
                     </p>
 
-                    <div className="flex items-center justify-between text-xs text-gray-500">
+                    <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
                       <span className={`font-semibold ${booking.payment.status === 'paid' ? 'text-green-600' : 'text-orange-600'}`}>
                         ₹{booking.payment.amount} · {booking.payment.status === 'paid' ? '✓ Paid' : 'Pending'}
                       </span>
                       {booking.documents?.length > 0 && (
                         <span className="flex items-center gap-1"><Paperclip size={11} /> {booking.documents.length} docs</span>
                       )}
+                    </div>
+                  </div>
+
+                  {/* Case Progress Bar */}
+                  <div className="px-4 pb-3">
+                    <div className="pt-2 border-t border-gray-100">
+                      <div className="flex items-center justify-between text-[11px] font-semibold text-gray-500 mb-1.5">
+                        <span>Progress</span>
+                        <span className="text-teal-700 font-bold">
+                          {booking.status === 'completed' ? '100% Completed' : booking.status === 'in_progress' ? '75% In Progress' : booking.advocate ? '50% Advocate Assigned' : '25% Pending Assignment'}
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full transition-all ${
+                            booking.status === 'completed' ? 'bg-emerald-500 w-full' :
+                            booking.status === 'in_progress' ? 'bg-indigo-500 w-3/4' :
+                            booking.advocate ? 'bg-teal-500 w-1/2' : 'bg-amber-500 w-1/4'
+                          }`}
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -562,10 +583,10 @@ export default function Consultations() {
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="font-semibold text-gray-900 flex items-center gap-1.5">
                       {showAllAdvocates ? (
-                        <>All Advocates <span className="bg-gray-100 text-gray-700 text-xs px-2 py-0.5 rounded-full font-bold">{totalAdvocatesCount || allAdvocates.length}</span></>
+                        <>All Advocates</>
                       ) : (
                         <>
-                          Nearby Advocates ({nearbyAdvocates.length})
+                          Nearby Advocates
                           {selectedBooking.clientCity && (
                             <span className="text-xs bg-teal-50 text-teal-700 font-semibold px-2 py-0.5 rounded-full">
                               in {selectedBooking.clientCity}
@@ -576,7 +597,7 @@ export default function Consultations() {
                     </h3>
                     <button onClick={() => setShowAllAdvocates(v => !v)}
                       className="text-xs text-teal-600 font-semibold hover:underline flex items-center gap-1 bg-teal-50 px-2.5 py-1 rounded-lg">
-                      {showAllAdvocates ? `Show Nearby (${nearbyAdvocates.length})` : `Show All (${totalAdvocatesCount || allAdvocates.length})`}
+                      {showAllAdvocates ? 'Show Nearby Advocates' : 'Show All Advocates'}
                       <Users size={12} />
                     </button>
                   </div>
