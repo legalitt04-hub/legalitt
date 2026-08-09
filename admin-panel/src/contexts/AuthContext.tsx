@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api from '../lib/api';
+import { connectSocket, disconnectSocket } from '../lib/socket';
 
 // ─── Permission map matching backend roleController.js ─────────────────────────
 const ROLE_PERMISSIONS: Record<string, string[]> = {
@@ -116,6 +117,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(userData);
     }
     setIsAuthenticated(true);
+    // Connect socket with token for real-time admin events
+    connectSocket(token);
   };
 
   const logout = () => {
@@ -123,6 +126,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('adminUser');
     setIsAuthenticated(false);
     setUser(null);
+    disconnectSocket();
   };
 
   const canAccess = (path: string): boolean => {
