@@ -167,17 +167,21 @@ export default function Consultations() {
   }, [activeTab, fetchBookings]);
 
   // ─── Open assignment panel ───────────────────────────────────────────────
+  const [totalAdvocatesCount, setTotalAdvocatesCount] = useState(0);
+
   const openPanel = async (booking: Booking) => {
     setSelectedBooking(booking);
     setPanelOpen(true);
     setShowAllAdvocates(false);
     setAdvocateSearch('');
+    setAdvocatePage(1);
     setLoadingNearby(true);
     try {
       const res = await api.get(`/admin/bookings/${booking._id}/nearby-advocates`);
       if (res.data?.success) {
         setNearbyAdvocates(res.data.data.nearbyAdvocates || []);
         setAllAdvocates(res.data.data.allAdvocates || []);
+        setTotalAdvocatesCount(res.data.data.totalAdvocates || res.data.data.allAdvocates?.length || 0);
       }
     } catch (err) {
       console.error('Failed to fetch nearby advocates', err);
@@ -558,7 +562,7 @@ export default function Consultations() {
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="font-semibold text-gray-900 flex items-center gap-1.5">
                       {showAllAdvocates ? (
-                        <>All Advocates <span className="bg-gray-100 text-gray-700 text-xs px-2 py-0.5 rounded-full font-bold">{allAdvocates.length}</span></>
+                        <>All Advocates <span className="bg-gray-100 text-gray-700 text-xs px-2 py-0.5 rounded-full font-bold">{totalAdvocatesCount || allAdvocates.length}</span></>
                       ) : (
                         <>
                           Nearby Advocates ({nearbyAdvocates.length})
@@ -572,7 +576,7 @@ export default function Consultations() {
                     </h3>
                     <button onClick={() => setShowAllAdvocates(v => !v)}
                       className="text-xs text-teal-600 font-semibold hover:underline flex items-center gap-1 bg-teal-50 px-2.5 py-1 rounded-lg">
-                      {showAllAdvocates ? `Show Nearby (${nearbyAdvocates.length})` : `Show All (${allAdvocates.length})`}
+                      {showAllAdvocates ? `Show Nearby (${nearbyAdvocates.length})` : `Show All (${totalAdvocatesCount || allAdvocates.length})`}
                       <Users size={12} />
                     </button>
                   </div>

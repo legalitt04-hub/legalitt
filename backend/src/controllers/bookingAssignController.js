@@ -96,7 +96,7 @@ exports.getNearbyAdvocatesForBooking = async (req, res, next) => {
     if (!booking) return next(new AppError('Booking not found.', 404));
 
     const city = booking.clientCity || booking.client?.address?.city;
-    const { specialization } = req.query;
+    const { specialization, search } = req.query;
 
     let cityFilter = { isVerified: true, verificationStatus: 'approved' };
     if (city) {
@@ -106,17 +106,30 @@ exports.getNearbyAdvocatesForBooking = async (req, res, next) => {
       cityFilter.specializations = specialization;
     }
 
-    // Fetch both nearby advocates in city AND all approved advocates in parallel
-    const [nearbyAdvocates, allAdvocates] = await Promise.all([
+    let allFilter = { isVerified: true, verificationStatus: 'approved' };
+    if (search) {
+      const searchRegex = new RegExp(search, 'i');
+      allFilter.$or = [
+        { 'location.address.city': searchRegex },
+        { specializations: searchRegex },
+      ];
+    }
+
+    // High performance queries with field projection (.select)
+    const [nearbyAdvocates, allAdvocates, totalAdvocatesCount] = await Promise.all([
       Advocate.find(cityFilter)
+        .select('user specializations rating consultationFee location experience')
         .populate('user', 'name avatar phone email')
         .sort({ 'rating.average': -1 })
-        .limit(50)
+        .limit(100)
         .lean(),
-      Advocate.find({ isVerified: true, verificationStatus: 'approved' })
+      Advocate.find(allFilter)
+        .select('user specializations rating consultationFee location experience')
         .populate('user', 'name avatar phone email')
         .sort({ 'rating.average': -1 })
+        .limit(200)
         .lean(),
+      Advocate.countDocuments({ isVerified: true, verificationStatus: 'approved' }),
     ]);
 
     res.json({
@@ -126,7 +139,7 @@ exports.getNearbyAdvocatesForBooking = async (req, res, next) => {
         allAdvocates,
         bookingCity: city || 'Unknown',
         totalNearby: nearbyAdvocates.length,
-        totalAdvocates: allAdvocates.length,
+        totalAdvocates: totalAdvocatesCount,
       },
     });
   } catch (err) {
