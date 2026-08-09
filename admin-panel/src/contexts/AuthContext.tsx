@@ -138,7 +138,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setIsAuthenticated(true);
             connectSocket(token);
           } else {
-            refreshUser();
+            const userEmail = rawUser?.email || '';
+            const msg = `Access Denied: ${userEmail ? `"${userEmail}"` : 'This email'} is not registered as an Admin. Contact your Super Admin.`;
+            sessionStorage.setItem('admin_login_error', msg);
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('adminUser');
+            setIsAuthenticated(false);
+            setUser(null);
+            if (window.location.pathname !== '/login') {
+              window.location.href = '/login';
+            }
           }
         }).catch(() => {
           refreshUser();

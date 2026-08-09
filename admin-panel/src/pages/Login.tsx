@@ -93,6 +93,15 @@ const Login: React.FC = () => {
     }, 1000);
   };
 
+  React.useEffect(() => {
+    const sessionErr = sessionStorage.getItem('admin_login_error');
+    if (sessionErr) {
+      setError(sessionErr);
+      sessionStorage.removeItem('admin_login_error');
+      setMode('google');
+    }
+  }, []);
+
   // ─── Password Login ──────────────────────────────────────────────────────────
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,7 +114,7 @@ const Login: React.FC = () => {
       if (res.data?.success && token) {
         const adminRoles = ['admin', 'super_admin', 'support_executive', 'accounts', 'forensic_expert', 'property_verification'];
         if (!adminRoles.includes(userData?.role)) {
-          setError('This account does not have admin permissions. Contact your Super Admin.');
+          setError(`Access Denied: "${email}" is not registered as an Admin. Contact your Super Admin.`);
           setLoading(false);
           return;
         }
@@ -160,7 +169,7 @@ const Login: React.FC = () => {
 
       const adminRoles = ['admin', 'super_admin', 'support_executive', 'accounts', 'forensic_expert', 'property_verification'];
       if (!adminRoles.includes(user?.role)) {
-        setError('This account does not have admin access. Contact your Super Admin.');
+        setError(`Access Denied: ${user?.email ? `"${user.email}"` : 'This email'} is not registered as an Admin. Contact your Super Admin.`);
         setLoading(false);
         return;
       }
@@ -199,7 +208,7 @@ const Login: React.FC = () => {
       if (res.data?.success && token) {
         const adminRoles = ['admin', 'super_admin', 'support_executive', 'accounts', 'forensic_expert', 'property_verification'];
         if (!adminRoles.includes(user?.role)) {
-          setError('This Google account is not registered as an admin. Please contact your Super Admin.');
+          setError(`Access Denied: ${user?.email ? `"${user.email}"` : 'This email'} is not registered as an Admin. Contact your Super Admin.`);
           setLoading(false);
           return;
         }
@@ -224,7 +233,7 @@ const Login: React.FC = () => {
       if (res.data?.success && token) {
         const adminRoles = ['admin', 'super_admin', 'support_executive', 'accounts', 'forensic_expert', 'property_verification'];
         if (!adminRoles.includes(user?.role)) {
-          setError('This Google account is not registered as an admin. Please contact your Super Admin.');
+          setError(`Access Denied: ${user?.email ? `"${user.email}"` : 'This email'} is not registered as an Admin. Contact your Super Admin.`);
           setLoading(false);
           return;
         }
