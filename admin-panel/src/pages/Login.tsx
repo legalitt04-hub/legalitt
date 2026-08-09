@@ -235,15 +235,17 @@ const Login: React.FC = () => {
 
   const handleDirectGoogleRedirect = () => {
     const clientId = '400989529051-9r050me1vuquck9bqk30b6pd1i97k817.apps.googleusercontent.com';
-    const redirectUri = window.location.origin + '/login';
+    // Use origin directly (https://legalitt.vercel.app) to match Google Console Authorized redirect URIs
+    const redirectUri = window.location.origin;
     const scope = 'openid email profile';
     const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=${encodeURIComponent(scope)}`;
     window.location.href = url;
   };
 
   React.useEffect(() => {
-    if (window.location.hash.includes('access_token=')) {
-      const params = new URLSearchParams(window.location.hash.substring(1));
+    const hash = window.location.hash;
+    if (hash && hash.includes('access_token=')) {
+      const params = new URLSearchParams(hash.substring(1));
       const accessToken = params.get('access_token');
       if (accessToken) {
         window.history.replaceState(null, '', window.location.pathname);

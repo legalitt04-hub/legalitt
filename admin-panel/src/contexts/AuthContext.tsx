@@ -108,7 +108,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  useEffect(() => { refreshUser(); }, [refreshUser]);
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash && hash.includes('access_token=')) {
+      const params = new URLSearchParams(hash.substring(1));
+      const accessToken = params.get('access_token');
+      if (accessToken) {
+        window.history.replaceState(null, '', window.location.pathname);
+        setIsLoading(true);
+        api.post('/auth/google', { accessToken }).then(res => {
+          const token = res.data.data?.accessToken || res.data.token || res.data.accessToken;
+          const rawUser = res.data.data?.user || res.data.data;
+          if (res.data?.success && token && rawUser) {
+            const built = buildUser(rawUser);
+            localStorage.setItem('adminToken', token);
+            localStorage.setItem('adminUser', JSON.stringify(built));
+            setUser(built);
+            setIsAuthenticated(true);
+            connectSocket(token);
+          }
+        }).catch(() => {
+          refreshUser();
+        }).finally(() => setIsLoading(false));
+        return;
+      }
+    }
+    refreshUser();
+  }, [refreshUser]);
 
   const login = (token: string, userData?: AdminUser) => {
     localStorage.setItem('adminToken', token);
