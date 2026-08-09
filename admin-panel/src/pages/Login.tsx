@@ -208,35 +208,59 @@ const Login: React.FC = () => {
     }
   };
 
+  const handleGoogleAccessToken = async (accessToken: string) => {
+    setError('');
+    setLoading(true);
+    try {
+      const res = await api.post('/auth/google', { accessToken });
+      const token = res.data.data?.accessToken || res.data.token || res.data.accessToken;
+      const user = res.data.data?.user || res.data.data;
+      if (res.data?.success && token) {
+        const adminRoles = ['admin', 'super_admin', 'support_executive', 'accounts', 'forensic_expert', 'property_verification'];
+        if (!adminRoles.includes(user?.role)) {
+          setError('This Google account is not registered as an admin. Please contact your Super Admin.');
+          setLoading(false);
+          return;
+        }
+        finishLogin(token, user);
+      } else {
+        setError(res.data?.message || 'Google login failed.');
+      }
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Google authentication failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDirectGoogleRedirect = () => {
+    const clientId = '400989529051-9r050me1vuquck9bqk30b6pd1i97k817.apps.googleusercontent.com';
+    const redirectUri = window.location.origin + '/login';
+    const scope = 'openid email profile';
+    const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=${encodeURIComponent(scope)}`;
+    window.location.href = url;
+  };
+
+  React.useEffect(() => {
+    if (window.location.hash.includes('access_token=')) {
+      const params = new URLSearchParams(window.location.hash.substring(1));
+      const accessToken = params.get('access_token');
+      if (accessToken) {
+        window.history.replaceState(null, '', window.location.pathname);
+        setMode('google');
+        handleGoogleAccessToken(accessToken);
+      }
+    }
+  }, []);
+
   // ─── Google OAuth ────────────────────────────────────────────────────────────
   const googleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
-      setError('');
-      setLoading(true);
-      try {
-        const res = await api.post('/auth/google', {
-          accessToken: tokenResponse.access_token,
-        });
-        const token = res.data.data?.accessToken || res.data.token || res.data.accessToken;
-        const user = res.data.data?.user || res.data.data;
-        if (res.data?.success && token) {
-          const adminRoles = ['admin', 'super_admin', 'support_executive', 'accounts', 'forensic_expert', 'property_verification'];
-          if (!adminRoles.includes(user?.role)) {
-            setError('This Google account is not registered as an admin. Please contact your Super Admin.');
-            setLoading(false);
-            return;
-          }
-          finishLogin(token, user);
-        } else {
-          setError(res.data?.message || 'Google login failed.');
-        }
-      } catch (err: any) {
-        setError(err?.response?.data?.message || 'Google authentication failed.');
-      } finally {
-        setLoading(false);
-      }
+      handleGoogleAccessToken(tokenResponse.access_token);
     },
-    onError: () => setError('Google sign-in was cancelled or failed.'),
+    onError: () => {
+      handleDirectGoogleRedirect();
+    },
     flow: 'implicit',
   });
 
@@ -434,7 +458,14 @@ const Login: React.FC = () => {
 
                 <button
                   type="button"
-                  onClick={() => { setError(''); googleLogin(); }}
+                  onClick={() => {
+                    setError('');
+                    try {
+                      googleLogin();
+                    } catch (e) {
+                      handleDirectGoogleRedirect();
+                    }
+                  }}
                   disabled={loading}
                   className="w-full h-12 bg-white hover:bg-gray-100 text-gray-800 rounded-xl font-bold text-sm flex items-center justify-center gap-3 transition-all shadow-md disabled:opacity-60"
                 >
