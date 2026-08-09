@@ -2,9 +2,7 @@ import axios from 'axios';
 
 // Create a customized axios instance
 const api = axios.create({
-  // Use the serverless proxy path by default on Vercel
-  // Use the Vite proxy for local dev
-  baseURL: import.meta.env.VITE_API_URL || '/api/v1',
+  baseURL: import.meta.env.VITE_API_URL || 'https://legalitt-growth.onrender.com/api/v1',
   headers: {
     'Content-Type': 'application/json',
   },
