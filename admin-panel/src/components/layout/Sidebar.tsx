@@ -5,30 +5,18 @@ import {
   LayoutDashboard, 
   Users, 
   UserCheck, 
-  ShieldCheck, 
   CreditCard, 
   Settings,
   LogOut,
   ChevronLeft,
   ChevronRight,
   Briefcase,
-  Layers,
-  Bot,
-  FileText,
   LifeBuoy,
   BarChart3,
-  Calendar,
-  Bell,
   MessageSquare,
-  MessageCircle,
-  Tag,
-  Star,
-  Ticket,
   UserCog,
-  History,
   Grid,
   Wallet,
-  AlertCircle,
   Megaphone,
   Shield
 } from 'lucide-react';
@@ -36,7 +24,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useRole } from '../../contexts/RoleContext';
 import { cn } from '../../lib/utils';
 
-// We'll organize nav items into sections
+// Consolidated & Merged nav items
 const navSections = [
   {
     title: 'Overview',
@@ -45,56 +33,41 @@ const navSections = [
     ]
   },
   {
-    title: 'Consultations & Ops',
+    title: 'Consultations & Operations',
     items: [
-      { icon: MessageSquare, label: 'Chat Consultations ⭐', path: '/consultations' },
-      { icon: MessageCircle, label: 'Chat Management', path: '/chats' },
-      { icon: Briefcase, label: 'Legal Notice Requests', path: '/cases' },
-      { icon: Grid, label: 'Categories', path: '/categories' },
-      { icon: Bot, label: 'AI Drafts', path: '/ai-drafts' },
-      { icon: FileText, label: 'Documents', path: '/documents' },
+      { icon: MessageSquare, label: 'Consultations & Chats', path: '/consultations' },
+      { icon: Briefcase, label: 'Cases & Legal Notices', path: '/cases' },
+      { icon: Grid, label: 'Service Categories', path: '/categories' },
     ]
   },
   {
-    title: 'Network & Team',
+    title: 'User & Advocate Network',
     items: [
-      { icon: Users, label: 'Users', path: '/users' },
-      { icon: UserCheck, label: 'Advocates', path: '/advocates' },
-      { icon: AlertCircle, label: 'Pending Approval', path: '/pending-advocates' },
-      { icon: ShieldCheck, label: 'Verification', path: '/verification' },
+      { icon: Users, label: 'Client Users', path: '/users' },
+      { icon: UserCheck, label: 'Advocate Network & Approvals', path: '/advocates' },
       { icon: UserCog, label: 'Admin Team', path: '/admins' },
     ]
   },
   {
-    title: 'Financials',
+    title: 'Financials & Revenue',
     items: [
       { icon: CreditCard, label: 'Payments & Revenue', path: '/earnings' },
-      { icon: Wallet, label: 'Withdrawals', path: '/withdrawals' },
-      { icon: Tag, label: 'Coupons & Promos', path: '/coupons' },
+      { icon: Wallet, label: 'Payouts & Withdrawals', path: '/withdrawals' },
     ]
   },
   {
-    title: 'Workspace & Desk',
+    title: 'Support & Growth',
     items: [
-      { icon: LifeBuoy, label: 'Support Desk', path: '/support' },
-      { icon: Star, label: 'Reviews & Ratings', path: '/reviews' },
-      { icon: Calendar, label: 'Calendar', path: '/calendar' },
-      { icon: Bell, label: 'Notifications', path: '/notifications' },
+      { icon: LifeBuoy, label: 'Support Desk & Tickets', path: '/support' },
+      { icon: Megaphone, label: 'Ads & Promotions', path: '/ads' },
     ]
   },
   {
-    title: 'Growth & Marketing',
-    items: [
-      { icon: Megaphone, label: 'Ads Management', path: '/ads' },
-    ]
-  },
-  {
-    title: 'System & Intelligence',
+    title: 'System & Security',
     items: [
       { icon: BarChart3, label: 'Reports & Analytics', path: '/reports' },
-      { icon: History, label: 'Audit Logs', path: '/audit-logs' },
       { icon: Shield, label: 'Role Management', path: '/roles' },
-      { icon: Settings, label: 'Settings', path: '/settings' },
+      { icon: Settings, label: 'System Settings', path: '/settings' },
     ]
   }
 ];
