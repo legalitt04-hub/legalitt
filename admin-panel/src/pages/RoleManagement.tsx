@@ -43,7 +43,7 @@ const PERMISSION_LABELS: Record<string, string> = {
   reports: '📈 Reports', audit: '🔍 Audit Logs', notifications: '🔔 Notifications',
 };
 
-const EMPTY_FORM = { name: '', email: '', phone: '', role: 'support_executive', password: '' };
+const EMPTY_FORM = { name: '', email: '', phone: '', role: '', password: '' };
 
 export default function RoleManagement() {
   const [accounts, setAccounts] = useState<AdminAccount[]>([]);
@@ -79,8 +79,8 @@ export default function RoleManagement() {
 
   const handleCreate = async () => {
     setFormError('');
-    if (!form.name || !form.email || !form.password) {
-      setFormError('Name, email, and password are required.');
+    if (!form.name || !form.email || !form.password || !form.role) {
+      setFormError('Name, email, password, and role selection are required.');
       return;
     }
     setSaving(true);
@@ -291,7 +291,8 @@ export default function RoleManagement() {
                 ))}
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Role *</label>
-                  <select value={form.role} onChange={e => setForm((p: any) => ({ ...p, role: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none">
+                  <select value={form.role || ''} onChange={e => setForm((p: any) => ({ ...p, role: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none">
+                    <option value="" disabled>Select Role...</option>
                     {(roles.length > 0 ? roles : [
                       { key: 'support_executive', display: 'Support Executive' },
                       { key: 'admin', display: 'Admin' },

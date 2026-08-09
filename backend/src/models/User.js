@@ -29,7 +29,18 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['client', 'advocate', 'admin', 'support', 'superadmin'],
+    enum: [
+      'client',
+      'advocate',
+      'admin',
+      'super_admin',
+      'support_executive',
+      'accounts',
+      'forensic_expert',
+      'property_verification',
+      'support',
+      'superadmin'
+    ],
     default: 'client',
   },
   avatar: {
