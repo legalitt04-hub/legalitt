@@ -20,10 +20,11 @@ export const getSocket = (): Socket => {
   return socket;
 };
 
-export const connectSocket = (token: string): Socket => {
+export const connectSocket = (token?: string): Socket => {
   const s = getSocket();
+  const authToken = token || localStorage.getItem('adminToken') || '';
   if (!s.connected) {
-    s.auth = { token };
+    s.auth = { token: authToken };
     s.connect();
   }
   return s;
@@ -34,6 +35,10 @@ export const disconnectSocket = () => {
     socket.disconnect();
   }
 };
+
+// Aliases for compatibility
+export const connectAdminSocket = connectSocket;
+export const disconnectAdminSocket = disconnectSocket;
 
 // ─── Admin-specific event listeners ─────────────────────────────────────────
 export const subscribeToAdminEvents = (handlers: {
