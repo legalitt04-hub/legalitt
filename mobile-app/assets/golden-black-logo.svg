@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <rect width="1024" height="1024" fill="#0A0B0E" rx="0"/>
+  <defs>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFF3C4"/>
+      <stop offset="30%" stop-color="#F59E0B"/>
+      <stop offset="70%" stop-color="#D97706"/>
+      <stop offset="100%" stop-color="#78350F"/>
+    </linearGradient>
+    <linearGradient id="goldHighlight" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="40%" stop-color="#FBBF24"/>
+      <stop offset="100%" stop-color="#B45309"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Golden Hexagon Flower Ring -->
+  <g transform="translate(512,512) scale(11.5)" filter="url(#glow)">
+    <!-- Top -->
+    <path transform="translate(0, -21) rotate(0)" d="M 0 -9 L 7.8 -4.5 L 7.8 4.5 L 0 9 L -7.8 4.5 L -7.8 -4.5 Z" fill="url(#goldHighlight)" stroke="#FFFBEB" stroke-width="0.8" stroke-linejoin="round" />
+    
+    <!-- Top Right -->
+    <path transform="translate(18.18, -10.5) rotate(60)" d="M 0 -9 L 7.8 -4.5 L 7.8 4.5 L 0 9 L -7.8 4.5 L -7.8 -4.5 Z" fill="url(#gold)" stroke="#FFFBEB" stroke-width="0.8" stroke-linejoin="round" />
+    
+    <!-- Bottom Right -->
+    <path transform="translate(18.18, 10.5) rotate(120)" d="M 0 -9 L 7.8 -4.5 L 7.8 4.5 L 0 9 L -7.8 4.5 L -7.8 -4.5 Z" fill="url(#gold)" stroke="#FFFBEB" stroke-width="0.8" stroke-linejoin="round" />
+    
+    <!-- Bottom -->
+    <path transform="translate(0, 21) rotate(180)" d="M 0 -9 L 7.8 -4.5 L 7.8 4.5 L 0 9 L -7.8 4.5 L -7.8 -4.5 Z" fill="url(#goldHighlight)" stroke="#FFFBEB" stroke-width="0.8" stroke-linejoin="round" />
+    
+    <!-- Bottom Left -->
+    <path transform="translate(-18.18, 10.5) rotate(240)" d="M 0 -9 L 7.8 -4.5 L 7.8 4.5 L 0 9 L -7.8 4.5 L -7.8 -4.5 Z" fill="url(#gold)" stroke="#FFFBEB" stroke-width="0.8" stroke-linejoin="round" />
+    
+    <!-- Top Left -->
+    <path transform="translate(-18.18, -10.5) rotate(300)" d="M 0 -9 L 7.8 -4.5 L 7.8 4.5 L 0 9 L -7.8 4.5 L -7.8 -4.5 Z" fill="url(#gold)" stroke="#FFFBEB" stroke-width="0.8" stroke-linejoin="round" />
+  </g>
+</svg>

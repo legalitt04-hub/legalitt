@@ -28,9 +28,9 @@ export default ({ config }) => ({
     icon: "./assets/icon.png",
     userInterfaceStyle: "light",
     splash: {
-      image: "./assets/gavel-static.png",
+      image: "./assets/splash.png",
       resizeMode: "contain",
-      backgroundColor: "#07080A"
+      backgroundColor: "#0A0B0E"
     },
 
     assetBundlePatterns: [
@@ -49,8 +49,8 @@ export default ({ config }) => ({
     },
     android: {
       adaptiveIcon: {
-        foregroundImage: "./assets/gavel-static.png",
-        backgroundColor: "#07080A"
+        foregroundImage: "./assets/adaptive-icon.png",
+        backgroundColor: "#0A0B0E"
       },
       config: {
         googleMaps: {
