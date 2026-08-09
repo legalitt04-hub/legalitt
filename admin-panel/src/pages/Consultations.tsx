@@ -98,7 +98,7 @@ const SLABadge: React.FC<{ deadline: string }> = ({ deadline }) => {
 export default function Consultations() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'pending_assignment' | 'all'>('pending_assignment');
+  const [activeTab, setActiveTab] = useState<'pending_assignment' | 'active_cases' | 'completed' | 'all'>('pending_assignment');
   const [search, setSearch] = useState('');
   const [serviceFilter, setServiceFilter] = useState('');
 
@@ -120,8 +120,12 @@ export default function Consultations() {
   const fetchBookings = useCallback(async () => {
     setLoading(true);
     try {
-      const status = activeTab === 'pending_assignment' ? 'pending_assignment' : undefined;
-      const res = await api.get('/admin/bookings', { params: { status, limit: 50 } });
+      let statusParam: string | undefined;
+      if (activeTab === 'pending_assignment') statusParam = 'pending_assignment';
+      else if (activeTab === 'active_cases') statusParam = 'confirmed,in_progress';
+      else if (activeTab === 'completed') statusParam = 'completed';
+
+      const res = await api.get('/admin/bookings', { params: { status: statusParam, limit: 100 } });
       if (res.data?.success) setBookings(res.data.data || []);
     } catch (err) {
       console.error('Failed to load bookings', err);
@@ -280,10 +284,12 @@ export default function Consultations() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 mt-4 bg-gray-100 p-1 rounded-xl w-fit">
+        <div className="flex gap-1 mt-4 bg-gray-100 p-1 rounded-xl w-fit flex-wrap">
           {[
-            { key: 'pending_assignment', label: 'Needs Assignment', urgentCount: bookings.filter(b => b.status === 'pending_assignment').length },
-            { key: 'all', label: 'All Requests' }
+            { key: 'pending_assignment', label: 'Needs Assignment', count: bookings.filter(b => b.status === 'pending_assignment').length, isUrgent: true },
+            { key: 'active_cases', label: 'Active Cases', count: bookings.filter(b => b.status === 'confirmed' || b.status === 'in_progress').length },
+            { key: 'completed', label: 'Completed Cases', count: bookings.filter(b => b.status === 'completed').length },
+            { key: 'all', label: 'All Requests', count: bookings.length }
           ].map(tab => (
             <button key={tab.key}
               onClick={() => setActiveTab(tab.key as any)}
@@ -293,11 +299,11 @@ export default function Consultations() {
                   : 'text-gray-500 hover:text-gray-700'
               }`}>
               {tab.label}
-              {tab.urgentCount !== undefined && tab.urgentCount > 0 && (
-                <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[20px] text-center">
-                  {tab.urgentCount}
-                </span>
-              )}
+              <span className={`text-xs rounded-full px-2 py-0.5 font-bold ${
+                tab.isUrgent && tab.count > 0 ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'
+              }`}>
+                {tab.count}
+              </span>
             </button>
           ))}
         </div>
@@ -318,21 +324,20 @@ export default function Consultations() {
         </select>
       </div>
 
-      {/* Stats row */}
-      {activeTab === 'pending_assignment' && (
-        <div className="px-6 mb-4 grid grid-cols-3 gap-3">
-          {[
-            { label: 'Pending', count: bookings.filter(b => b.status === 'pending_assignment').length, color: 'text-orange-600', bg: 'bg-orange-50' },
-            { label: 'Urgent (<4h)', count: bookings.filter(b => b.sla?.isUrgent).length, color: 'text-red-600', bg: 'bg-red-50' },
-            { label: 'Overdue', count: bookings.filter(b => b.sla?.isOverdue).length, color: 'text-red-700', bg: 'bg-red-100' },
-          ].map(s => (
-            <div key={s.label} className={`${s.bg} rounded-xl p-3 flex items-center gap-3`}>
-              <span className={`text-2xl font-bold ${s.color}`}>{s.count}</span>
-              <span className="text-sm text-gray-600">{s.label}</span>
-            </div>
-          ))}
-        </div>
-      )}
+      {/* Overview KPI Cards */}
+      <div className="px-6 mb-5 grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[
+          { label: 'Pending Assignment', count: bookings.filter(b => b.status === 'pending_assignment').length, color: 'text-amber-600', bg: 'bg-amber-50 border-amber-200' },
+          { label: 'Active Assigned Cases', count: bookings.filter(b => b.status === 'confirmed' || b.status === 'in_progress').length, color: 'text-indigo-600', bg: 'bg-indigo-50 border-indigo-200' },
+          { label: 'Completed Cases', count: bookings.filter(b => b.status === 'completed').length, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200' },
+          { label: 'Paid Revenue', count: `₹${bookings.filter(b => b.payment?.status === 'paid').reduce((sum, b) => sum + (b.payment?.amount || 0), 0)}`, color: 'text-cyan-700', bg: 'bg-cyan-50 border-cyan-200' },
+        ].map(s => (
+          <div key={s.label} className={`${s.bg} border rounded-2xl p-4 flex flex-col justify-between shadow-sm`}>
+            <span className="text-xs font-semibold text-gray-500">{s.label}</span>
+            <span className={`text-2xl font-black mt-1 ${s.color}`}>{s.count}</span>
+          </div>
+        ))}
+      </div>
 
       {/* Booking Cards Grid */}
       <div className="px-6 pb-6">
@@ -415,11 +420,35 @@ export default function Consultations() {
                         <UserCheck size={15} /> Assign Advocate
                       </button>
                     ) : booking.advocate ? (
-                      <div className="flex items-center gap-2 bg-green-50 rounded-xl px-3 py-2">
-                        <CheckCircle2 size={14} className="text-green-600" />
-                        <span className="text-xs text-green-700 font-medium">
-                          Assigned to {booking.advocate.user?.name}
-                        </span>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between bg-emerald-50/80 rounded-xl p-2.5 border border-emerald-100">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="w-7 h-7 rounded-full bg-emerald-200 text-emerald-800 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                              {booking.advocate.user?.name?.charAt(0) || 'A'}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold text-emerald-900 truncate">Assigned to {booking.advocate.user?.name}</p>
+                              {booking.advocate.user?.phone && <p className="text-[10px] text-emerald-700">{booking.advocate.user.phone}</p>}
+                            </div>
+                          </div>
+                          <span className="text-[10px] font-semibold bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-full">
+                            Active
+                          </span>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={e => { e.stopPropagation(); openPanel(booking); }}
+                            className="flex-1 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-lg transition-colors">
+                            Manage & Re-assign
+                          </button>
+                          {booking.status !== 'completed' && (
+                            <button
+                              onClick={e => { e.stopPropagation(); handleUpdateStatus(booking._id, 'completed'); }}
+                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors">
+                              Mark Completed
+                            </button>
+                          )}
+                        </div>
                       </div>
                     ) : null}
                   </div>
