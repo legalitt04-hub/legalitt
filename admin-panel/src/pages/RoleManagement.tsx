@@ -116,6 +116,16 @@ export default function RoleManagement() {
     finally { setResetting(false); }
   };
 
+  const handleRemoveRole = async (acc: AdminAccount) => {
+    if (!window.confirm(`Are you sure you want to remove ${acc.name} from the admin team and revoke their role?`)) return;
+    try {
+      await api.delete(`/admin/roles/accounts/${acc._id}`);
+      fetchData();
+    } catch {
+      setFormError('Failed to revoke role.');
+    }
+  };
+
   const filteredAccounts = roleFilter
     ? accounts.filter(a => a.role === roleFilter)
     : accounts;
@@ -227,8 +237,12 @@ export default function RoleManagement() {
                     {acc.isActive ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
                   </button>
                   <button onClick={() => { setResetTarget(acc); setNewPw(''); }} title="Reset password"
-                    className="p-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100">
+                    className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100">
                     <Lock className="w-3.5 h-3.5" />
+                  </button>
+                  <button onClick={() => handleRemoveRole(acc)} title="Revoke admin role & remove from team"
+                    className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100">
+                    <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>

@@ -222,7 +222,17 @@ exports.getAuditLogs = async (req, res, next) => {
 // ─── Admin Management ────────────────────────────────────────────────────────
 exports.getAdmins = async (req, res, next) => {
   try {
-    const admins = await User.find({ role: 'admin' }).select('-password').sort('-createdAt');
+    const adminRoles = [
+      'admin',
+      'super_admin',
+      'support_executive',
+      'accounts',
+      'forensic_expert',
+      'property_verification',
+      'support',
+      'superadmin'
+    ];
+    const admins = await User.find({ role: { $in: adminRoles } }).select('-password').sort('-createdAt');
     res.json({ success: true, data: admins });
   } catch (err) { next(err); }
 };

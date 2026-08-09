@@ -11,6 +11,8 @@ const ROLE_PERMISSIONS = {
   accounts:              ['dashboard','earnings','withdrawals','reports'],
   forensic_expert:       ['dashboard','cases','documents'],
   property_verification: ['dashboard','cases','documents'],
+  support:               ['dashboard','consultations','support','notifications'],
+  superadmin:            ['dashboard','users','advocates','cases','consultations','ads','roles','earnings','withdrawals','settings','support','reviews','reports','audit','notifications'],
 };
 
 const ROLE_DISPLAY = {
@@ -20,6 +22,8 @@ const ROLE_DISPLAY = {
   accounts: 'Accounts',
   forensic_expert: 'Forensic Expert',
   property_verification: 'Property Verification',
+  support: 'Support Executive',
+  superadmin: 'Super Admin',
 };
 
 // GET /api/v1/admin/roles/accounts — list all admin accounts
@@ -120,6 +124,20 @@ exports.resetAdminPassword = async (req, res, next) => {
     const user = await User.findByIdAndUpdate(req.params.id, { password: hashed });
     if (!user) return next(new AppError('Account not found.', 404));
     res.json({ success: true, message: 'Password reset successfully.' });
+  } catch (err) { next(err); }
+};
+
+// DELETE /api/v1/admin/roles/accounts/:id — revoke admin role
+exports.deleteAdminAccount = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return next(new AppError('Account not found.', 404));
+
+    // Revoke admin role back to client
+    user.role = 'client';
+    await user.save();
+
+    res.json({ success: true, message: 'Admin role revoked successfully.' });
   } catch (err) { next(err); }
 };
 

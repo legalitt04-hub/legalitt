@@ -108,6 +108,7 @@ router.get('/roles/permissions',           roleController.getRolePermissions);
 router.get('/roles/accounts',              roleController.getAdminAccounts);
 router.post('/roles/accounts',             roleController.createAdminAccount);
 router.patch('/roles/accounts/:id',        roleController.updateAdminAccount);
+router.delete('/roles/accounts/:id',       roleController.deleteAdminAccount);
 router.post('/roles/accounts/:id/reset-password', roleController.resetAdminPassword);
 
 module.exports = router;

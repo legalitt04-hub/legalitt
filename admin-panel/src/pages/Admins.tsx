@@ -2,29 +2,39 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
-import { Button } from '../components/ui/button';
-import { UserCog, Plus, ShieldCheck, UserCheck } from 'lucide-react';
+import { UserCog, Trash2 } from 'lucide-react';
 import api from '../lib/api';
 
 export default function Admins() {
   const [admins, setAdmins] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchAdmins = async () => {
-      try {
-        const res = await api.get('/admin/admins');
-        if (res.data?.success) {
-          setAdmins(res.data.data);
-        }
-      } catch (err) {
-        console.error('Failed to load admins', err);
-      } finally {
-        setLoading(false);
+  const fetchAdmins = async () => {
+    try {
+      const res = await api.get('/admin/admins');
+      if (res.data?.success) {
+        setAdmins(res.data.data);
       }
-    };
+    } catch (err) {
+      console.error('Failed to load admins', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchAdmins();
   }, []);
+
+  const handleRevoke = async (id: string, name: string) => {
+    if (!window.confirm(`Revoke admin role from ${name}?`)) return;
+    try {
+      await api.delete(`/admin/roles/accounts/${id}`);
+      fetchAdmins();
+    } catch {
+      alert('Failed to revoke role');
+    }
+  };
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
@@ -41,7 +51,7 @@ export default function Admins() {
       <Card className="bg-white border-slate-200 shadow-sm overflow-hidden">
         <div className="p-4 border-b border-slate-100 flex justify-between items-center">
           <span className="text-sm font-bold text-slate-900 uppercase tracking-wider">System Administrators</span>
-          <span className="text-xs text-slate-500 font-medium">Total: {admins.length} Admins</span>
+          <span className="text-xs text-slate-500 font-medium">Total: {admins.length} Members</span>
         </div>
 
         <div className="divide-y divide-slate-100">
@@ -63,12 +73,16 @@ export default function Admins() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200 uppercase text-xs">
+                  <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200 uppercase text-xs font-semibold">
                     {adm.role || 'Admin'}
                   </Badge>
                   <Badge variant="outline" className={adm.isActive !== false ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}>
                     {adm.isActive !== false ? 'Active' : 'Suspended'}
                   </Badge>
+                  <button onClick={() => handleRevoke(adm._id, adm.name)} title="Revoke admin role"
+                    className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
             ))
