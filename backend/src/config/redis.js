@@ -46,9 +46,14 @@ const getClient = async () => {
   });
 
   try {
-    await client.connect();
+    await Promise.race([
+      client.connect(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Redis connect timeout')), 3000))
+    ]);
   } catch (err) {
     logger.error('Redis connect failed — running without cache:', err.message);
+    // Ignore disconnect errors if it wasn't connected
+    try { await client.disconnect(); } catch (e) {}
     client = null;
     return null;
   }
