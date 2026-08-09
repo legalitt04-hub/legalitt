@@ -225,10 +225,16 @@ export default function Consultations() {
     return matchSearch && matchService;
   });
 
-  const advocatesDisplay = (showAllAdvocates ? allAdvocates : nearbyAdvocates).filter(a =>
-    !advocateSearch || a.user?.name?.toLowerCase().includes(advocateSearch.toLowerCase()) ||
-    a.specializations?.some(s => s.toLowerCase().includes(advocateSearch.toLowerCase()))
-  );
+  const advocatesDisplay = (showAllAdvocates ? allAdvocates : nearbyAdvocates).filter(a => {
+    if (!advocateSearch) return true;
+    const q = advocateSearch.toLowerCase();
+    return (
+      a.user?.name?.toLowerCase().includes(q) ||
+      a.user?.email?.toLowerCase().includes(q) ||
+      a.location?.address?.city?.toLowerCase().includes(q) ||
+      a.specializations?.some(s => s.toLowerCase().includes(q))
+    );
+  });
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
@@ -519,15 +525,23 @@ export default function Consultations() {
                 {/* ── Advocate Selection ── */}
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-semibold text-gray-900">
-                      {showAllAdvocates ? 'All Verified Advocates' : `Nearby Advocates`}
-                      {selectedBooking.clientCity && !showAllAdvocates && (
-                        <span className="text-sm font-normal text-gray-500 ml-1">in {selectedBooking.clientCity}</span>
+                    <h3 className="font-semibold text-gray-900 flex items-center gap-1.5">
+                      {showAllAdvocates ? (
+                        <>All Advocates <span className="bg-gray-100 text-gray-700 text-xs px-2 py-0.5 rounded-full font-bold">{allAdvocates.length}</span></>
+                      ) : (
+                        <>
+                          Nearby Advocates ({nearbyAdvocates.length})
+                          {selectedBooking.clientCity && (
+                            <span className="text-xs bg-teal-50 text-teal-700 font-semibold px-2 py-0.5 rounded-full">
+                              in {selectedBooking.clientCity}
+                            </span>
+                          )}
+                        </>
                       )}
                     </h3>
                     <button onClick={() => setShowAllAdvocates(v => !v)}
-                      className="text-xs text-teal-600 font-semibold hover:underline flex items-center gap-1">
-                      {showAllAdvocates ? 'Show Nearby Only' : 'Show All Advocates'}
+                      className="text-xs text-teal-600 font-semibold hover:underline flex items-center gap-1 bg-teal-50 px-2.5 py-1 rounded-lg">
+                      {showAllAdvocates ? `Show Nearby (${nearbyAdvocates.length})` : `Show All (${allAdvocates.length})`}
                       <Users size={12} />
                     </button>
                   </div>
@@ -535,7 +549,7 @@ export default function Consultations() {
                   <div className="relative mb-3">
                     <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                     <input value={advocateSearch} onChange={e => setAdvocateSearch(e.target.value)}
-                      placeholder="Search by name or specialization..."
+                      placeholder="Search advocate by name, city, email, or specialization..."
                       className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
                   </div>
 

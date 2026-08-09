@@ -275,7 +275,14 @@ export default function RoleManagement() {
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Role *</label>
                   <select value={form.role} onChange={e => setForm((p: any) => ({ ...p, role: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none">
-                    {roles.map(r => <option key={r.key} value={r.key}>{r.display}</option>)}
+                    {(roles.length > 0 ? roles : [
+                      { key: 'support_executive', display: 'Support Executive' },
+                      { key: 'admin', display: 'Admin' },
+                      { key: 'accounts', display: 'Accounts' },
+                      { key: 'forensic_expert', display: 'Forensic Expert' },
+                      { key: 'property_verification', display: 'Property Verification' },
+                      { key: 'super_admin', display: 'Super Admin' },
+                    ]).map(r => <option key={r.key} value={r.key}>{r.display}</option>)}
                   </select>
                 </div>
                 <div>

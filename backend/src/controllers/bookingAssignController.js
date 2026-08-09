@@ -91,62 +91,36 @@ exports.getNearbyAdvocatesForBooking = async (req, res, next) => {
     const city = booking.clientCity || booking.client?.address?.city;
     const { specialization } = req.query;
 
-    let filter = { isVerified: true, verificationStatus: 'approved' };
+    let cityFilter = { isVerified: true, verificationStatus: 'approved' };
     if (city) {
-      filter['location.address.city'] = new RegExp(city, 'i');
+      cityFilter['location.address.city'] = new RegExp(city, 'i');
     }
     if (specialization) {
-      filter.specializations = specialization;
+      cityFilter.specializations = specialization;
     }
 
-    // If we have coordinates, use geo query
-    let advocates;
-    if (booking.clientCoords?.lat && booking.clientCoords?.lng) {
-      try {
-        advocates = await Advocate.find({
-          ...filter,
-          location: {
-            $nearSphere: {
-              $geometry: { type: 'Point', coordinates: [booking.clientCoords.lng, booking.clientCoords.lat] },
-              $maxDistance: 50000, // 50km radius
-            },
-          },
-        })
-          .populate('user', 'name avatar phone email')
-          .limit(50)
-          .lean();
-      } catch (geoErr) {
-        // Fallback to city-based search if geo fails
-        advocates = await Advocate.find(filter)
-          .populate('user', 'name avatar phone email')
-          .limit(50)
-          .lean();
-      }
-    } else {
-      advocates = await Advocate.find(filter)
+    // Fetch both nearby advocates in city AND all approved advocates in parallel
+    const [nearbyAdvocates, allAdvocates] = await Promise.all([
+      Advocate.find(cityFilter)
         .populate('user', 'name avatar phone email')
         .sort({ 'rating.average': -1 })
         .limit(50)
-        .lean();
-    }
-
-    // Also get all advocates if city filter returns nothing
-    let allAdvocates = [];
-    if (advocates.length === 0) {
-      allAdvocates = await Advocate.find({ isVerified: true, verificationStatus: 'approved' })
+        .lean(),
+      Advocate.find({ isVerified: true, verificationStatus: 'approved' })
         .populate('user', 'name avatar phone email')
         .sort({ 'rating.average': -1 })
         .limit(100)
-        .lean();
-    }
+        .lean(),
+    ]);
 
     res.json({
       success: true,
       data: {
-        nearbyAdvocates: advocates,
-        allAdvocates: allAdvocates,
+        nearbyAdvocates,
+        allAdvocates,
         bookingCity: city || 'Unknown',
-        totalNearby: advocates.length,
+        totalNearby: nearbyAdvocates.length,
+        totalAdvocates: allAdvocates.length,
       },
     });
   } catch (err) {
