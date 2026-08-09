@@ -93,7 +93,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const res = await api.get('/auth/me');
       if (res.data?.success) {
-        const built = buildUser(res.data.data);
+        const rawUser = res.data.data;
+        const ADMIN_ROLES = ['admin', 'super_admin', 'support_executive', 'accounts', 'forensic_expert', 'property_verification'];
+        if (!ADMIN_ROLES.includes(rawUser?.role)) {
+          localStorage.removeItem('adminToken');
+          localStorage.removeItem('adminUser');
+          setIsAuthenticated(false);
+          setUser(null);
+          setIsLoading(false);
+          return;
+        }
+        const built = buildUser(rawUser);
         setUser(built);
         localStorage.setItem('adminUser', JSON.stringify(built));
         setIsAuthenticated(true);
@@ -119,13 +129,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         api.post('/auth/google', { accessToken }).then(res => {
           const token = res.data.data?.accessToken || res.data.token || res.data.accessToken;
           const rawUser = res.data.data?.user || res.data.data;
-          if (res.data?.success && token && rawUser) {
+          const ADMIN_ROLES = ['admin', 'super_admin', 'support_executive', 'accounts', 'forensic_expert', 'property_verification'];
+          if (res.data?.success && token && rawUser && ADMIN_ROLES.includes(rawUser.role)) {
             const built = buildUser(rawUser);
             localStorage.setItem('adminToken', token);
             localStorage.setItem('adminUser', JSON.stringify(built));
             setUser(built);
             setIsAuthenticated(true);
             connectSocket(token);
+          } else {
+            refreshUser();
           }
         }).catch(() => {
           refreshUser();

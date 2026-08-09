@@ -103,6 +103,12 @@ const Login: React.FC = () => {
       const token = res.data.data?.accessToken || res.data.token || res.data.accessToken;
       const userData = res.data.data?.user || res.data.data;
       if (res.data?.success && token) {
+        const adminRoles = ['admin', 'super_admin', 'support_executive', 'accounts', 'forensic_expert', 'property_verification'];
+        if (!adminRoles.includes(userData?.role)) {
+          setError('This account does not have admin permissions. Contact your Super Admin.');
+          setLoading(false);
+          return;
+        }
         finishLogin(token, userData);
       } else {
         setError(res.data?.message || 'Login failed.');
