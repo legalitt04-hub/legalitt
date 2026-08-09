@@ -328,15 +328,23 @@ const EarningsScreen = ({ navigation }) => {
         </View>
       </Modal>
 
-      {/* Footer Withdrawal Button */}
+      {/* Footer Buttons */}
       <View style={s.footer}>
-        <TouchableOpacity 
-          style={[s.withdrawBtn, (balance.available < 100 || withdrawing) && s.withdrawBtnDisabled]}
-          onPress={handleWithdraw}
-          disabled={withdrawing || (balance.available < 100)}
-        >
-          <Text style={s.withdrawBtnText}>{withdrawing ? 'Processing...' : 'Withdrawal Funds'}</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <TouchableOpacity
+            style={[s.withdrawBtn, { flex: 1 }, (balance.available < 100 || withdrawing) && s.withdrawBtnDisabled]}
+            onPress={handleWithdraw}
+            disabled={withdrawing || (balance.available < 100)}
+          >
+            <Text style={s.withdrawBtnText}>{withdrawing ? 'Processing...' : 'Withdraw Funds'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[s.withdrawBtn, { flex: 1, backgroundColor: '#0D9488' }]}
+            onPress={() => navigation.navigate('AdvocateWallet')}
+          >
+            <Text style={s.withdrawBtnText}>💼 My Wallet</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </SafeAreaView>
   );

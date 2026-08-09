@@ -62,6 +62,11 @@ const userSchema = new mongoose.Schema({
   passwordResetExpires: Date,
   fcmToken: String, // Firebase push notification token
   expoPushToken: String, // Expo push notification token
+  // OTP fields for phone verification
+  phoneOTP: { type: String, select: false },
+  phoneOTPExpires: { type: Date, select: false },
+  emailOTP: { type: String, select: false },
+  emailOTPExpires: { type: Date, select: false },
   lastSeen: {
     type: Date,
     default: Date.now,

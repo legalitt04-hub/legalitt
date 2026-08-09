@@ -738,3 +738,93 @@ exports.getPublicSettings = async (req, res, next) => {
     res.json({ success: true, data: settings });
   } catch (err) { next(err); }
 };
+
+// ─── Enhanced User Management ─────────────────────────────────────────────────
+exports.createUser = async (req, res, next) => {
+  try {
+    const { name, email, phone, password, role = 'client' } = req.body;
+    if (!name || !email || !password) return next(new (require('../middlewares/errorHandler').AppError)('Name, email, password required.', 400));
+    const exists = await User.findOne({ email: email.toLowerCase() });
+    if (exists) return next(new (require('../middlewares/errorHandler').AppError)('Email already registered.', 409));
+    const user = await User.create({ name, email: email.toLowerCase(), phone, password, role, isVerified: true });
+    res.status(201).json({ success: true, data: user.toSafeObject ? user.toSafeObject() : user });
+  } catch (err) { next(err); }
+};
+
+exports.updateUser = async (req, res, next) => {
+  try {
+    const { name, phone, email } = req.body;
+    const user = await User.findByIdAndUpdate(req.params.id, { name, phone, email }, { new: true }).select('-password -refreshTokens');
+    if (!user) return next(new (require('../middlewares/errorHandler').AppError)('User not found.', 404));
+    res.json({ success: true, data: user });
+  } catch (err) { next(err); }
+};
+
+exports.deleteUser = async (req, res, next) => {
+  try {
+    const user = await User.findByIdAndDelete(req.params.id);
+    if (!user) return next(new (require('../middlewares/errorHandler').AppError)('User not found.', 404));
+    res.json({ success: true, message: 'User deleted.' });
+  } catch (err) { next(err); }
+};
+
+exports.resetUserPassword = async (req, res, next) => {
+  try {
+    const { password } = req.body;
+    if (!password || password.length < 8) return next(new (require('../middlewares/errorHandler').AppError)('Min 8 characters required.', 400));
+    const bcrypt = require('bcryptjs');
+    const hashed = await bcrypt.hash(password, 12);
+    const user = await User.findByIdAndUpdate(req.params.id, { password: hashed });
+    if (!user) return next(new (require('../middlewares/errorHandler').AppError)('User not found.', 404));
+    res.json({ success: true, message: 'Password reset.' });
+  } catch (err) { next(err); }
+};
+
+// ─── Enhanced Advocate Management ────────────────────────────────────────────
+exports.createAdvocate = async (req, res, next) => {
+  try {
+    const { name, email, phone, password, barCouncilId, specializations, location } = req.body;
+    if (!name || !email || !password) return next(new (require('../middlewares/errorHandler').AppError)('Name, email, password required.', 400));
+    const exists = await User.findOne({ email: email.toLowerCase() });
+    if (exists) return next(new (require('../middlewares/errorHandler').AppError)('Email already registered.', 409));
+    const user = await User.create({ name, email: email.toLowerCase(), phone, password, role: 'advocate', isVerified: true });
+    const Advocate = require('../models/Advocate');
+    const advocate = await Advocate.create({
+      user: user._id, barCouncilId, specializations: specializations || [],
+      location: location || {}, verificationStatus: 'approved', isVerified: true,
+    });
+    res.status(201).json({ success: true, data: { user: user._id, advocate: advocate._id } });
+  } catch (err) { next(err); }
+};
+
+exports.updateAdvocate = async (req, res, next) => {
+  try {
+    const Advocate = require('../models/Advocate');
+    const advocate = await Advocate.findByIdAndUpdate(req.params.id, req.body, { new: true }).populate('user', 'name email phone avatar');
+    if (!advocate) return next(new (require('../middlewares/errorHandler').AppError)('Advocate not found.', 404));
+    res.json({ success: true, data: advocate });
+  } catch (err) { next(err); }
+};
+
+exports.deleteAdvocate = async (req, res, next) => {
+  try {
+    const Advocate = require('../models/Advocate');
+    const advocate = await Advocate.findByIdAndDelete(req.params.id);
+    if (!advocate) return next(new (require('../middlewares/errorHandler').AppError)('Advocate not found.', 404));
+    res.json({ success: true, message: 'Advocate deleted.' });
+  } catch (err) { next(err); }
+};
+
+exports.suspendAdvocate = async (req, res, next) => {
+  try {
+    const Advocate = require('../models/Advocate');
+    const advocate = await Advocate.findById(req.params.id).populate('user');
+    if (!advocate) return next(new (require('../middlewares/errorHandler').AppError)('Advocate not found.', 404));
+    const newStatus = advocate.verificationStatus === 'suspended' ? 'approved' : 'suspended';
+    advocate.verificationStatus = newStatus;
+    advocate.isVerified = newStatus === 'approved';
+    await advocate.save();
+    await User.findByIdAndUpdate(advocate.user._id, { isActive: newStatus === 'approved' });
+    res.json({ success: true, data: { verificationStatus: newStatus } });
+  } catch (err) { next(err); }
+};

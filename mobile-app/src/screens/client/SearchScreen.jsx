@@ -98,12 +98,21 @@ const SearchScreen = ({ navigation, route }) => {
           lat: latitude,
           lng: longitude,
           radius: filters.radius,
-          limit: 50, // ✅ 50 per page
-          page: pageNum, // ✅ Current page
+          limit: 50,
+          page: pageNum,
         });
+
+        // Fallback to getAdvocates if nearby yields no results
+        if ((!response?.data?.data || response.data.data.length === 0)) {
+          response = await advocateAPI.getAdvocates({
+            limit: 50,
+            page: pageNum,
+            specialization: filters.specializations.length > 0 ? filters.specializations[0] : undefined,
+          });
+        }
       }
 
-      if (response.data.success && response.data.data) {
+      if (response?.data?.success && response.data.data) {
         const transformedAdvocates = response.data.data.map(adv => ({
           id: adv._id,
           name: adv.user?.name || 'Unknown',
@@ -117,14 +126,12 @@ const SearchScreen = ({ navigation, route }) => {
           status: adv.isOnline ? 'Online' : 'Offline',
         }));
 
-        // ✅ Handle pagination
         if (reset || pageNum === 1) {
           setAdvocates(transformedAdvocates);
         } else {
           setAdvocates(prev => [...prev, ...transformedAdvocates]);
         }
 
-        // ✅ Update pagination state
         if (response.data.pagination) {
           setHasMore(response.data.pagination.hasMore);
           setTotalCount(response.data.pagination.total);

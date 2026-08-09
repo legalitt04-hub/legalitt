@@ -25,9 +25,13 @@ Notifications.setNotificationHandler({
 });
 
 const ChatScreen = ({ navigation, route }) => {
-  const { chatId, advocateName, advocateAvatar, advocateId } = route.params || {};
+  const {
+    chatId, advocateName, advocateAvatar, advocateId,
+    zegoRoomId, zegoToken, zegoAppId, zegoAppSign, mode: callMode,
+  } = route.params || {};
   const { user } = useAuth();
   const { isConnected } = useNetwork();
+  const userData = user?.user || user || {};
 
   const {
     messages, loading, loadingMore, hasMore, connected, isTyping, error,
@@ -256,9 +260,28 @@ const ChatScreen = ({ navigation, route }) => {
 
         <TouchableOpacity
           style={styles.callBtn}
-          onPress={() => Alert.alert('🔒 Secure Call', 'Voice calls are end-to-end encrypted via Legalitt.')}
+          onPress={() => {
+            if (zegoRoomId && zegoToken) {
+              navigation.navigate('VideoCall', {
+                zegoRoomId,
+                zegoToken,
+                zegoAppId: zegoAppId || 0,
+                zegoAppSign: zegoAppSign || '',
+                advocateName,
+                myUserId:   String(userData._id || ''),
+                myUserName: String(userData.name || 'User'),
+                mode: callMode || 'voice',
+              });
+            } else {
+              Alert.alert('Chat Only', 'This consultation is chat-based. Voice/video calls are not available for this booking.');
+            }
+          }}
         >
-          <Ionicons name="call-outline" size={20} color={COLORS.textPrimary} />
+          <Ionicons
+            name={callMode === 'video' ? 'videocam-outline' : 'call-outline'}
+            size={20}
+            color={zegoRoomId ? COLORS.primary : COLORS.textPrimary}
+          />
         </TouchableOpacity>
       </View>
 

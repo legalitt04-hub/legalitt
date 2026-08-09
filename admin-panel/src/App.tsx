@@ -31,6 +31,10 @@ import Reviews from './pages/Reviews';
 import Coupons from './pages/Coupons';
 import Admins from './pages/Admins';
 import AuditLogs from './pages/AuditLogs';
+import PendingAdvocates from './pages/PendingAdvocates';
+import Withdrawals from './pages/Withdrawals';
+import AdsManagement from './pages/AdsManagement';
+import RoleManagement from './pages/RoleManagement';
 
 function App() {
   return (
@@ -64,6 +68,8 @@ function App() {
             {/* Financials */}
             <Route path="/earnings" element={<Earnings />} />
             <Route path="/coupons" element={<Coupons />} />
+            <Route path="/pending-advocates" element={<PendingAdvocates />} />
+            <Route path="/withdrawals" element={<Withdrawals />} />
             
             {/* Workspace & Desk */}
             <Route path="/support" element={<Support />} />
@@ -75,6 +81,10 @@ function App() {
             <Route path="/reports" element={<Reports />} />
             <Route path="/audit-logs" element={<AuditLogs />} />
             <Route path="/settings" element={<Settings />} />
+
+            {/* New Modules */}
+            <Route path="/ads" element={<AdsManagement />} />
+            <Route path="/roles" element={<RoleManagement />} />
           </Route>
         </Routes>
       </BrowserRouter>

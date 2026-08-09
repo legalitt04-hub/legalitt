@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import api, { caseAPI, bookingAPI, chatAPI } from '../../services/api';
+import api, { caseAPI, bookingAPI, chatAPI, legalAdviceAPI } from '../../services/api';
 import { COLORS } from '../../constants/theme';
 import { formatDate, formatINR } from '../../utils/helpers';
 
@@ -29,6 +29,7 @@ const CaseDetailScreen = ({ route, navigation }) => {
   const [legalCase, setLegalCase] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [clientDocs, setClientDocs] = useState([]);
 
   // Modal forms states
   const [timelineModalVisible, setTimelineModalVisible] = useState(false);
@@ -123,6 +124,16 @@ const CaseDetailScreen = ({ route, navigation }) => {
         _id: booking._id
       });
       setLoading(false);
+      // Fetch booking details with client documents
+      if (booking._id) {
+        legalAdviceAPI.getRequestDetail(booking._id)
+          .then(res => {
+            if (res.data?.success) {
+              setClientDocs(res.data.data?.documents || []);
+            }
+          })
+          .catch(() => {}); // silent fail — docs optional
+      }
     }
   }, [caseId, booking]);
 
@@ -349,6 +360,34 @@ const CaseDetailScreen = ({ route, navigation }) => {
                 <Ionicons name="time-outline" size={14} color={COLORS.primary} />
                 <Text style={styles.meta}>{legalCase.timeSlot?.startTime || 'TBD'}</Text>
               </View>
+            </Section>
+
+            {/* Client Uploaded Documents */}
+            <Section title="📎 Documents from Client">
+              {clientDocs.length === 0 ? (
+                <Text style={styles.emptyText}>Client has not uploaded any documents yet.</Text>
+              ) : (
+                <View style={styles.docsList}>
+                  {clientDocs.map((doc, idx) => (
+                    <TouchableOpacity
+                      key={doc._id || idx}
+                      style={styles.docRow}
+                      onPress={() => Linking.openURL(doc.url)}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons
+                        name={doc.type === 'pdf' ? 'document-text' : 'image-outline'}
+                        size={20}
+                        color={COLORS.primary}
+                      />
+                      <Text style={styles.docName} numberOfLines={1}>{doc.name || `Document ${idx + 1}`}</Text>
+                      <View style={styles.docViewBtn}>
+                        <Text style={styles.docViewBtnText}>Open ↗</Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
             </Section>
           </>
         )}
@@ -614,6 +653,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderColor: '#F3F4F6'
   },
   docName: { fontSize: 13, color: COLORS.textPrimary, flex: 1 },
+  docViewBtn: { paddingHorizontal: 10, paddingVertical: 4, backgroundColor: 'rgba(20,184,166,0.1)', borderRadius: 8 },
   docViewBtnText: { fontSize: 12, fontWeight: '700', color: COLORS.primary },
 
   // Notes styles

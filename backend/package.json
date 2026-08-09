@@ -10,6 +10,7 @@
     "test": "jest --coverage --forceExit"
   },
   "dependencies": {
+    "@daily-co/daily-js": "^0.91.0",
     "@socket.io/redis-adapter": "^8.3.0",
     "bcryptjs": "^2.4.3",
     "cloudinary": "^1.41.3",

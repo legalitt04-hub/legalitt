@@ -16,6 +16,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/theme';
+import { legalAdviceAPI, paymentAPI } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
+import RazorpayCheckout from 'react-native-razorpay';
 
 const { width } = Dimensions.get('window');
 
@@ -46,6 +49,8 @@ const INITIAL_DOC_TYPES = [
 ];
 
 export default function AILegalNoticeScreen({ navigation }) {
+  const { user } = useAuth();
+  const userData = user?.user || user || {};
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 5;
 
@@ -142,12 +147,96 @@ export default function AILegalNoticeScreen({ navigation }) {
     }, 600);
   };
 
-  const handleSubmitReview = () => {
+  const handleSubmitReview = async () => {
+    if (!selectedCategory) return Alert.alert('Required', 'Please select a legal notice category.');
+    if (!issueDescription.trim() || issueDescription.trim().length < 10) {
+      return Alert.alert('Required', 'Please describe your issue (min 10 characters).');
+    }
+    if (!senderName.trim()) return Alert.alert('Required', 'Please enter your name.');
+    if (!senderPhone.trim()) return Alert.alert('Required', 'Please enter your phone number.');
+
     setIsSubmitting(true);
-    setTimeout(() => {
+    try {
+      const amount = 1499; // Legal Notice base price
+
+      // Step 1: Create booking on backend
+      const bookingRes = await legalAdviceAPI.createRequest({
+        consultationMode: 'chat',
+        serviceType: 'legal_notice',
+        issueCategory: selectedCategory,
+        issueDescription: `${issueDescription}\n\nRecipient: ${recipientName} (${recipientRelation})\nAddress: ${recipientAddress}`,
+        preferredSlot: 'Within 24 Hours',
+        documents: documents.filter(d => d.uploaded && d.uploadedUrl).map(d => ({
+          url: d.uploadedUrl,
+          name: d.title,
+          type: 'pdf',
+        })),
+        clientCity: senderAddress || userData.address?.city || '',
+        amount,
+        recipientDetails: {
+          name: recipientName,
+          relation: recipientRelation,
+          phone: recipientPhone,
+          email: recipientEmail,
+          address: recipientAddress,
+        },
+      });
+
+      const { bookingId, amount: bookingAmount } = bookingRes.data.data;
+
+      // Step 2: Razorpay payment
+      const orderRes = await paymentAPI.createOrder(bookingId);
+      const { orderId, amount: orderAmount, currency, keyId } = orderRes.data.data;
+
+      const paymentData = await RazorpayCheckout.open({
+        description: 'Legal Notice Drafting & Review',
+        image: 'https://res.cloudinary.com/legalitt/image/upload/v1/legalitt-logo.png',
+        currency: currency || 'INR',
+        key: keyId,
+        amount: orderAmount,
+        name: 'Legalitt',
+        order_id: orderId,
+        prefill: {
+          email: senderEmail || userData.email,
+          contact: senderPhone.replace(/\D/g, '').slice(-10),
+          name: senderName,
+        },
+        theme: { color: '#14B8A6' },
+      });
+
+      // Step 3: Confirm payment
+      await legalAdviceAPI.confirmPayment({
+        bookingId,
+        razorpayOrderId: paymentData.razorpay_order_id,
+        razorpayPaymentId: paymentData.razorpay_payment_id,
+        razorpaySignature: paymentData.razorpay_signature,
+      });
+
       setIsSubmitting(false);
       setIsSubmitted(true);
-    }, 1200);
+
+      // Navigate to success after a moment
+      setTimeout(() => {
+        navigation.navigate('ConsultationScheduled', {
+          bookingData: {
+            bookingId,
+            requestId: `NOT-${bookingId.substring(bookingId.length - 6).toUpperCase()}`,
+            selectedType: { title: 'Legal Notice', price: String(amount) },
+            selectedMatter: { title: selectedCategory },
+            serviceType: 'legal_notice',
+            clientDetails: { fullName: senderName, phone: senderPhone },
+            totalAmount: bookingAmount,
+          },
+        });
+      }, 1500);
+    } catch (err: any) {
+      setIsSubmitting(false);
+      if (err?.code === 'PAYMENT_CANCELLED') {
+        Alert.alert('Payment Cancelled', 'Your legal notice request was not submitted.');
+      } else {
+        Alert.alert('Error', err?.response?.data?.message || 'Submission failed. Please try again.');
+      }
+    }
   };
 
   const uploadedDocCount = documents.filter(d => d.uploaded).length;

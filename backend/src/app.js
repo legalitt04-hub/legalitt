@@ -134,6 +134,8 @@ app.use('/api/v1/fir', require('./routes/firDrafts'));
 app.use('/api/v1/users', require('./routes/userProfile'));
 app.use('/api/v1/cases', require('./routes/cases'));
 app.use('/api/v1/settings', require('./routes/settings'));
+app.use('/api/v1/legal-advice', require('./routes/legalAdvice')); // Legal Advice + Legal Notice flow
+app.use('/api/v1/ads', require('./routes/ads')); // Public ads fetch for mobile app
 
 app.use(notFound);
 app.use(errorHandler);

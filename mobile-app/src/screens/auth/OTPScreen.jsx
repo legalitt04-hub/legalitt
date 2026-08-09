@@ -23,8 +23,8 @@ const OTPScreen = ({ navigation, route }) => {
   const { email, role, mode, password: loginPassword, registerData } = route.params;
   const { register, login } = useAuth();
 
-  // OTP Input
-  const [otp, setOtp] = useState(['', '', '', '']);
+  // OTP Input — 6 digits
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const inputRefs = useRef([]);
 
   // Password Setup (for registration only)
@@ -36,6 +36,22 @@ const OTPScreen = ({ navigation, route }) => {
   // Flow control
   const [otpVerified, setOtpVerified] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+
+  // Resend countdown
+  const [countdown, setCountdown] = useState(60);
+  const timerRef = useRef(null);
+
+  const startCountdown = () => {
+    setCountdown(60);
+    clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setCountdown(c => {
+        if (c <= 1) { clearInterval(timerRef.current); return 0; }
+        return c - 1;
+      });
+    }, 1000);
+  };
 
   // Live password validation criteria
   const hasMinLength = newPassword.length >= 8;
@@ -46,23 +62,26 @@ const OTPScreen = ({ navigation, route }) => {
   const passwordsMatch = newPassword.length > 0 && newPassword === confirmPassword;
 
   useEffect(() => {
-    // Auto-focus first input
     inputRefs.current[0]?.focus();
-    // Send initial OTP E2E
     handleResendOTP();
+    return () => clearInterval(timerRef.current);
   }, []);
 
   const handleOtpChange = (text, index) => {
     if (text && !/^\d+$/.test(text)) return;
 
     const newOtp = [...otp];
+    // Handle paste — fill from current index
+    if (text.length > 1) {
+      const digits = text.replace(/\D/g, '').slice(0, 6).split('');
+      const filled = [...Array(6)].map((_, i) => digits[i] || '');
+      setOtp(filled);
+      inputRefs.current[Math.min(digits.length - 1, 5)]?.focus();
+      return;
+    }
     newOtp[index] = text;
     setOtp(newOtp);
-
-    // Auto-focus next input
-    if (text && index < 3) {
-      inputRefs.current[index + 1]?.focus();
-    }
+    if (text && index < 5) inputRefs.current[index + 1]?.focus();
   };
 
   const handleKeyPress = (e, index) => {
@@ -77,29 +96,19 @@ const OTPScreen = ({ navigation, route }) => {
 
   const handleVerifyOTP = async () => {
     const otpCode = otp.join('');
-    if (otpCode.length !== 4) return;
+    if (otpCode.length !== 6) return;
 
-    console.log('Verifying OTP E2E:', otpCode);
-
+    setVerifying(true);
     try {
-      // 1. Call E2E verify-otp endpoint on backend
       const { data } = await authAPI.verifyOTP(email.trim().toLowerCase(), otpCode, role);
 
       if (data.success) {
         if (mode === 'login') {
-          // LOGIN MODE: OTP verified -> Call login API via context
-          const response = await login(
-            email.trim().toLowerCase(),
-            loginPassword
-          );
-          if (!response.success) {
-            Alert.alert('Verification failed', response.message || 'OTP verification failed');
-          }
+          const response = await login(email.trim().toLowerCase(), loginPassword);
+          if (!response.success) Alert.alert('Verification failed', response.message || 'OTP verification failed');
         } else if (registerData?.password) {
-          // REGISTER MODE with pre-entered password (Advocate flow) -> Auto complete registration
           await handleCompleteRegistration(registerData.password);
         } else {
-          // REGISTER MODE without pre-entered password (Client flow) -> Show password setup
           setOtpVerified(true);
         }
       } else {
@@ -107,11 +116,9 @@ const OTPScreen = ({ navigation, route }) => {
       }
     } catch (error) {
       const serverMsg = error.response?.data?.message;
-      if (serverMsg) {
-        Alert.alert('Verification Failed', serverMsg);
-      } else {
-        Alert.alert('Server Waking Up', 'The cloud server is waking up. Please tap Verify once more.');
-      }
+      Alert.alert('Verification Failed', serverMsg || 'The server is waking up. Please tap Verify once more.');
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -163,36 +170,31 @@ const OTPScreen = ({ navigation, route }) => {
   };
 
   const handleResendOTP = async () => {
-    console.log('Sending Email OTP to:', email);
     try {
       await authAPI.sendOTP(email.trim().toLowerCase());
+      startCountdown();
     } catch (err) {
       console.log('Error triggering OTP resend:', err.message);
     }
-    setOtp(['', '', '', '']);
+    setOtp(['', '', '', '', '', '']);
     inputRefs.current[0]?.focus();
   };
 
   // Show OTP Entry Screen
   if (!otpVerified) {
+    const otpFull = otp.join('').length === 6;
     return (
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={{ flex: 1 }}
-        >
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
           <View style={styles.content}>
             {/* Header */}
             <View style={styles.header}>
               <Text style={styles.title}>Enter verification code</Text>
-              <Text style={styles.subtitle}>
-                Code sent to {email}
-              </Text>
+              <Text style={styles.subtitle}>6-digit code sent to {email}</Text>
             </View>
 
-            {/* OTP Inputs */}
+            {/* 6-digit OTP Inputs */}
             <View style={styles.otpContainer}>
               {otp.map((digit, index) => (
                 <TextInput
@@ -203,33 +205,38 @@ const OTPScreen = ({ navigation, route }) => {
                   onChangeText={(text) => handleOtpChange(text, index)}
                   onKeyPress={(e) => handleKeyPress(e, index)}
                   keyboardType="number-pad"
-                  maxLength={1}
+                  maxLength={6}
                   selectTextOnFocus
                 />
               ))}
             </View>
 
-            {/* Resend OTP */}
-            <TouchableOpacity onPress={handleResendOTP} style={styles.resendContainer}>
+            {/* Resend with countdown */}
+            <TouchableOpacity
+              onPress={countdown === 0 ? handleResendOTP : undefined}
+              disabled={countdown > 0}
+              style={styles.resendContainer}
+            >
               <Text style={styles.resendText}>
-                Didn't receive code?{' '}
-                <Text style={styles.resendLink}>Resend</Text>
+                {countdown > 0
+                  ? `Resend OTP in ${countdown}s`
+                  : <Text style={styles.resendLink}>Resend OTP</Text>
+                }
               </Text>
             </TouchableOpacity>
 
-            {/* Spacer */}
             <View style={{ flex: 1 }} />
 
             {/* Verify Button */}
             <TouchableOpacity
-              style={[
-                styles.nextButton,
-                otp.join('').length !== 4 && styles.nextButtonDisabled,
-              ]}
+              style={[styles.nextButton, (!otpFull || verifying) && styles.nextButtonDisabled]}
               onPress={handleVerifyOTP}
-              disabled={otp.join('').length !== 4}
+              disabled={!otpFull || verifying}
             >
-              <Text style={styles.nextButtonText}>Verify</Text>
+              {verifying
+                ? <ActivityIndicator color="#FFFFFF" size="small" />
+                : <Text style={styles.nextButtonText}>Verify Code</Text>
+              }
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>

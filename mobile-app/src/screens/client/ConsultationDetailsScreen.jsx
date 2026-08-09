@@ -1,27 +1,40 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import {
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  Alert, ActivityIndicator, Platform
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as DocumentPicker from 'expo-document-picker';
 import SafeScreen from '../../components/SafeScreen';
 import { LEGAL_THEME } from '../../constants/legalAdviceTheme';
 import { LogoHeader } from '../../components/legalAdvice/LogoHeader';
 import { Stepper } from '../../components/legalAdvice/Stepper';
 import { InputField } from '../../components/legalAdvice/InputField';
 import { TextArea } from '../../components/legalAdvice/TextArea';
-import { UploadCard } from '../../components/legalAdvice/UploadCard';
 import { PrimaryButton } from '../../components/legalAdvice/PrimaryButton';
 import { useAuth } from '../../context/AuthContext';
+import { uploadAPI, legalAdviceAPI, paymentAPI } from '../../services/api';
+import RazorpayCheckout from 'react-native-razorpay';
+
+const MAX_FILES = 5;
+const MAX_FILE_SIZE_MB = 10;
 
 export default function ConsultationDetailsScreen({ navigation, route }) {
   const { user } = useAuth();
-  const selectedType = route?.params?.selectedType || { id: 'audio', title: 'Audio Consultation', price: '799' };
+  const selectedType = route?.params?.selectedType || { id: 'chat', title: 'Chat Consultation', price: '499' };
   const selectedMatter = route?.params?.selectedMatter || { id: 'property', title: 'Property Law' };
+  const serviceType = route?.params?.serviceType || 'legal_advice'; // 'legal_advice' or 'legal_notice'
 
-  const [fullName, setFullName] = useState(user?.name || user?.user?.name || '');
-  const [phone, setPhone] = useState(user?.phone || user?.user?.phone || '');
-  const [email, setEmail] = useState(user?.email || user?.user?.email || '');
+  const userData = user?.user || user || {};
+  const [fullName, setFullName] = useState(userData.name || '');
+  const [phone, setPhone] = useState(userData.phone || '');
+  const [email, setEmail] = useState(userData.email || '');
+  const [city, setCity] = useState(userData.address?.city || '');
   const [preferredSlot, setPreferredSlot] = useState('Tomorrow, 10:30 AM');
   const [description, setDescription] = useState('');
   const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const timeSlots = [
     'Today, 4:00 PM',
@@ -30,49 +43,139 @@ export default function ConsultationDetailsScreen({ navigation, route }) {
     'Tomorrow, 3:00 PM',
   ];
 
-  const handlePickFile = () => {
-    // Simulate document picker addition
-    const newFile = {
-      name: `Legal_Doc_${uploadedFiles.length + 1}.pdf`,
-      size: '1.4 MB',
-      type: 'pdf',
-    };
-    setUploadedFiles([...uploadedFiles, newFile]);
-  };
+  // ─── Real Document Picker ────────────────────────────────────────────────────
+  const handlePickFile = useCallback(async () => {
+    if (uploadedFiles.length >= MAX_FILES) {
+      Alert.alert('Limit Reached', `You can upload up to ${MAX_FILES} documents.`);
+      return;
+    }
+
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'image/*', 'application/msword',
+               'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+
+      if (result.canceled || !result.assets?.length) return;
+
+      const file = result.assets[0];
+      const fileSizeMB = (file.size || 0) / (1024 * 1024);
+
+      if (fileSizeMB > MAX_FILE_SIZE_MB) {
+        Alert.alert('File Too Large', `Please select a file smaller than ${MAX_FILE_SIZE_MB}MB.`);
+        return;
+      }
+
+      // Upload to Cloudinary
+      setUploading(true);
+      try {
+        const response = await uploadAPI.uploadFile(file.uri, file.name, file.mimeType);
+        const cloudinaryUrl = response.data?.data?.url || response.data?.url;
+
+        if (!cloudinaryUrl) throw new Error('Upload failed');
+
+        setUploadedFiles(prev => [...prev, {
+          url: cloudinaryUrl,
+          name: file.name,
+          type: file.mimeType?.includes('image') ? 'image' : 'pdf',
+          size: fileSizeMB.toFixed(1) + ' MB',
+        }]);
+      } catch (uploadErr) {
+        Alert.alert('Upload Failed', 'Could not upload document. Please try again.');
+      } finally {
+        setUploading(false);
+      }
+    } catch (err) {
+      console.log('Document picker error:', err);
+    }
+  }, [uploadedFiles]);
 
   const handleRemoveFile = (index) => {
-    const updated = uploadedFiles.filter((_, idx) => idx !== index);
-    setUploadedFiles(updated);
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleContinue = () => {
-    if (!fullName.trim()) {
-      Alert.alert('Required Field', 'Please enter your full name.');
-      return;
-    }
-    if (!phone.trim()) {
-      Alert.alert('Required Field', 'Please enter your phone number.');
-      return;
-    }
+  // ─── Submit → Backend → Razorpay ────────────────────────────────────────────
+  const handleContinue = async () => {
+    if (!fullName.trim()) return Alert.alert('Required', 'Please enter your full name.');
+    if (!phone.trim()) return Alert.alert('Required', 'Please enter your phone number.');
     if (!description.trim() || description.trim().length < 10) {
-      Alert.alert('Details Required', 'Please provide a brief description of your legal concern (min 10 characters).');
-      return;
+      return Alert.alert('Required', 'Please describe your legal concern (min 10 characters).');
     }
 
-    const clientDetails = {
-      fullName,
-      phone,
-      email,
-      preferredSlot,
-      description,
-      filesCount: uploadedFiles.length,
-    };
+    setSubmitting(true);
+    try {
+      const modeMap = { chat: 'chat', audio: 'voice', video: 'video' };
+      const consultationMode = modeMap[selectedType.id] || 'chat';
+      const amount = parseInt(selectedType.price || '499', 10);
 
-    navigation.navigate('ReviewPayment', {
-      selectedType,
-      selectedMatter,
-      clientDetails,
-    });
+      // Step 1: Create booking on backend
+      const bookingRes = await legalAdviceAPI.createRequest({
+        consultationMode,
+        serviceType,
+        issueCategory: selectedMatter.id,
+        issueDescription: description.trim(),
+        preferredSlot,
+        documents: uploadedFiles.map(f => ({ url: f.url, name: f.name, type: f.type })),
+        clientCity: city.trim() || userData.address?.city || '',
+        amount,
+      });
+
+      const { bookingId, amount: bookingAmount } = bookingRes.data.data;
+
+      // Step 2: Create Razorpay order
+      const orderRes = await paymentAPI.createOrder(bookingId);
+      const { orderId, amount: orderAmount, currency, keyId } = orderRes.data.data;
+
+      // Step 3: Open Razorpay checkout
+      const razorpayOptions = {
+        description: `${selectedType.title} - ${selectedMatter.title}`,
+        image: 'https://res.cloudinary.com/legalitt/image/upload/v1/legalitt-logo.png',
+        currency: currency || 'INR',
+        key: keyId,
+        amount: orderAmount,
+        name: 'Legalitt',
+        order_id: orderId,
+        prefill: {
+          email: email.trim() || userData.email,
+          contact: phone.replace(/\D/g, '').slice(-10),
+          name: fullName.trim(),
+        },
+        theme: { color: '#14B8A6' },
+      };
+
+      const paymentData = await RazorpayCheckout.open(razorpayOptions);
+
+      // Step 4: Confirm payment with backend
+      await legalAdviceAPI.confirmPayment({
+        bookingId,
+        razorpayOrderId: paymentData.razorpay_order_id,
+        razorpayPaymentId: paymentData.razorpay_payment_id,
+        razorpaySignature: paymentData.razorpay_signature,
+      });
+
+      // Step 5: Navigate to success screen
+      navigation.navigate('ConsultationScheduled', {
+        bookingData: {
+          bookingId,
+          requestId: `LEG-${bookingId.substring(bookingId.length - 6).toUpperCase()}`,
+          selectedType,
+          selectedMatter,
+          serviceType,
+          clientDetails: { fullName, phone, email, preferredSlot, filesCount: uploadedFiles.length },
+          totalAmount: bookingAmount,
+        },
+      });
+    } catch (err) {
+      if (err?.code === 'PAYMENT_CANCELLED') {
+        Alert.alert('Payment Cancelled', 'You cancelled the payment. Your request was not submitted.');
+      } else {
+        Alert.alert('Error', err?.response?.data?.message || 'Something went wrong. Please try again.');
+      }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -81,102 +184,108 @@ export default function ConsultationDetailsScreen({ navigation, route }) {
       <Stepper currentStep={1} />
 
       <View style={styles.container}>
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* HERO CARD */}
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          {/* Hero */}
           <View style={styles.heroCard}>
-            <Text style={styles.heroTitle}>Tell Us About Your Legal Concern</Text>
+            <Text style={styles.heroTitle}>
+              {serviceType === 'legal_notice' ? 'Legal Notice Details' : 'Tell Us About Your Legal Concern'}
+            </Text>
             <Text style={styles.heroSubtitle}>
-              Providing accurate details helps us assign the best advocate specialized in {selectedMatter.title}.
+              {serviceType === 'legal_notice'
+                ? 'Provide details for your legal notice. Our advocates will draft & review it for you.'
+                : `Accurate details help us assign the best ${selectedMatter.title} specialist.`}
             </Text>
           </View>
 
-          {/* FORM FIELDS */}
           <View style={styles.formContainer}>
-            <InputField
-              label="Full Name"
-              value={fullName}
-              onChangeText={setFullName}
-              placeholder="e.g. Rahul Sharma"
-              required
-            />
+            <InputField label="Full Name" value={fullName} onChangeText={setFullName}
+              placeholder="e.g. Rahul Sharma" required />
 
-            <InputField
-              label="Phone Number"
-              value={phone}
-              onChangeText={setPhone}
-              placeholder="e.g. +91 98765 43210"
-              keyboardType="phone-pad"
-              required
-            />
+            <InputField label="Phone Number" value={phone} onChangeText={setPhone}
+              placeholder="e.g. +91 98765 43210" keyboardType="phone-pad" required />
 
-            <InputField
-              label="Email Address"
-              value={email}
-              onChangeText={setEmail}
-              placeholder="e.g. rahul@example.com"
-              keyboardType="email-address"
-            />
+            <InputField label="Email Address" value={email} onChangeText={setEmail}
+              placeholder="e.g. rahul@example.com" keyboardType="email-address" />
 
-            {/* PREFERRED TIME SLOT SELECTOR */}
+            <InputField label="Your City" value={city} onChangeText={setCity}
+              placeholder="e.g. Mumbai, Delhi, Bangalore" />
+
+            {/* Time Slot */}
             <View style={styles.slotContainer}>
               <Text style={styles.slotLabel}>Preferred Consultation Slot *</Text>
               <View style={styles.slotsRow}>
                 {timeSlots.map((slot, idx) => {
                   const isSelected = preferredSlot === slot;
                   return (
-                    <TouchableOpacity
-                      key={idx}
+                    <TouchableOpacity key={idx}
                       style={[styles.slotChip, isSelected && styles.selectedSlotChip]}
-                      onPress={() => setPreferredSlot(slot)}
-                      activeOpacity={0.8}
-                    >
-                      <Ionicons
-                        name="time-outline"
-                        size={14}
-                        color={isSelected ? LEGAL_THEME.colors.white : LEGAL_THEME.colors.secondaryText}
-                      />
-                      <Text style={[styles.slotText, isSelected && styles.selectedSlotText]}>
-                        {slot}
-                      </Text>
+                      onPress={() => setPreferredSlot(slot)} activeOpacity={0.8}>
+                      <Ionicons name="time-outline" size={14}
+                        color={isSelected ? LEGAL_THEME.colors.white : LEGAL_THEME.colors.secondaryText} />
+                      <Text style={[styles.slotText, isSelected && styles.selectedSlotText]}>{slot}</Text>
                     </TouchableOpacity>
                   );
                 })}
               </View>
             </View>
 
-            {/* DESCRIPTION FIELD */}
-            <TextArea
-              label="Describe Your Legal Matter"
-              value={description}
-              onChangeText={setDescription}
-              placeholder="Briefly describe the facts of your case, key dates, or specific questions you want the advocate to answer..."
-              maxLength={500}
-              required
-            />
+            <TextArea label="Describe Your Legal Matter"
+              value={description} onChangeText={setDescription}
+              placeholder={serviceType === 'legal_notice'
+                ? 'Describe who should receive the notice, the nature of the dispute, and what action you want...'
+                : 'Briefly describe the facts of your case, key dates, or specific questions...'}
+              maxLength={1000} required />
 
-            {/* UPLOAD SECTION */}
-            <UploadCard
-              files={uploadedFiles}
-              onPickFile={handlePickFile}
-              onRemoveFile={handleRemoveFile}
-            />
+            {/* Document Upload */}
+            <View style={styles.uploadSection}>
+              <Text style={styles.uploadLabel}>Attach Documents (Optional)</Text>
+              <Text style={styles.uploadSubLabel}>
+                PDF, Word, or images • Max {MAX_FILE_SIZE_MB}MB each • Up to {MAX_FILES} files
+              </Text>
+
+              {uploadedFiles.map((file, idx) => (
+                <View key={idx} style={styles.fileRow}>
+                  <View style={styles.fileIcon}>
+                    <Ionicons name={file.type === 'image' ? 'image-outline' : 'document-outline'}
+                      size={20} color={LEGAL_THEME.colors.primaryGold} />
+                  </View>
+                  <View style={styles.fileInfo}>
+                    <Text style={styles.fileName} numberOfLines={1}>{file.name}</Text>
+                    <Text style={styles.fileSize}>{file.size} • Uploaded ✓</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => handleRemoveFile(idx)} style={styles.removeBtn}>
+                    <Ionicons name="close-circle" size={22} color="#EF4444" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+
+              {uploadedFiles.length < MAX_FILES && (
+                <TouchableOpacity style={styles.uploadButton} onPress={handlePickFile}
+                  disabled={uploading} activeOpacity={0.8}>
+                  {uploading ? (
+                    <ActivityIndicator size="small" color={LEGAL_THEME.colors.primaryGold} />
+                  ) : (
+                    <Ionicons name="cloud-upload-outline" size={20} color={LEGAL_THEME.colors.primaryGold} />
+                  )}
+                  <Text style={styles.uploadButtonText}>
+                    {uploading ? 'Uploading...' : 'Upload Document'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
         </ScrollView>
 
-        {/* BOTTOM ACTION & PRIVACY FOOTER */}
         <View style={styles.bottomFooter}>
           <PrimaryButton
-            title="Proceed to Review & Pay"
+            title={submitting ? 'Processing...' : `Proceed to Pay ₹${selectedType.price}`}
             onPress={handleContinue}
+            disabled={submitting || uploading}
           />
-
           <View style={styles.privacyRow}>
             <Ionicons name="lock-closed" size={12} color={LEGAL_THEME.colors.secondaryText} />
             <Text style={styles.privacyText}>
-              Your information is end-to-end encrypted and kept strictly confidential.
+              End-to-end encrypted • Secured by Razorpay
             </Text>
           </View>
         </View>
@@ -186,100 +295,60 @@ export default function ConsultationDetailsScreen({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: LEGAL_THEME.colors.white,
-  },
-  scrollContent: {
-    paddingHorizontal: LEGAL_THEME.spacing.screenPadding,
-    paddingTop: 16,
-    paddingBottom: 130,
-  },
+  container: { flex: 1, backgroundColor: LEGAL_THEME.colors.white },
+  scrollContent: { paddingHorizontal: LEGAL_THEME.spacing.screenPadding, paddingTop: 16, paddingBottom: 140 },
   heroCard: {
     backgroundColor: LEGAL_THEME.colors.cream,
-    borderRadius: 18,
-    borderWidth: 1,
+    borderRadius: 18, borderWidth: 1,
     borderColor: LEGAL_THEME.colors.border,
-    padding: 16,
-    marginBottom: 20,
+    padding: 16, marginBottom: 20,
   },
-  heroTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: LEGAL_THEME.colors.primaryText,
-    marginBottom: 4,
-  },
-  heroSubtitle: {
-    fontSize: 12,
-    color: LEGAL_THEME.colors.secondaryText,
-    lineHeight: 17,
-  },
-  formContainer: {
-    marginBottom: 10,
-  },
-  slotContainer: {
-    marginBottom: 16,
-  },
-  slotLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: LEGAL_THEME.colors.primaryText,
-    marginBottom: 8,
-  },
-  slotsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
+  heroTitle: { fontSize: 18, fontWeight: '800', color: LEGAL_THEME.colors.primaryText, marginBottom: 4 },
+  heroSubtitle: { fontSize: 12, color: LEGAL_THEME.colors.secondaryText, lineHeight: 17 },
+  formContainer: { marginBottom: 10 },
+  slotContainer: { marginBottom: 16 },
+  slotLabel: { fontSize: 13, fontWeight: '600', color: LEGAL_THEME.colors.primaryText, marginBottom: 8 },
+  slotsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   slotChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: LEGAL_THEME.colors.cream,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: LEGAL_THEME.colors.border,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderRadius: 12, borderWidth: 1, borderColor: LEGAL_THEME.colors.border,
+    paddingHorizontal: 12, paddingVertical: 8,
   },
-  selectedSlotChip: {
-    backgroundColor: LEGAL_THEME.colors.primaryGold,
-    borderColor: LEGAL_THEME.colors.primaryGold,
+  selectedSlotChip: { backgroundColor: LEGAL_THEME.colors.primaryGold, borderColor: LEGAL_THEME.colors.primaryGold },
+  slotText: { fontSize: 12, fontWeight: '600', color: LEGAL_THEME.colors.secondaryText },
+  selectedSlotText: { color: LEGAL_THEME.colors.white },
+  uploadSection: { marginBottom: 12 },
+  uploadLabel: { fontSize: 13, fontWeight: '700', color: LEGAL_THEME.colors.primaryText, marginBottom: 2 },
+  uploadSubLabel: { fontSize: 11, color: LEGAL_THEME.colors.secondaryText, marginBottom: 12 },
+  fileRow: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#F0FDF4', borderRadius: 12,
+    padding: 12, marginBottom: 8, borderWidth: 1, borderColor: '#BBF7D0',
   },
-  slotText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: LEGAL_THEME.colors.secondaryText,
+  fileIcon: {
+    width: 36, height: 36, borderRadius: 8, backgroundColor: '#ECFDF5',
+    alignItems: 'center', justifyContent: 'center', marginRight: 10,
   },
-  selectedSlotText: {
-    color: LEGAL_THEME.colors.white,
+  fileInfo: { flex: 1 },
+  fileName: { fontSize: 13, fontWeight: '600', color: '#1F2937' },
+  fileSize: { fontSize: 11, color: '#6B7280', marginTop: 2 },
+  removeBtn: { padding: 4 },
+  uploadButton: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    borderWidth: 2, borderStyle: 'dashed', borderColor: LEGAL_THEME.colors.primaryGold,
+    borderRadius: 14, paddingVertical: 14, backgroundColor: '#FFFBEB',
   },
+  uploadButtonText: { fontSize: 14, fontWeight: '700', color: LEGAL_THEME.colors.primaryGold },
   bottomFooter: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+    position: 'absolute', bottom: 0, left: 0, right: 0,
     backgroundColor: LEGAL_THEME.colors.white,
     paddingHorizontal: LEGAL_THEME.spacing.screenPadding,
-    paddingTop: 12,
-    paddingBottom: 16,
-    borderTopWidth: 1,
-    borderTopColor: LEGAL_THEME.colors.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 8,
+    paddingTop: 12, paddingBottom: 16,
+    borderTopWidth: 1, borderTopColor: LEGAL_THEME.colors.border,
+    shadowColor: '#000', shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.08, shadowRadius: 10, elevation: 8,
   },
-  privacyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    marginTop: 8,
-  },
-  privacyText: {
-    fontSize: 11,
-    color: LEGAL_THEME.colors.secondaryText,
-  },
+  privacyRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 8 },
+  privacyText: { fontSize: 11, color: LEGAL_THEME.colors.secondaryText },
 });

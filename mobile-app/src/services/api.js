@@ -206,14 +206,22 @@ api.interceptors.response.use(
 export const authAPI = {
   login: (credentials) => api.post('/auth/login', credentials),
   register: (userData) => api.post('/auth/register', userData),
-  googleAuth: (idToken, role) => api.post('/auth/google', { idToken, role }),
+  googleAuth: (idToken, role, accessToken) => api.post('/auth/google', {
+    ...(idToken ? { idToken } : {}),
+    ...(accessToken ? { accessToken } : {}),
+    role,
+  }),
   refreshToken: (refreshToken) => api.post('/auth/refresh', { refreshToken }),
   logout: (refreshToken) => api.post('/auth/logout', { refreshToken }),
   getMe: () => api.get('/users/me'),
   deleteAccount: () => api.delete('/users/me'),
   sendOTP: (email) => api.post('/auth/send-otp', { email }),
   verifyOTP: (email, otp, role) => api.post('/auth/verify-otp', { email, otp, role }),
+  forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
+  verifyResetOTP: (email, otp) => api.post('/auth/verify-reset-otp', { email, otp }),
+  resetPassword: (email, otp, newPassword) => api.post('/auth/reset-password', { email, otp, newPassword }),
 };
+
 
 export const advocateAPI = {
   getAdvocates: (params) => api.get('/advocates', { params }),
@@ -282,4 +290,25 @@ export const caseAPI = {
   addDoc: (id, data) => api.post(`/cases/${id}/documents`, data),
 };
 
+// Legal Advice + Legal Notice (Admin assignment flow)
+export const legalAdviceAPI = {
+  createRequest:    (data) => api.post('/legal-advice/request', data),
+  confirmPayment:   (data) => api.post('/legal-advice/confirm-payment', data),
+  getMyRequests:    (params) => api.get('/legal-advice/my-requests', { params }),
+  getRequestDetail: (id) => api.get(`/legal-advice/request/${id}`),
+};
+
+// Document Upload to Cloudinary
+export const uploadAPI = {
+  uploadFile: async (fileUri, fileName, mimeType) => {
+    const formData = new FormData();
+    formData.append('file', { uri: fileUri, name: fileName, type: mimeType || 'application/octet-stream' });
+    return api.post('/uploads/file', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 60000,
+    });
+  },
+};
+
 export default api;
+

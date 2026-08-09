@@ -10,6 +10,8 @@ import { useAuth } from '../../context/AuthContext';
 import { useChatList } from '../../hooks/useChat';
 import { COLORS } from '../../constants/theme';
 import { formatINR } from '../../utils/helpers';
+import { getSocket } from '../../services/socket';
+import Constants from 'expo-constants';
 
 // Subcomponents
 import StatsCard from '../../components/advocate/StatsCard';
@@ -173,6 +175,60 @@ const AdvocateDashboardScreen = ({ navigation }) => {
   useEffect(() => {
     fetchDashboardData();
   }, []);
+
+  // ─── Real-time: listen for new booking assigned by admin ────────────────
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    const { ZEGO_APP_ID, ZEGO_APP_SIGN } = Constants.expoConfig?.extra || {};
+    const advocateUser = user?.user || user || {};
+
+    const handleNewBooking = (data) => {
+      const modeEmoji = { chat: '💬', voice: '📞', video: '📹' };
+      const emoji = modeEmoji[data.consultationMode] || '⚖️';
+
+      Alert.alert(
+        `${emoji} New Case Assigned!`,
+        `${data.client?.name || 'A client'} needs ${data.consultationMode} consultation.
+
+"${(data.issue || '').substring(0, 80)}${(data.issue || '').length > 80 ? '...' : ''}"`,
+        [
+          { text: 'Later', style: 'cancel' },
+          {
+            text: data.consultationMode === 'chat' ? 'Open Chat' : 'Join Call',
+            onPress: () => {
+              if (data.consultationMode === 'chat' && data.chatId) {
+                navigation.navigate('Chat', {
+                  chatId: data.chatId,
+                  advocateName: data.client?.name || 'Client',
+                  advocateAvatar: data.client?.avatar,
+                  advocateId: data.client?._id,
+                });
+              } else if ((data.consultationMode === 'voice' || data.consultationMode === 'video') && data.zegoRoomId) {
+                navigation.navigate('VideoCall', {
+                  zegoRoomId:  data.zegoRoomId,
+                  zegoToken:   data.zegoToken,
+                  zegoAppId:   Number(ZEGO_APP_ID || 0),
+                  zegoAppSign: ZEGO_APP_SIGN || '',
+                  advocateName: data.client?.name || 'Client',
+                  myUserId:    String(advocateUser._id || ''),
+                  myUserName:  String(advocateUser.name || 'Advocate'),
+                  mode:        data.consultationMode,
+                  bookingId:   data.bookingId,
+                });
+              }
+            },
+          },
+        ]
+      );
+      // Also refresh dashboard counts
+      fetchDashboardData();
+    };
+
+    socket.on('new_booking_assigned', handleNewBooking);
+    return () => socket.off('new_booking_assigned', handleNewBooking);
+  }, [navigation, user]);
 
   const onRefresh = async () => {
     setRefreshing(true);

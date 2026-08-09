@@ -22,6 +22,7 @@ import OnboardingScreen from '../screens/auth/OnboardingScreen';
 import LoginRegisterScreen from '../screens/auth/LoginRegisterScreen';
 import OTPScreen from '../screens/auth/OTPScreen';
 import TermsAcceptanceScreen from '../screens/auth/TermsAcceptanceScreen';
+import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 
 // CLIENT SCREENS
 import HomeScreen from '../screens/client/HomeScreen';
@@ -68,12 +69,14 @@ import NotificationsScreen from '../screens/shared/NotificationsScreen';
 import PrivacyPolicyScreen from '../screens/shared/PrivacyPolicyScreen';
 import TermsConditionsScreen from '../screens/shared/TermsConditionsScreen';
 import DataDeletionScreen from '../screens/shared/DataDeletionScreen';
+import VideoCallScreen from '../screens/VideoCallScreen';
 
 // ADVOCATE SCREENS
 import AdvocateStack from './AdvocateStack';
 import AdvocateDashboardScreen from '../screens/advocate/DashboardScreen';
 import CaseRequestsScreen from '../screens/advocate/CaseRequestsScreen';
 import EarningsScreen from '../screens/advocate/EarningsScreen';
+import AdvocateWalletScreen from '../screens/advocate/AdvocateWalletScreen';
 import DocumentUploadScreen from '../screens/advocate/DocumentUploadScreen';
 import PendingApprovalScreen from '../screens/advocate/PendingApprovalScreen';
 import { CasesScreen, ClientsScreen, CaseDetailScreen, ProfileEditScreen as AdvocateProfileEditScreen } from '../screens/advocate';
@@ -211,6 +214,11 @@ const AdvocateTabs = () => {
         component={EarningsScreen}
         options={{ title: 'Earnings' }}
       />
+      <Tab.Screen
+        name="AdvocateWallet"
+        component={AdvocateWalletScreen}
+        options={{ title: 'Wallet', tabBarButton: () => null, tabBarStyle: { display: 'none' } }}
+      />
     </Tab.Navigator>
   );
 };
@@ -253,6 +261,7 @@ const AppNavigator = () => {
               <Stack.Screen name="Onboarding" component={OnboardingScreen} />
               <Stack.Screen name="LoginRegister" component={LoginRegisterScreen} />
               <Stack.Screen name="OTP" component={OTPScreen} />
+              <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
               <Stack.Screen name="AdvocateFlow" component={AdvocateStack} />
               <Stack.Screen name="SearchFilter" component={SearchFilterScreen} />
               {/* Policy screens reachable from the login/register checkbox links */}
@@ -272,6 +281,8 @@ const AppNavigator = () => {
               <Stack.Screen name="AdvocateProfileEdit" component={AdvocateProfileEditScreen} />
               <Stack.Screen name="ChatList" component={ChatListScreen} />
               <Stack.Screen name="Chat" component={ChatScreen} />
+              <Stack.Screen name="VideoCall" component={VideoCallScreen}
+                options={{ animation: 'slide_from_bottom', gestureEnabled: false }} />
               <Stack.Screen name="Notifications" component={NotificationsScreen} />
               <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
               <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
@@ -314,6 +325,10 @@ const AppNavigator = () => {
               <Stack.Screen name="ConsultationScheduled" component={ConsultationScheduledScreen} />
               <Stack.Screen name="TrackConsultation" component={TrackConsultationScreen} />
               <Stack.Screen name="ConsultationCompleted" component={ConsultationCompletedScreen} />
+
+              {/* VIDEO & VOICE CALL */}
+              <Stack.Screen name="VideoCall" component={VideoCallScreen}
+                options={{ animation: 'slide_from_bottom', gestureEnabled: false }} />
 
               <Stack.Screen name="Settings" component={SettingsScreen} />
               <Stack.Screen name="Notifications" component={NotificationsScreen} />

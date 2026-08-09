@@ -1,43 +1,38 @@
-import React, { createContext, useContext, useState, type ReactNode } from 'react';
+import React, { createContext, useContext, type ReactNode } from 'react';
+import { useAuth } from './AuthContext';
 
-export type Role = 
-  | 'Super Admin'
-  | 'Admin'
-  | 'Advocate'
-  | 'Support Executive'
-  | 'Accounts'
-  | 'Forensic Expert'
-  | 'Property Verification Executive';
+// Re-export types for backward compatibility
+export type Role =
+  | 'super_admin' | 'admin' | 'support_executive'
+  | 'accounts' | 'forensic_expert' | 'property_verification';
 
 interface RoleContextType {
-  activeRole: Role;
-  setActiveRole: (role: Role) => void;
+  activeRole: string;
+  displayRole: string;
   canAccess: (path: string) => boolean;
+  hasPermission: (permission: string) => boolean;
+  permissions: string[];
 }
 
 const RoleContext = createContext<RoleContextType | undefined>(undefined);
 
-const rolePermissions: Record<Role, string[]> = {
-  'Super Admin': ['*'],
-  'Admin': ['*'],
-  'Advocate': ['/', '/cases', '/documents', '/calendar', '/support', '/earnings'],
-  'Support Executive': ['/', '/support', '/users', '/cases', '/chats', '/consultations'],
-  'Accounts': ['/', '/earnings', '/reports', '/coupons'],
-  'Forensic Expert': ['/', '/documents', '/cases', '/ai-drafts'],
-  'Property Verification Executive': ['/', '/documents', '/services', '/categories']
-};
-
 export const RoleProvider = ({ children }: { children: ReactNode }) => {
-  const [activeRole, setActiveRole] = useState<Role>('Super Admin');
+  const { user, canAccess } = useAuth();
 
-  const canAccess = (path: string) => {
-    const allowed = rolePermissions[activeRole];
-    if (allowed.includes('*')) return true;
-    return allowed.includes(path);
+  const hasPermission = (permission: string): boolean => {
+    if (!user) return false;
+    if (user.role === 'super_admin' || user.role === 'admin') return true;
+    return user.permissions.includes(permission);
   };
 
   return (
-    <RoleContext.Provider value={{ activeRole, setActiveRole, canAccess }}>
+    <RoleContext.Provider value={{
+      activeRole: user?.role || 'admin',
+      displayRole: user?.displayRole || 'Admin',
+      canAccess,
+      hasPermission,
+      permissions: user?.permissions || [],
+    }}>
       {children}
     </RoleContext.Provider>
   );

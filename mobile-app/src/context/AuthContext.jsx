@@ -6,6 +6,7 @@ import { Alert } from 'react-native';
 import { GoogleSignin } from '../utils/GoogleSigninMock';
 import Constants from 'expo-constants';
 import { authAPI, TOKEN_KEY, REFRESH_KEY } from '../services/api';
+import { connectSocket, disconnectSocket } from '../services/socket';
 
 const AuthContext = createContext(null);
 
@@ -55,13 +56,17 @@ const reducer = (state, action) => {
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(reducer, initialState);
 
-  // Initialize Google Sign-In on mount
+  // Initialize Google Sign-In on mount — configure with webClientId + androidClientId
   useEffect(() => {
-    const webClientId = Constants.expoConfig?.extra?.GOOGLE_WEB_CLIENT_ID || '145094326598-95qo14kskqa4ddr6k57rrs9ebp1so35t.apps.googleusercontent.com';
-    console.log('[AuthContext] Configuring Google Sign-In with webClientId:', webClientId);
+    const webClientId = Constants.expoConfig?.extra?.GOOGLE_WEB_CLIENT_ID
+      || '400989529051-9r050me1vuquck9bqk30b6pd1i97k817.apps.googleusercontent.com';
+    const androidClientId = Constants.expoConfig?.extra?.GOOGLE_ANDROID_CLIENT_ID
+      || '400989529051-5jmb7omhkks18b28oqf20b6nk19ggn3u.apps.googleusercontent.com';
     GoogleSignin.configure({
       webClientId,
-      offlineAccess: true,
+      androidClientId,
+      offlineAccess: false,
+      forceCodeForRefreshToken: false,
     });
   }, []);
 
@@ -98,6 +103,8 @@ export const AuthProvider = ({ children }) => {
       await SecureStore.setItemAsync(TOKEN_KEY, data.data.accessToken);
       await SecureStore.setItemAsync(REFRESH_KEY, data.data.refreshToken);
       dispatch({ type: 'LOGIN_SUCCESS', payload: data.data.user });
+      // Connect socket after login so real-time updates work
+      setTimeout(() => connectSocket(), 500);
       return { success: true, user: data.data.user };
     } catch (err) {
       const msg = err.response?.data?.message || 'Login failed';
@@ -121,12 +128,14 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  const googleLogin = useCallback(async (idToken, role) => {
+  // Google Sign-In: sends idToken to backend for verification
+  const googleLogin = useCallback(async (idToken, role, accessToken) => {
     dispatch({ type: 'LOADING' });
     try {
-      const { data } = await authAPI.googleAuth(idToken, role);
+      const { data } = await authAPI.googleAuth(idToken, role, accessToken);
       await SecureStore.setItemAsync(TOKEN_KEY, data.data.accessToken);
       await SecureStore.setItemAsync(REFRESH_KEY, data.data.refreshToken);
+      connectSocket(data.data.accessToken);
       dispatch({ type: 'LOGIN_SUCCESS', payload: data.data.user });
       return { success: true, user: data.data.user };
     } catch (err) {
@@ -143,6 +152,7 @@ export const AuthProvider = ({ children }) => {
     } catch { /* ignore */ }
     await SecureStore.deleteItemAsync(TOKEN_KEY);
     await SecureStore.deleteItemAsync(REFRESH_KEY);
+    disconnectSocket(); // Clean up socket on logout
     dispatch({ type: 'LOGOUT' });
   }, []);
 
@@ -178,31 +188,12 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  // ─── Session activity monitor & biometrics flow ─────────────────────────────
+  // ─── Session activity monitor & biometrics flow (Session timeout disabled) ─────────────────────────────
   const lastActiveTime = useRef(Date.now());
 
   const updateActivity = useCallback(() => {
     lastActiveTime.current = Date.now();
   }, []);
-
-  useEffect(() => {
-    if (!state.isAuthenticated) return;
-
-    const interval = setInterval(() => {
-      const inactiveMs = Date.now() - lastActiveTime.current;
-      const timeoutMs = 15 * 60 * 1000; // 15 minutes session timeout
-      
-      if (inactiveMs > timeoutMs) {
-        logout();
-        Alert.alert(
-          'Session Timeout',
-          'You have been logged out due to 15 minutes of inactivity for your security.'
-        );
-      }
-    }, 10000); // check inactivity every 10 seconds
-
-    return () => clearInterval(interval);
-  }, [state.isAuthenticated, logout]);
 
   const enableBiometrics = useCallback(async (email, password) => {
     try {

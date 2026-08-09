@@ -26,7 +26,11 @@ import {
   Ticket,
   UserCog,
   History,
-  Grid
+  Grid,
+  Wallet,
+  AlertCircle,
+  Megaphone,
+  Shield
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRole } from '../../contexts/RoleContext';
@@ -56,6 +60,7 @@ const navSections = [
     items: [
       { icon: Users, label: 'Users', path: '/users' },
       { icon: UserCheck, label: 'Advocates', path: '/advocates' },
+      { icon: AlertCircle, label: 'Pending Approval', path: '/pending-advocates' },
       { icon: ShieldCheck, label: 'Verification', path: '/verification' },
       { icon: UserCog, label: 'Admin Team', path: '/admins' },
     ]
@@ -64,6 +69,7 @@ const navSections = [
     title: 'Financials',
     items: [
       { icon: CreditCard, label: 'Payments & Revenue', path: '/earnings' },
+      { icon: Wallet, label: 'Withdrawals', path: '/withdrawals' },
       { icon: Tag, label: 'Coupons & Promos', path: '/coupons' },
     ]
   },
@@ -77,10 +83,17 @@ const navSections = [
     ]
   },
   {
+    title: 'Growth & Marketing',
+    items: [
+      { icon: Megaphone, label: 'Ads Management', path: '/ads' },
+    ]
+  },
+  {
     title: 'System & Intelligence',
     items: [
       { icon: BarChart3, label: 'Reports & Analytics', path: '/reports' },
       { icon: History, label: 'Audit Logs', path: '/audit-logs' },
+      { icon: Shield, label: 'Role Management', path: '/roles' },
       { icon: Settings, label: 'Settings', path: '/settings' },
     ]
   }
@@ -94,8 +107,8 @@ interface SidebarProps {
 }
 
 const Sidebar = ({ isOpen, setIsOpen, isCollapsed, setIsCollapsed }: SidebarProps) => {
-  const { logout } = useAuth();
-  const { activeRole, canAccess } = useRole();
+  const { logout, user } = useAuth();
+  const { canAccess, displayRole } = useRole();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -212,12 +225,18 @@ const Sidebar = ({ isOpen, setIsOpen, isCollapsed, setIsCollapsed }: SidebarProp
               {!isCollapsed ? (
                 <>
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-r from-amber-600 to-amber-500 flex items-center justify-center flex-shrink-0">
-                      <span className="font-bold text-slate-950 text-xs">AD</span>
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center flex-shrink-0 text-slate-950 font-bold text-xs">
+                      {user?.name ? user.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) : 'AD'}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-slate-900 truncate">{activeRole}</p>
-                      <p className="text-[10px] font-medium text-amber-600 uppercase tracking-wider">Role Preview</p>
+                      <p className="text-sm font-semibold text-slate-900 truncate">{user?.name || 'Admin'}</p>
+                      <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full ${
+                        user?.role === 'super_admin' ? 'bg-red-100 text-red-600' :
+                        user?.role === 'admin' ? 'bg-indigo-100 text-indigo-600' :
+                        user?.role === 'accounts' ? 'bg-emerald-100 text-emerald-600' :
+                        user?.role === 'support_executive' ? 'bg-blue-100 text-blue-600' :
+                        'bg-amber-100 text-amber-600'
+                      }`}>{displayRole}</span>
                     </div>
                   </div>
                   <button 

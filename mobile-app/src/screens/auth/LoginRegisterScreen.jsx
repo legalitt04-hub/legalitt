@@ -163,34 +163,57 @@ const LoginRegisterScreen = ({ navigation, route }) => {
 
     setLoading(true);
     try {
-      await GoogleSignin.hasPlayServices();
-      const userInfo = await GoogleSignin.signIn();
-      const idToken = userInfo.idToken || userInfo.data?.idToken;
+      // Check Play Services availability
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+
+      // Trigger native Google account picker
+      const signInResult = await GoogleSignin.signIn();
+
+      // v13 returns { data: { idToken, user, ... } } or { idToken, user, ... }
+      const idToken  = signInResult?.data?.idToken  || signInResult?.idToken;
+      const userData = signInResult?.data?.user      || signInResult?.user;
+
       if (!idToken) {
-        throw new Error('Google Sign-In did not return an ID token.');
+        // Should not happen — idToken always present if signIn succeeded
+        throw new Error('Google Sign-In did not return an ID token. Please try again.');
       }
 
-      const response = await googleLogin(idToken, 'client');
-      if (response.success && response.user) {
-        // Successfully authenticated!
-      } else {
-        Alert.alert('Google Sign-In Failed', response.message || 'Could not verify credentials.');
+      // Send idToken to Legalitt backend for verification + JWT issue
+      const userRole = role === 'advocate' ? 'advocate' : 'client';
+      const response = await googleLogin(idToken, userRole);
+
+      if (!response.success) {
+        Alert.alert(
+          'Google Sign-In Failed',
+          response.message || 'Could not verify your Google account. Please try again.',
+          [{ text: 'OK' }]
+        );
       }
+      // On success, AuthContext auto-navigates via isAuthenticated state
     } catch (error) {
       if (error.code === statusCodes.SIGN_IN_CANCELLED) {
-        console.log('Google Sign-In cancelled by user');
+        // User pressed back — silent
       } else if (error.code === statusCodes.IN_PROGRESS) {
-        console.log('Google Sign-In is already in progress');
+        Alert.alert('Please Wait', 'Google Sign-In is already in progress.');
       } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        Alert.alert('Error', 'Google Play Services are not available or outdated.');
+        Alert.alert(
+          'Play Services Required',
+          'Google Play Services is not available or needs an update. Please update it from the Play Store.',
+          [{ text: 'OK' }]
+        );
       } else {
-        console.error('Google sign-in error:', error);
-        Alert.alert('Google Sign-In Error', error.message || 'Google sign-in encountered an error.');
+        console.error('[Google Sign-In Error]', error);
+        Alert.alert(
+          'Sign-In Error',
+          error.message || 'Something went wrong with Google Sign-In. Please try again.',
+          [{ text: 'OK' }]
+        );
       }
     } finally {
       setLoading(false);
     }
   };
+
 
   const handleModeChange = (newMode) => {
     setMode(newMode);

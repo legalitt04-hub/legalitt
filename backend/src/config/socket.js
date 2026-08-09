@@ -71,8 +71,14 @@ const initSocket = async (server) => {
   const onlineUsers = new Map();
 
   io.on("connection", (socket) => {
-    logger.info(`Socket connected: ${socket.userId}`);
+    logger.info(`Socket connected: ${socket.userId} (${socket.userRole})`);
+    // Every user joins their personal room
     socket.join(`user:${socket.userId}`);
+    // Admin users also join admin_room for global notifications
+    if (socket.userRole === 'admin') {
+      socket.join('admin_room');
+      logger.info(`Admin ${socket.userId} joined admin_room`);
+    }
 
     // Track online presence
     if (!onlineUsers.has(socket.userId)) onlineUsers.set(socket.userId, new Set());

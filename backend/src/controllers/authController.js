@@ -5,6 +5,8 @@ const AuditLog = require('../models/AuditLog');
 const { AppError } = require('../middlewares/errorHandler');
 const logger = require('../utils/logger');
 const crypto = require('crypto');
+const { sendPasswordResetEmail, sendWelcomeEmail, sendEmailOTP } = require('../services/emailService');
+const { sendSMSOTP, generateOTP } = require('../services/smsService');
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -78,6 +80,9 @@ exports.register = async (req, res, next) => {
 
     const user = await User.create({ name, email, password, phone, role: safeRole });
     logger.info(`New user registered: ${user.email} (${user.role})`);
+
+    // Send welcome email (non-blocking)
+    sendWelcomeEmail({ toEmail: user.email, userName: user.name }).catch(() => {});
 
     await sendTokens(user, 201, res);
   } catch (err) {
@@ -276,6 +281,97 @@ exports.updateFCMToken = async (req, res, next) => {
   }
 };
 
+// ─── Send OTP (Phone or Email) ────────────────────────────────────────────────
+exports.sendOTP = async (req, res, next) => {
+  try {
+    const { phone, email, purpose = 'verification' } = req.body;
+
+    if (!phone && !email) {
+      return next(new AppError('Phone or email is required.', 400));
+    }
+
+    const otp = generateOTP();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    let user;
+    if (phone) {
+      // Find or temp-store OTP for this phone
+      user = await User.findOne({ phone });
+      if (!user && purpose === 'verification') {
+        // New registration — store OTP temporarily by phone (we'll link on register)
+        // For simplicity, use email-based flow for new users
+        return next(new AppError('Please register first before requesting OTP.', 400));
+      }
+      if (user) {
+        user.phoneOTP = otp;
+        user.phoneOTPExpires = otpExpires;
+        await user.save({ validateBeforeSave: false });
+      }
+
+      // Send via MSG91 SMS
+      const smsResult = await sendSMSOTP(phone, otp);
+      if (!smsResult.success) {
+        // Fallback: log OTP in development
+        if (process.env.NODE_ENV !== 'production') {
+          console.log(`[DEV OTP] Phone: ${phone} | OTP: ${otp}`);
+          return res.json({ success: true, message: 'OTP sent (dev mode - check server logs)', dev_otp: otp });
+        }
+        return next(new AppError('Failed to send SMS OTP. Please try email OTP.', 500));
+      }
+    } else if (email) {
+      user = await User.findOne({ email: email.toLowerCase().trim() });
+      if (!user) {
+        return res.json({ success: true, message: 'If an account exists, OTP has been sent.' });
+      }
+      user.emailOTP = otp;
+      user.emailOTPExpires = otpExpires;
+      await user.save({ validateBeforeSave: false });
+
+      await sendEmailOTP({ toEmail: email, userName: user.name, otp });
+    }
+
+    res.json({ success: true, message: 'OTP sent successfully.' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ─── Verify OTP ───────────────────────────────────────────────────────────────
+exports.verifyOTP = async (req, res, next) => {
+  try {
+    const { phone, email, otp } = req.body;
+
+    if (!otp) return next(new AppError('OTP is required.', 400));
+    if (!phone && !email) return next(new AppError('Phone or email is required.', 400));
+
+    let user;
+    if (phone) {
+      user = await User.findOne({ phone }).select('+phoneOTP +phoneOTPExpires');
+      if (!user || user.phoneOTP !== otp || !user.phoneOTPExpires || user.phoneOTPExpires < Date.now()) {
+        return next(new AppError('Invalid or expired OTP.', 400));
+      }
+      user.isPhoneVerified = true;
+      user.phoneOTP = undefined;
+      user.phoneOTPExpires = undefined;
+      await user.save({ validateBeforeSave: false });
+    } else {
+      user = await User.findOne({ email: email.toLowerCase().trim() }).select('+emailOTP +emailOTPExpires');
+      if (!user || user.emailOTP !== otp || !user.emailOTPExpires || user.emailOTPExpires < Date.now()) {
+        return next(new AppError('Invalid or expired OTP.', 400));
+      }
+      user.isEmailVerified = true;
+      user.emailOTP = undefined;
+      user.emailOTPExpires = undefined;
+      await user.save({ validateBeforeSave: false });
+    }
+
+    logger.info(`OTP verified for user: ${user.email || user.phone}`);
+    await sendTokens(user, 200, res);
+  } catch (err) {
+    next(err);
+  }
+};
+
 // ─── Forgot Password ──────────────────────────────────────────────────────────
 exports.forgotPassword = async (req, res, next) => {
   try {
@@ -285,58 +381,114 @@ exports.forgotPassword = async (req, res, next) => {
     const user = await User.findOne({ email: email.toLowerCase().trim() });
     if (!user) {
       // Return 200 to prevent email enumeration attacks
-      return res.status(200).json({ success: true, message: 'If an account exists, a reset link has been sent.' });
+      return res.status(200).json({ success: true, message: 'If an account exists, a reset OTP has been sent.' });
     }
 
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+    // Generate 6-digit OTP for mobile OTP flow
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    const hashedOTP = crypto.createHash('sha256').update(otp).digest('hex');
 
-    user.passwordResetToken = hashedToken;
-    user.passwordResetExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+    user.passwordResetToken = hashedOTP;
+    user.passwordResetExpires = Date.now() + 15 * 60 * 1000; // 15 minutes
     await user.save({ validateBeforeSave: false });
 
-    const resetURL = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
-    
-    // Dummy Email Transport Logging
-    console.log('---------------------------------------------------------');
-    console.log(`[DUMMY EMAIL] To: ${user.email}`);
-    console.log(`[DUMMY EMAIL] Subject: Password Reset Request`);
-    console.log(`[DUMMY EMAIL] Body: Please click here to reset your password: ${resetURL}`);
-    console.log('---------------------------------------------------------');
+    // Send OTP via email (Resend)
+    try {
+      await sendPasswordResetEmail({
+        toEmail: user.email,
+        userName: user.name,
+        resetToken: otp, // pass OTP as resetToken — emailService uses this
+        isOtp: true,
+      });
+      logger.info(`Password reset OTP sent to ${user.email}`);
+    } catch (emailErr) {
+      user.passwordResetToken = undefined;
+      user.passwordResetExpires = undefined;
+      await user.save({ validateBeforeSave: false });
+      logger.error('Failed to send password reset OTP:', emailErr.message);
+      return next(new AppError('Failed to send reset OTP. Please try again later.', 500));
+    }
 
-    res.status(200).json({ success: true, message: 'If an account exists, a reset link has been sent.' });
+    res.status(200).json({ success: true, message: 'A 6-digit reset OTP has been sent to your email.' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ─── Verify Reset OTP (mobile flow) ──────────────────────────────────────────
+exports.verifyResetOTP = async (req, res, next) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) return next(new AppError('Email and OTP are required.', 400));
+
+    const hashedOTP = crypto.createHash('sha256').update(String(otp)).digest('hex');
+
+    const user = await User.findOne({
+      email: email.toLowerCase().trim(),
+      passwordResetToken: hashedOTP,
+      passwordResetExpires: { $gt: Date.now() },
+    });
+
+    if (!user) return next(new AppError('Invalid or expired OTP. Please try again.', 400));
+
+    // OTP is valid — return a short-lived reset token for the next step
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const hashedResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+    user.passwordResetToken = hashedResetToken; // Replace OTP with reset token
+    user.passwordResetExpires = Date.now() + 10 * 60 * 1000; // 10 more minutes
+    await user.save({ validateBeforeSave: false });
+
+    res.status(200).json({
+      success: true,
+      message: 'OTP verified successfully.',
+      data: { resetToken },
+    });
   } catch (err) {
     next(err);
   }
 };
 
 // ─── Reset Password ───────────────────────────────────────────────────────────
+// Supports both OTP-based (mobile) and token-based (admin) resets
 exports.resetPassword = async (req, res, next) => {
   try {
-    const { token, password } = req.body;
-    
-    if (!token || !password) {
-      return next(new AppError('Token and new password are required.', 400));
+    const { token, password, email, otp, newPassword } = req.body;
+
+    let user;
+
+    if (token) {
+      // Token-based reset (admin panel link flow)
+      const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+      user = await User.findOne({
+        passwordResetToken: hashedToken,
+        passwordResetExpires: { $gt: Date.now() },
+      });
+    } else if (email && otp) {
+      // OTP-direct reset (mobile shortcut: email + otp + newPassword without separate verify step)
+      const hashedOTP = crypto.createHash('sha256').update(String(otp)).digest('hex');
+      user = await User.findOne({
+        email: email.toLowerCase().trim(),
+        passwordResetToken: hashedOTP,
+        passwordResetExpires: { $gt: Date.now() },
+      });
     }
 
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    if (!user) return next(new AppError('Reset token/OTP is invalid or has expired.', 400));
 
-    const user = await User.findOne({
-      passwordResetToken: hashedToken,
-      passwordResetExpires: { $gt: Date.now() }
-    });
-
-    if (!user) {
-      return next(new AppError('Token is invalid or has expired.', 400));
+    const finalPassword = password || newPassword;
+    if (!finalPassword || finalPassword.length < 8) {
+      return next(new AppError('Password must be at least 8 characters.', 400));
     }
 
-    user.password = password;
+    user.password = finalPassword;
     user.passwordResetToken = undefined;
     user.passwordResetExpires = undefined;
     await user.save();
 
+    logger.info(`Password reset successful for ${user.email}`);
     res.status(200).json({ success: true, message: 'Password has been successfully reset. Please log in.' });
   } catch (err) {
     next(err);
   }
 };
+

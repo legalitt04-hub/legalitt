@@ -131,13 +131,28 @@ export default function HomeScreen({ navigation }) {
         limit: 20,
       });
 
-      if (response.data.success && response.data.data) {
+      if (response.data?.success && response.data?.data && response.data.data.length > 0) {
         const transformedAdvocates = transformNearbyAdvocates(response.data.data);
         setAdvocates(transformedAdvocates);
+      } else {
+        // Fallback to general advocates list if radius yields no nearby advocates
+        const fallbackRes = await advocateAPI.getAdvocates({ limit: 20 });
+        if (fallbackRes.data?.success && fallbackRes.data?.data) {
+          const transformedAdvocates = transformNearbyAdvocates(fallbackRes.data.data);
+          setAdvocates(transformedAdvocates);
+        }
       }
     } catch (error) {
       console.error('Error fetching advocates:', error);
-      // Fallback: If network request fails, don't clear previously loaded cached advocates
+      // Fallback request
+      try {
+        const fallbackRes = await advocateAPI.getAdvocates({ limit: 20 });
+        if (fallbackRes.data?.success && fallbackRes.data?.data) {
+          setAdvocates(transformNearbyAdvocates(fallbackRes.data.data));
+        }
+      } catch (fErr) {
+        console.error('Fallback advocate fetch error:', fErr);
+      }
     } finally {
       setLoading(false);
     }

@@ -105,6 +105,22 @@ const advocateSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  // Earnings wallet — credited on each consultation payment
+  wallet: {
+    balance:            { type: Number, default: 0, min: 0 }, // Available for withdrawal
+    totalEarned:        { type: Number, default: 0 },         // All-time earnings
+    pendingWithdrawal:  { type: Number, default: 0 },         // Requested but not yet paid
+    totalWithdrawn:     { type: Number, default: 0 },         // Paid out
+  },
+  // Saved bank details for withdrawals
+  bankDetails: {
+    accountHolder: String,
+    accountNumber: String,
+    ifscCode:      String,
+    bankName:      String,
+    upiId:         String,
+  },
+  verificationRejectionReason: { type: String }, // Admin's reason if rejected
 }, {
   timestamps: true,
   toJSON: { virtuals: true },
