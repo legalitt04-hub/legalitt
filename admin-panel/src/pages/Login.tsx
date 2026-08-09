@@ -460,14 +460,10 @@ const Login: React.FC = () => {
                   type="button"
                   onClick={() => {
                     setError('');
-                    try {
-                      googleLogin();
-                    } catch (e) {
-                      handleDirectGoogleRedirect();
-                    }
+                    handleDirectGoogleRedirect();
                   }}
                   disabled={loading}
-                  className="w-full h-12 bg-white hover:bg-gray-100 text-gray-800 rounded-xl font-bold text-sm flex items-center justify-center gap-3 transition-all shadow-md disabled:opacity-60"
+                  className="w-full h-12 bg-white hover:bg-gray-100 text-gray-800 rounded-xl font-bold text-sm flex items-center justify-center gap-3 transition-all shadow-md disabled:opacity-60 cursor-pointer"
                 >
                   {loading ? (
                     <Loader2 className="w-4 h-4 animate-spin text-gray-600" />
