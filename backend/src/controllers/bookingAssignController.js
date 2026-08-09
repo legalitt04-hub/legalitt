@@ -109,7 +109,6 @@ exports.getNearbyAdvocatesForBooking = async (req, res, next) => {
       Advocate.find({ isVerified: true, verificationStatus: 'approved' })
         .populate('user', 'name avatar phone email')
         .sort({ 'rating.average': -1 })
-        .limit(100)
         .lean(),
     ]);
 

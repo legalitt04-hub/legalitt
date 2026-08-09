@@ -106,6 +106,8 @@ export default function Consultations() {
   const [nearbyAdvocates, setNearbyAdvocates] = useState<NearbyAdvocate[]>([]);
   const [allAdvocates, setAllAdvocates] = useState<NearbyAdvocate[]>([]);
   const [advocateSearch, setAdvocateSearch] = useState('');
+  const [advocatePage, setAdvocatePage] = useState(1);
+  const ADV_PAGE_SIZE = 10;
   const [assigning, setAssigning] = useState<string | null>(null);
   const [showAllAdvocates, setShowAllAdvocates] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
@@ -570,56 +572,83 @@ export default function Consultations() {
                       )}
                     </div>
                   ) : (
-                    <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
-                      {advocatesDisplay.map(adv => (
-                        <motion.div key={adv._id}
-                          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                          className="flex items-center gap-3 p-4 border-2 border-gray-100 rounded-2xl hover:border-teal-200 hover:bg-teal-50/30 transition-all">
+                    <>
+                      <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+                        {advocatesDisplay
+                          .slice((advocatePage - 1) * ADV_PAGE_SIZE, advocatePage * ADV_PAGE_SIZE)
+                          .map(adv => (
+                            <motion.div key={adv._id}
+                              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                              className="flex items-center gap-3 p-4 border-2 border-gray-100 rounded-2xl hover:border-teal-200 hover:bg-teal-50/30 transition-all">
 
-                          <div className="w-11 h-11 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold flex-shrink-0">
-                            {adv.user?.avatar ? (
-                              <img src={adv.user.avatar} className="w-11 h-11 rounded-full object-cover" alt="" />
-                            ) : (
-                              adv.user?.name?.charAt(0)?.toUpperCase()
-                            )}
+                              <div className="w-11 h-11 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold flex-shrink-0">
+                                {adv.user?.avatar ? (
+                                  <img src={adv.user.avatar} className="w-11 h-11 rounded-full object-cover" alt="" />
+                                ) : (
+                                  adv.user?.name?.charAt(0)?.toUpperCase()
+                                )}
+                              </div>
+
+                              <div className="flex-1 min-w-0">
+                                <p className="font-semibold text-gray-900 text-sm">{adv.user?.name}</p>
+                                <p className="text-xs text-gray-500 truncate">
+                                  {adv.specializations?.slice(0, 2).join(', ') || 'General Practice'}
+                                </p>
+                                <div className="flex items-center gap-3 mt-1">
+                                  {adv.rating?.average && (
+                                    <span className="flex items-center gap-0.5 text-xs text-amber-600 font-medium">
+                                      <Star size={10} fill="currentColor" /> {adv.rating.average.toFixed(1)}
+                                    </span>
+                                  )}
+                                  {adv.consultationFee && (
+                                    <span className="text-xs text-green-600 font-medium">₹{adv.consultationFee}</span>
+                                  )}
+                                  {adv.location?.address?.city && (
+                                    <span className="flex items-center gap-0.5 text-xs text-gray-400">
+                                      <MapPin size={9} /> {adv.location.address.city}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              <button
+                                onClick={() => handleAssign(adv._id, adv.user?.name || 'Advocate')}
+                                disabled={!!assigning}
+                                className="flex items-center gap-1.5 px-4 py-2 bg-teal-600 text-white text-sm font-semibold rounded-xl hover:bg-teal-700 disabled:opacity-50 transition-colors whitespace-nowrap flex-shrink-0">
+                                {assigning === adv._id ? (
+                                  <Loader2 size={14} className="animate-spin" />
+                                ) : (
+                                  <UserCheck size={14} />
+                                )}
+                                Assign
+                              </button>
+                            </motion.div>
+                          ))}
+                      </div>
+
+                      {/* Advocate List Pagination Controls */}
+                      {advocatesDisplay.length > ADV_PAGE_SIZE && (
+                        <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100 text-xs">
+                          <span className="text-gray-500">
+                            Page {advocatePage} of {Math.ceil(advocatesDisplay.length / ADV_PAGE_SIZE)} · ({advocatesDisplay.length} total)
+                          </span>
+                          <div className="flex gap-2">
+                            <button
+                              disabled={advocatePage <= 1}
+                              onClick={() => setAdvocatePage(p => p - 1)}
+                              className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 font-semibold disabled:opacity-40 hover:bg-gray-50">
+                              Previous
+                            </button>
+                            <button
+                              disabled={advocatePage >= Math.ceil(advocatesDisplay.length / ADV_PAGE_SIZE)}
+                              onClick={() => setAdvocatePage(p => p + 1)}
+                              className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 font-semibold disabled:opacity-40 hover:bg-gray-50">
+                              Next
+                            </button>
                           </div>
-
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-gray-900 text-sm">{adv.user?.name}</p>
-                            <p className="text-xs text-gray-500 truncate">
-                              {adv.specializations?.slice(0, 2).join(', ') || 'General Practice'}
-                            </p>
-                            <div className="flex items-center gap-3 mt-1">
-                              {adv.rating?.average && (
-                                <span className="flex items-center gap-0.5 text-xs text-amber-600 font-medium">
-                                  <Star size={10} fill="currentColor" /> {adv.rating.average.toFixed(1)}
-                                </span>
-                              )}
-                              {adv.consultationFee && (
-                                <span className="text-xs text-green-600 font-medium">₹{adv.consultationFee}</span>
-                              )}
-                              {adv.location?.address?.city && (
-                                <span className="flex items-center gap-0.5 text-xs text-gray-400">
-                                  <MapPin size={9} /> {adv.location.address.city}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          <button
-                            onClick={() => handleAssign(adv._id, adv.user?.name || 'Advocate')}
-                            disabled={!!assigning}
-                            className="flex items-center gap-1.5 px-4 py-2 bg-teal-600 text-white text-sm font-semibold rounded-xl hover:bg-teal-700 disabled:opacity-50 transition-colors whitespace-nowrap flex-shrink-0">
-                            {assigning === adv._id ? (
-                              <Loader2 size={14} className="animate-spin" />
-                            ) : (
-                              <UserCheck size={14} />
-                            )}
-                            Assign
-                          </button>
-                        </motion.div>
-                      ))}
-                    </div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
