@@ -53,11 +53,20 @@ exports.getAdminAccounts = async (req, res, next) => {
 // POST /api/v1/admin/roles/accounts — create new admin account
 exports.createAdminAccount = async (req, res, next) => {
   try {
-    let targetRole = role === 'superadmin' ? 'super_admin' : (role === 'support' ? 'support_executive' : role);
-    if (!ROLE_PERMISSIONS[targetRole]) {
-      return next(new AppError('Invalid role.', 400));
+    const { name, email, phone, password, role, permissions } = req.body;
+
+    if (!name || !email || !password || !role) {
+      return next(new AppError('Name, email, password, and role are required.', 400));
     }
-    let user = await User.findOne({ email: email.toLowerCase() });
+
+    const normalizedEmail = email.toLowerCase().trim();
+    let targetRole = role === 'superadmin' ? 'super_admin' : (role === 'support' ? 'support_executive' : role);
+
+    if (!ROLE_PERMISSIONS[targetRole]) {
+      return next(new AppError(`Invalid role: ${role}`, 400));
+    }
+
+    let user = await User.findOne({ email: normalizedEmail });
     if (user) {
       // Update existing user role and details to grant admin access
       user.role = targetRole;
@@ -69,24 +78,26 @@ exports.createAdminAccount = async (req, res, next) => {
     } else {
       user = await User.create({
         name: name.trim(),
-        email: email.toLowerCase(),
+        email: normalizedEmail,
         phone,
         password,
-        role,
-        isVerified: true,
+        role: targetRole,
+        isEmailVerified: true,
+        isPhoneVerified: true,
         isActive: true,
       });
     }
 
     res.status(201).json({
       success: true,
+      message: `Admin account created for ${user.name} with role ${ROLE_DISPLAY[targetRole] || targetRole}`,
       data: {
         _id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
-        displayRole: ROLE_DISPLAY[role],
-        permissions: permissions || ROLE_PERMISSIONS[role],
+        displayRole: ROLE_DISPLAY[targetRole] || user.role,
+        permissions: permissions || ROLE_PERMISSIONS[targetRole] || [],
       },
     });
   } catch (err) { next(err); }
