@@ -10,7 +10,8 @@ const os = require('os');
 const upload = multer({ dest: os.tmpdir() });
 
 // All admin routes require auth + admin role
-router.use(protect, authorize('admin'));
+const validAdminRoles = ['admin', 'super_admin', 'superadmin', 'support_executive', 'support', 'accounts', 'forensic_expert', 'property_verification'];
+router.use(protect, authorize(...validAdminRoles));
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 router.get('/stats',                adminController.getDashboardStats);
