@@ -28,7 +28,6 @@ export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -48,8 +47,7 @@ export default function UsersPage() {
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const params: any = { page, limit: LIMIT };
-      if (roleFilter) params.role = roleFilter;
+      const params: any = { page, limit: LIMIT, role: 'client' };
       if (statusFilter) params.isActive = statusFilter === 'active' ? 'true' : 'false';
       if (search) params.search = search;
       const { data } = await api.get('/admin/users', { params });
@@ -58,7 +56,7 @@ export default function UsersPage() {
       setTotalPages(data.pagination?.pages || 1);
     } catch { setUsers([]); }
     finally { setLoading(false); }
-  }, [page, roleFilter, statusFilter, search]);
+  }, [page, statusFilter, search]);
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
@@ -143,13 +141,6 @@ export default function UsersPage() {
           <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Search by name, email..."
             className="w-full pl-9 pr-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" />
         </div>
-        <select value={roleFilter} onChange={e => { setRoleFilter(e.target.value); setPage(1); }}
-          className="px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none">
-          <option value="">All Roles</option>
-          <option value="client">Clients</option>
-          <option value="advocate">Advocates</option>
-          <option value="admin">Admins</option>
-        </select>
         <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
           className="px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none">
           <option value="">All Status</option>
@@ -302,15 +293,8 @@ export default function UsersPage() {
                 ))}
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Role</label>
-                  <select value={form.role || 'client'} onChange={e => setForm((p: any) => ({ ...p, role: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none">
-                    <option value="client">Client</option>
-                    <option value="advocate">Advocate</option>
-                    <option value="admin">Admin</option>
-                    <option value="super_admin">Super Admin</option>
-                    <option value="support_executive">Support Executive</option>
-                    <option value="accounts">Accounts</option>
-                    <option value="forensic_expert">Forensic Expert</option>
-                    <option value="property_verification">Property Verification</option>
+                  <select value="client" disabled className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-500 cursor-not-allowed">
+                    <option value="client">Client User</option>
                   </select>
                 </div>
                 <div className="flex gap-3 pt-1">
