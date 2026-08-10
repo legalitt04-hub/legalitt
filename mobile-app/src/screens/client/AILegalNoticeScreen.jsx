@@ -229,7 +229,7 @@ export default function AILegalNoticeScreen({ navigation }) {
           },
         });
       }, 1500);
-    } catch (err: any) {
+    } catch (err) {
       setIsSubmitting(false);
       if (err?.code === 'PAYMENT_CANCELLED') {
         Alert.alert('Payment Cancelled', 'Your legal notice request was not submitted.');
