@@ -106,11 +106,22 @@ export default function Advocates() {
     } catch (e: any) { alert(e?.response?.data?.message || 'Action failed.'); }
   };
 
-  const handleSuspend = async (id: string) => {
+  const handleSuspend = async (id: string, currentStatus?: string) => {
+    const isSuspended = currentStatus === 'suspended';
+    const actionText = isSuspended ? 'Unsuspend & Re-activate' : 'Suspend';
+    if (!window.confirm(`Are you sure you want to ${actionText.toLowerCase()} this advocate account?`)) return;
+
     try {
-      await api.patch(`/admin/advocates/${id}/suspend`);
+      const res = await api.patch(`/admin/advocates/${id}/suspend`);
+      const newStatus = res.data?.data?.verificationStatus || (isSuspended ? 'approved' : 'suspended');
+      alert(`✅ Advocate account has been ${newStatus === 'suspended' ? 'SUSPENDED' : 'UNSUSPENDED & RE-ACTIVATED'}.`);
+      if (selectedAdv) {
+        setSelectedAdv(prev => prev ? { ...prev, verificationStatus: newStatus as any } : null);
+      }
       fetchAdvocates();
-    } catch (e: any) { console.error('Suspend failed:', e); }
+    } catch (e: any) {
+      alert(e?.response?.data?.message || 'Failed to update advocate status.');
+    }
   };
 
   const handleUpdateRating = async (id: string, ratingVal: number) => {
@@ -270,9 +281,20 @@ export default function Advocates() {
                               <button onClick={() => handleVerify(adv._id, 'reject')} className="p-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100" title="Reject"><XCircle className="w-3.5 h-3.5" /></button>
                             </>
                           ) : (
-                            <button onClick={() => handleSuspend(adv._id)} title={adv.verificationStatus === 'suspended' ? 'Unsuspend' : 'Suspend'}
-                              className={`p-1.5 rounded-lg ${adv.verificationStatus === 'suspended' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'} hover:opacity-80`}>
-                              {adv.verificationStatus === 'suspended' ? <ToggleLeft className="w-3.5 h-3.5" /> : <ToggleRight className="w-3.5 h-3.5" />}
+                            <button
+                              onClick={() => handleSuspend(adv._id, adv.verificationStatus)}
+                              title={adv.verificationStatus === 'suspended' ? 'Unsuspend Advocate' : 'Suspend Advocate'}
+                              className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 border transition-all ${
+                                adv.verificationStatus === 'suspended'
+                                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'
+                                  : 'bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100'
+                              }`}
+                            >
+                              {adv.verificationStatus === 'suspended' ? (
+                                <><CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Unsuspend</>
+                              ) : (
+                                <><PauseCircle className="w-3.5 h-3.5 text-amber-600" /> Suspend</>
+                              )}
                             </button>
                           )}
                           <button onClick={() => setDeleteId(adv._id)} className="p-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button>
@@ -390,7 +412,7 @@ export default function Advocates() {
                 </div>
               </div>
 
-              {/* Approval / Rejection Actions */}
+              {/* Approval / Rejection / Suspend Actions */}
               {(selectedAdv.verificationStatus === 'pending' || selectedAdv.verificationStatus === 'under_review') ? (
                 <div className="space-y-3 pt-2 border-t border-gray-100">
                   <div className="flex gap-3">
@@ -411,7 +433,24 @@ export default function Advocates() {
                   </div>
                 </div>
               ) : (
-                <button onClick={() => setSelectedAdv(null)} className="w-full py-2.5 bg-gray-100 text-xs font-bold text-gray-700 rounded-xl hover:bg-gray-200">Close Details</button>
+                <div className="space-y-2 pt-3 border-t border-gray-100">
+                  {selectedAdv.verificationStatus === 'suspended' ? (
+                    <button
+                      onClick={() => handleSuspend(selectedAdv._id, selectedAdv.verificationStatus)}
+                      className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md flex items-center justify-center gap-2"
+                    >
+                      <CheckCircle2 className="w-4 h-4" /> Unsuspend & Re-activate Advocate Account
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleSuspend(selectedAdv._id, selectedAdv.verificationStatus)}
+                      className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-xl shadow-md flex items-center justify-center gap-2"
+                    >
+                      <PauseCircle className="w-4 h-4" /> Suspend Advocate Account
+                    </button>
+                  )}
+                  <button onClick={() => setSelectedAdv(null)} className="w-full py-2.5 bg-gray-100 text-xs font-bold text-gray-700 rounded-xl hover:bg-gray-200">Close Details</button>
+                </div>
               )}
             </motion.div>
           </motion.div>
