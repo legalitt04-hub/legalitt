@@ -6,11 +6,9 @@ import NetInfo from '@react-native-community/netinfo';
 import { getCacheKey, getCachedData, setCachedData } from '../utils/offlineCache';
 import { addToOfflineQueue } from '../utils/offlineQueue';
 
-// In production builds, use API_URL from env. In dev (Expo Go), fall back to dynamic host.
+// Production Render Live Backend URL
 const extraApiUrl = Constants.expoConfig?.extra?.API_URL;
-const debuggerHost = Constants.expoConfig?.hostUri;
-const devHost = debuggerHost ? debuggerHost.split(':')[0] : '10.0.2.2';
-export const BASE_URL = extraApiUrl || `http://${devHost}:5000/api/v1`;
+export const BASE_URL = extraApiUrl || 'https://legalitt-growth.onrender.com/api/v1';
 console.log('🌐 API Base URL:', BASE_URL);
 
 export const TOKEN_KEY = 'authToken';
