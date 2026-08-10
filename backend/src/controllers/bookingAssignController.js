@@ -49,15 +49,16 @@ exports.getPendingBookings = async (req, res, next) => {
       ]),
     ]);
 
-    // Add SLA info to each booking
+    // Add SLA info to each booking safely
     const bookingsWithSLA = bookings.map(b => {
-      const deadline = new Date(b.assignmentDeadline);
+      const deadlineDate = b.assignmentDeadline ? new Date(b.assignmentDeadline) : new Date(b.createdAt || Date.now());
+      const deadline = isNaN(deadlineDate.getTime()) ? new Date() : deadlineDate;
       const now = new Date();
-      const hoursRemaining = Math.max(0, (deadline - now) / (1000 * 60 * 60));
+      const hoursRemaining = Math.max(0, (deadline.getTime() - now.getTime()) / (1000 * 60 * 60));
       return {
         ...b,
         sla: {
-          deadline: b.assignmentDeadline,
+          deadline: deadline.toISOString(),
           hoursRemaining: Math.round(hoursRemaining * 10) / 10,
           isOverdue: now > deadline,
           isUrgent: hoursRemaining < 4 && hoursRemaining > 0,
