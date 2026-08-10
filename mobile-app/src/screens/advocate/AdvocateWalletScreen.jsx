@@ -8,47 +8,23 @@ import { Ionicons } from '@expo/vector-icons';
 import api from '../../services/api';
 import { COLORS } from '../../constants/theme';
 
-interface WalletData {
-  balance: number;
-  totalEarned: number;
-  pendingWithdrawal: number;
-  totalWithdrawn: number;
-}
-
-interface BankDetails {
-  accountHolder: string;
-  accountNumber: string;
-  ifscCode: string;
-  bankName: string;
-  upiId?: string;
-}
-
-interface Withdrawal {
-  _id: string;
-  amount: number;
-  status: 'pending' | 'approved' | 'rejected' | 'paid';
-  createdAt: string;
-  transactionId?: string;
-  adminNote?: string;
-}
-
-const STATUS_COLOR: Record<string, string> = {
+const STATUS_COLOR = {
   pending: '#F59E0B', approved: '#3B82F6', paid: '#10B981', rejected: '#EF4444',
 };
 
-export default function AdvocateWalletScreen({ navigation }: any) {
-  const [wallet, setWallet] = useState<WalletData>({ balance: 0, totalEarned: 0, pendingWithdrawal: 0, totalWithdrawn: 0 });
-  const [bankDetails, setBankDetails] = useState<BankDetails | null>(null);
-  const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
+export default function AdvocateWalletScreen({ navigation }) {
+  const [wallet, setWallet] = useState({ balance: 0, totalEarned: 0, pendingWithdrawal: 0, totalWithdrawn: 0 });
+  const [bankDetails, setBankDetails] = useState(null);
+  const [withdrawals, setWithdrawals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   // Withdrawal form
   const [showWithdrawForm, setShowWithdrawForm] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [bankForm, setBankForm] = useState<BankDetails>({ accountHolder: '', accountNumber: '', ifscCode: '', bankName: '', upiId: '' });
+  const [bankForm, setBankForm] = useState({ accountHolder: '', accountNumber: '', ifscCode: '', bankName: '', upiId: '' });
   const [submitting, setSubmitting] = useState(false);
-  const [activeTab, setActiveTab] = useState<'wallet' | 'history'>('wallet');
+  const [activeTab, setActiveTab] = useState('wallet');
 
   const fetchWallet = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -85,7 +61,7 @@ export default function AdvocateWalletScreen({ navigation }: any) {
       await api.put('/wallet/bank-details', bankForm);
       Alert.alert('Saved ✓', 'Bank details saved successfully.');
       setBankDetails({ ...bankForm });
-    } catch (err: any) {
+    } catch (err) {
       Alert.alert('Error', err?.response?.data?.message || 'Failed to save bank details.');
     } finally {
       setSubmitting(false);
@@ -113,7 +89,7 @@ export default function AdvocateWalletScreen({ navigation }: any) {
               setShowWithdrawForm(false);
               Alert.alert('Request Submitted ✓', 'Your withdrawal request has been submitted. Admin will process it within 2-3 business days.');
               fetchWallet(true);
-            } catch (err: any) {
+            } catch (err) {
               Alert.alert('Error', err?.response?.data?.message || 'Failed to submit withdrawal request.');
             } finally {
               setSubmitting(false);
@@ -251,11 +227,11 @@ export default function AdvocateWalletScreen({ navigation }: any) {
                   <Text style={styles.fieldLabel}>{field.label}</Text>
                   <TextInput
                     style={styles.fieldInput}
-                    value={bankForm[field.key as keyof BankDetails] || ''}
+                    value={bankForm[field.key] || ''}
                     onChangeText={v => setBankForm(prev => ({ ...prev, [field.key]: field.upper ? v.toUpperCase() : v }))}
                     placeholder={field.placeholder}
                     placeholderTextColor="#9CA3AF"
-                    keyboardType={(field.keyType as any) || 'default'}
+                    keyboardType={field.keyType || 'default'}
                   />
                 </View>
               ))}
