@@ -53,6 +53,7 @@ router.put('/settings',               adminController.updateSettings);
 const adminModuleController = require('../controllers/adminModuleController');
 router.get('/cases',                  adminModuleController.getCases);
 router.put('/cases/:id',              adminModuleController.updateCase);
+router.delete('/cases/:id',           adminModuleController.deleteCase);
 router.get('/services',               adminModuleController.getServices);
 router.put('/services/:id',           adminModuleController.updateService);
 router.get('/documents',              adminModuleController.getDocuments);

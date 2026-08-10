@@ -41,6 +41,15 @@ exports.updateCase = async (req, res, next) => {
   }
 };
 
+exports.deleteCase = async (req, res, next) => {
+  try {
+    await Case.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: 'Case deleted' });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // ─── Services ─────────────────────────────────────────────────────────────────
 exports.getServices = async (req, res, next) => {
   try {
