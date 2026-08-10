@@ -121,7 +121,7 @@ export default function AdvocateWalletScreen({ navigation }) {
 
       {/* Tabs */}
       <View style={styles.tabRow}>
-        {(['wallet', 'history'] as const).map(tab => (
+        {['wallet', 'history'].map(tab => (
           <TouchableOpacity key={tab} onPress={() => setActiveTab(tab)}
             style={[styles.tab, activeTab === tab && styles.tabActive]}>
             <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
