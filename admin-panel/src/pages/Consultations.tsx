@@ -655,20 +655,18 @@ export default function Consultations() {
                                 <p className="text-xs text-gray-500 truncate">
                                   {adv.specializations?.slice(0, 2).join(', ') || 'General Practice'}
                                 </p>
-                                <div className="flex items-center gap-3 mt-1">
-                                  {adv.rating?.average && (
-                                    <span className="flex items-center gap-0.5 text-xs text-amber-600 font-medium">
-                                      <Star size={10} fill="currentColor" /> {adv.rating.average.toFixed(1)}
+                                <div className="flex items-center flex-wrap gap-2 mt-1.5">
+                                  <span className="flex items-center gap-1 text-xs px-2 py-0.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-md font-bold">
+                                    <Star size={11} fill="currentColor" className="text-amber-500" /> Rated by Admin: {adv.rating?.average ? adv.rating.average.toFixed(1) : '5.0'}
+                                  </span>
+                                  {adv.consultationFee ? (
+                                    <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">₹{adv.consultationFee}</span>
+                                  ) : null}
+                                  {adv.location?.address?.city ? (
+                                    <span className="flex items-center gap-0.5 text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md font-medium">
+                                      <MapPin size={10} /> {adv.location.address.city}
                                     </span>
-                                  )}
-                                  {adv.consultationFee && (
-                                    <span className="text-xs text-green-600 font-medium">₹{adv.consultationFee}</span>
-                                  )}
-                                  {adv.location?.address?.city && (
-                                    <span className="flex items-center gap-0.5 text-xs text-gray-400">
-                                      <MapPin size={9} /> {adv.location.address.city}
-                                    </span>
-                                  )}
+                                  ) : null}
                                 </div>
                               </div>
 
