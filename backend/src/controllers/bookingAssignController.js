@@ -112,7 +112,7 @@ exports.getNearbyAdvocatesForBooking = async (req, res, next) => {
     const city = booking.clientCity || booking.client?.address?.city;
     const { specialization, search } = req.query;
 
-    let cityFilter = { isVerified: true, verificationStatus: 'approved' };
+    let cityFilter = { verificationStatus: { $ne: 'rejected' } };
     if (city) {
       cityFilter['location.address.city'] = new RegExp(city, 'i');
     }
@@ -120,30 +120,42 @@ exports.getNearbyAdvocatesForBooking = async (req, res, next) => {
       cityFilter.specializations = specialization;
     }
 
-    let allFilter = { isVerified: true, verificationStatus: 'approved' };
+    let allFilter = { verificationStatus: { $ne: 'rejected' } };
     if (search) {
       const searchRegex = new RegExp(search, 'i');
+      const matchingUsers = await User.find({
+        $or: [
+          { name: searchRegex },
+          { email: searchRegex },
+          { phone: searchRegex },
+        ],
+      }).select('_id').lean();
+
+      const matchingUserIds = matchingUsers.map(u => u._id);
+
       allFilter.$or = [
+        { user: { $in: matchingUserIds } },
         { 'location.address.city': searchRegex },
         { specializations: searchRegex },
+        { barCouncilNumber: searchRegex },
       ];
     }
 
     // High performance queries with field projection (.select)
     const [nearbyAdvocates, allAdvocates, totalAdvocatesCount] = await Promise.all([
       Advocate.find(cityFilter)
-        .select('user specializations rating consultationFee location experience')
+        .select('user specializations rating consultationFee location experience verificationStatus isVerified')
         .populate('user', 'name avatar phone email')
-        .sort({ 'rating.average': -1 })
+        .sort({ 'rating.average': -1, createdAt: -1 })
         .limit(100)
         .lean(),
       Advocate.find(allFilter)
-        .select('user specializations rating consultationFee location experience')
+        .select('user specializations rating consultationFee location experience verificationStatus isVerified')
         .populate('user', 'name avatar phone email')
-        .sort({ 'rating.average': -1 })
+        .sort({ 'rating.average': -1, createdAt: -1 })
         .limit(200)
         .lean(),
-      Advocate.countDocuments({ isVerified: true, verificationStatus: 'approved' }),
+      Advocate.countDocuments({ verificationStatus: { $ne: 'rejected' } }),
     ]);
 
     res.json({

@@ -13,7 +13,7 @@ import AppNavigator from './src/navigation/AppNavigator';
 if (Platform.OS !== 'web') {
   try {
     SplashScreen.preventAutoHideAsync();
-  } catch (e) {}
+  } catch (e) { }
 
   // Configure notification handler
   try {
@@ -24,7 +24,7 @@ if (Platform.OS !== 'web') {
         shouldSetBadge: true,
       }),
     });
-  } catch (e) {}
+  } catch (e) { }
 }
 
 class ErrorBoundary extends Component {

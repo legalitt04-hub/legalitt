@@ -254,3 +254,36 @@ exports.processWithdrawal = async (req, res, next) => {
     next(err);
   }
 };
+
+// ─── PATCH /api/v1/admin/advocates/:id/rating ────────────────────────────────
+exports.updateAdvocateRating = async (req, res, next) => {
+  try {
+    const { average, count = 1 } = req.body;
+    if (average === undefined || average < 0 || average > 5) {
+      return next(new AppError('Rating average must be between 0 and 5.', 400));
+    }
+
+    const advocate = await Advocate.findByIdAndUpdate(
+      req.params.id,
+      {
+        $set: {
+          'rating.average': Number(average),
+          'rating.count': Number(count),
+        },
+      },
+      { new: true }
+    ).populate('user', 'name email');
+
+    if (!advocate) return next(new AppError('Advocate not found.', 404));
+
+    logger.info(`Admin updated rating for ${advocate.user?.email} to ${average} stars`);
+
+    res.json({
+      success: true,
+      message: `Updated rating for ${advocate.user?.name || 'Advocate'} to ${average} ⭐`,
+      data: advocate,
+    });
+  } catch (err) {
+    next(err);
+  }
+};

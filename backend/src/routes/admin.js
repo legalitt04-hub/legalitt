@@ -92,6 +92,7 @@ router.get('/pending-advocates',                adminAdvocateController.getAdvoc
 router.get('/pending-advocates/:id',            adminAdvocateController.getAdvocateDetail);
 router.patch('/pending-advocates/:id/approve',  adminAdvocateController.approveAdvocate);
 router.patch('/pending-advocates/:id/reject',   adminAdvocateController.rejectAdvocate);
+router.patch('/advocates/:id/rating',           adminAdvocateController.updateAdvocateRating);
 
 // ─── Withdrawal Management ────────────────────────────────────────────────────
 router.get('/withdrawals',                      adminAdvocateController.getWithdrawals);
