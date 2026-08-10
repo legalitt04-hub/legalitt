@@ -7,14 +7,18 @@ import { Mail, ArrowLeft, KeyRound, Lock, Eye, EyeOff, CheckCircle2, RefreshCw, 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
+  const [resetToken, setResetToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const navigate = useNavigate();
 
+  // STEP 1: Send OTP to Email
   const handleRequestOTP = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -24,7 +28,7 @@ const ForgotPassword = () => {
     try {
       const response = await api.post('/auth/forgot-password', { email: email.toLowerCase().trim() });
       if (response.data.success) {
-        setMessage(response.data.message || 'A 6-digit OTP has been sent to your email.');
+        setMessage(response.data.message || 'A 6-digit OTP code has been sent to your email.');
         setStep(2);
       } else {
         setError(response.data.message || 'Failed to send reset code');
@@ -36,22 +40,71 @@ const ForgotPassword = () => {
     }
   };
 
+  // STEP 2: Verify OTP Code
+  const handleVerifyOTP = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setMessage('');
+
+    if (otp.length !== 6) {
+      setError('Please enter the full 6-digit OTP code.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await api.post('/auth/verify-reset-otp', {
+        email: email.toLowerCase().trim(),
+        otp,
+      });
+
+      if (response.data.success && response.data.data?.resetToken) {
+        setResetToken(response.data.data.resetToken);
+        setMessage('OTP verified! Now enter your new password.');
+        setStep(3);
+      } else {
+        setError(response.data.message || 'Invalid OTP code.');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Invalid or expired OTP code.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // STEP 3: Set & Confirm New Password
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setMessage('');
+
+    if (newPassword.length < 8) {
+      setError('Password must be at least 8 characters long.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError('New password and Confirm password do not match.');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const response = await api.post('/auth/reset-password', { email: email.toLowerCase().trim(), otp, newPassword });
+      const response = await api.post('/auth/reset-password', {
+        token: resetToken,
+        password: newPassword,
+      });
+
       if (response.data.success) {
         alert('✅ Password reset successful! Please log in with your new password.');
         navigate('/login');
       } else {
-        setError(response.data.message || 'Failed to reset password');
+        setError(response.data.message || 'Failed to reset password.');
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Invalid OTP code or password request expired.');
+      setError(err.response?.data?.message || 'Reset session expired. Please request a new OTP.');
     } finally {
       setLoading(false);
     }
@@ -77,18 +130,21 @@ const ForgotPassword = () => {
           <ArrowLeft className="w-4 h-4" /> Back to Sign In
         </button>
 
-        {/* Title (Logo Removed) */}
+        {/* Header */}
         <div className="text-center mb-6">
           <h1 className="text-2xl font-bold text-white tracking-tight">Reset Password</h1>
           <p className="text-slate-400 text-sm text-center mt-1">
-            {step === 1 ? 'Enter your registered admin email' : 'Verify OTP code and create a new password'}
+            {step === 1 && 'Step 1: Enter your registered admin email'}
+            {step === 2 && 'Step 2: Enter the 6-digit OTP code sent to your email'}
+            {step === 3 && 'Step 3: Create and confirm your new password'}
           </p>
         </div>
 
-        {/* Step Indicator */}
+        {/* 3-Step Progress Indicator */}
         <div className="flex items-center justify-center gap-2 mb-6">
-          <div className={`h-1.5 rounded-full transition-all duration-300 ${step === 1 ? 'w-8 bg-amber-500' : 'w-2 bg-white/20'}`} />
-          <div className={`h-1.5 rounded-full transition-all duration-300 ${step === 2 ? 'w-8 bg-amber-500' : 'w-2 bg-white/20'}`} />
+          <div className={`h-1.5 rounded-full transition-all duration-300 ${step === 1 ? 'w-8 bg-amber-500' : 'w-2 bg-emerald-500'}`} />
+          <div className={`h-1.5 rounded-full transition-all duration-300 ${step === 2 ? 'w-8 bg-amber-500' : step > 2 ? 'w-2 bg-emerald-500' : 'w-2 bg-white/20'}`} />
+          <div className={`h-1.5 rounded-full transition-all duration-300 ${step === 3 ? 'w-8 bg-amber-500' : 'w-2 bg-white/20'}`} />
         </div>
 
         {/* Alerts */}
@@ -107,8 +163,8 @@ const ForgotPassword = () => {
           )}
         </AnimatePresence>
 
-        {step === 1 ? (
-          /* STEP 1: Request OTP */
+        {/* STEP 1: Enter Email */}
+        {step === 1 && (
           <form onSubmit={handleRequestOTP} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
@@ -142,9 +198,11 @@ const ForgotPassword = () => {
               {loading ? 'Sending OTP...' : 'Send Verification OTP'}
             </button>
           </form>
-        ) : (
-          /* STEP 2: Verify OTP & New Password */
-          <form onSubmit={handleResetPassword} className="space-y-4" autoComplete="off">
+        )}
+
+        {/* STEP 2: Verify OTP */}
+        {step === 2 && (
+          <form onSubmit={handleVerifyOTP} className="space-y-4" autoComplete="off">
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
@@ -169,6 +227,34 @@ const ForgotPassword = () => {
               </div>
             </div>
 
+            <button
+              type="submit"
+              disabled={loading || otp.length !== 6}
+              className="w-full h-12 mt-2 bg-amber-500 hover:bg-amber-400 text-[#0A0A0A] rounded-xl font-bold text-sm shadow-[0_0_20px_rgba(245,158,11,0.3)] transition-all hover:shadow-[0_0_30px_rgba(245,158,11,0.5)] disabled:opacity-60 flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <Loader2 className="w-4 h-4 animate-spin text-[#0A0A0A]" />
+              ) : (
+                <Shield className="w-4 h-4" />
+              )}
+              {loading ? 'Verifying OTP...' : 'Verify OTP Code'}
+            </button>
+
+            <div className="text-center pt-2">
+              <button
+                type="button"
+                onClick={() => { setStep(1); setOtp(''); setMessage(''); setError(''); }}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-amber-400 transition-colors"
+              >
+                <RefreshCw className="w-3 h-3" /> Resend OTP / Change Email
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* STEP 3: Set & Confirm Password */}
+        {step === 3 && (
+          <form onSubmit={handleResetPassword} className="space-y-4" autoComplete="off">
             <div>
               <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
                 New Password
@@ -197,9 +283,37 @@ const ForgotPassword = () => {
               </div>
             </div>
 
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                Confirm New Password
+              </label>
+              <div className="relative group">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-amber-500 transition-colors" />
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  name="confirm-password"
+                  id="confirm-password-input"
+                  autoComplete="new-password"
+                  placeholder="Re-enter new password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  minLength={8}
+                  className="w-full pl-11 pr-12 h-12 bg-[#1A1A1A] border border-white/10 text-white placeholder:text-slate-500 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                >
+                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !newPassword || !confirmPassword}
               className="w-full h-12 mt-2 bg-amber-500 hover:bg-amber-400 text-[#0A0A0A] rounded-xl font-bold text-sm shadow-[0_0_20px_rgba(245,158,11,0.3)] transition-all hover:shadow-[0_0_30px_rgba(245,158,11,0.5)] disabled:opacity-60 flex items-center justify-center gap-2"
             >
               {loading ? (
@@ -207,18 +321,8 @@ const ForgotPassword = () => {
               ) : (
                 <Shield className="w-4 h-4" />
               )}
-              {loading ? 'Resetting Password...' : 'Confirm & Reset Password'}
+              {loading ? 'Updating Password...' : 'Reset Password'}
             </button>
-
-            <div className="text-center pt-2">
-              <button
-                type="button"
-                onClick={() => { setStep(1); setMessage(''); setError(''); }}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-amber-400 transition-colors"
-              >
-                <RefreshCw className="w-3 h-3" /> Resend OTP / Change Email
-              </button>
-            </div>
           </form>
         )}
       </motion.div>
