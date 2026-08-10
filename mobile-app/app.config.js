@@ -30,7 +30,7 @@ export default ({ config }) => ({
     splash: {
       image: "./assets/splash.png",
       resizeMode: "contain",
-      backgroundColor: "#0A0B0E"
+      backgroundColor: "#000000"
     },
 
     assetBundlePatterns: [
@@ -50,7 +50,7 @@ export default ({ config }) => ({
     android: {
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
-        backgroundColor: "#0A0B0E"
+        backgroundColor: "#000000"
       },
       config: {
         googleMaps: {

@@ -1,4 +1,16 @@
 // navigation/AppNavigator.jsx - PRODUCTION READY WITH TOKEN VALIDATION & REFRESH
+import { NativeModules } from 'react-native';
+
+// Fallback for ZegoCloud NativeModules in Expo Go to prevent crash: Cannot read property 'prefix' of null
+if (Platform.OS !== 'web' && NativeModules) {
+  if (!NativeModules.ZegoExpressNativeModule) {
+    NativeModules.ZegoExpressNativeModule = { prefix: 'zego' };
+  }
+  if (!NativeModules.ZIMNativeModule) {
+    NativeModules.ZIMNativeModule = { prefix: 'zim' };
+  }
+}
+
 import AuthLoadingScreen from './AuthLoadingScreen';
 import SearchFilterScreen from '../screens/client/SearchFilterScreen';
 import React, { useState, useEffect } from 'react';
@@ -232,7 +244,7 @@ const AppNavigator = () => {
   // Prevents Home screen or Auth screens from appearing while animation is running.
   if (!splashFinished) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#07080A' }}>
+      <View style={{ flex: 1, minHeight: Platform.OS === 'web' ? '100vh' : '100%', backgroundColor: '#000000' }}>
         <LegalittIntroScreen
           onAnimationComplete={() => {
             setSplashFinished(true);
@@ -243,7 +255,7 @@ const AppNavigator = () => {
   }
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, minHeight: Platform.OS === 'web' ? '100vh' : '100%', backgroundColor: '#000000' }}>
       <OfflineBanner />
       <NavigationContainer>
         <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade', animationDuration: 400 }}>

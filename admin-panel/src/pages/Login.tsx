@@ -112,7 +112,7 @@ const Login: React.FC = () => {
       const token = res.data.data?.accessToken || res.data.token || res.data.accessToken;
       const userData = res.data.data?.user || res.data.data;
       if (res.data?.success && token) {
-        const adminRoles = ['admin', 'super_admin', 'support_executive', 'accounts', 'forensic_expert', 'property_verification'];
+        const adminRoles = ['admin', 'super_admin', 'superadmin', 'support_executive', 'support', 'accounts', 'forensic_expert', 'property_verification'];
         if (!adminRoles.includes(userData?.role)) {
           setError(`Access Denied: "${email}" is not registered as an Admin. Contact your Super Admin.`);
           setLoading(false);
@@ -167,7 +167,7 @@ const Login: React.FC = () => {
         return;
       }
 
-      const adminRoles = ['admin', 'super_admin', 'support_executive', 'accounts', 'forensic_expert', 'property_verification'];
+      const adminRoles = ['admin', 'super_admin', 'superadmin', 'support_executive', 'support', 'accounts', 'forensic_expert', 'property_verification'];
       if (!adminRoles.includes(user?.role)) {
         setError(`Access Denied: ${user?.email ? `"${user.email}"` : 'This email'} is not registered as an Admin. Contact your Super Admin.`);
         setLoading(false);
@@ -206,7 +206,7 @@ const Login: React.FC = () => {
       const token = res.data.data?.accessToken || res.data.token || res.data.accessToken;
       const user = res.data.data?.user || res.data.data;
       if (res.data?.success && token) {
-        const adminRoles = ['admin', 'super_admin', 'support_executive', 'accounts', 'forensic_expert', 'property_verification'];
+        const adminRoles = ['admin', 'super_admin', 'superadmin', 'support_executive', 'support', 'accounts', 'forensic_expert', 'property_verification'];
         if (!adminRoles.includes(user?.role)) {
           setError(`Access Denied: ${user?.email ? `"${user.email}"` : 'This email'} is not registered as an Admin. Contact your Super Admin.`);
           setLoading(false);
@@ -231,7 +231,7 @@ const Login: React.FC = () => {
       const token = res.data.data?.accessToken || res.data.token || res.data.accessToken;
       const user = res.data.data?.user || res.data.data;
       if (res.data?.success && token) {
-        const adminRoles = ['admin', 'super_admin', 'support_executive', 'accounts', 'forensic_expert', 'property_verification'];
+        const adminRoles = ['admin', 'super_admin', 'superadmin', 'support_executive', 'support', 'accounts', 'forensic_expert', 'property_verification'];
         if (!adminRoles.includes(user?.role)) {
           setError(`Access Denied: ${user?.email ? `"${user.email}"` : 'This email'} is not registered as an Admin. Contact your Super Admin.`);
           setLoading(false);

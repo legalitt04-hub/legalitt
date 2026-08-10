@@ -47,7 +47,7 @@ export default function LegalittIntroScreen({ navigation, onAnimationComplete })
   useEffect(() => {
     let isMounted = true;
     StatusBar.setBarStyle('light-content');
-    StatusBar.setBackgroundColor('#07080A');
+    StatusBar.setBackgroundColor('#000000');
 
     const preloadAssets = async () => {
       try {
@@ -164,7 +164,7 @@ export default function LegalittIntroScreen({ navigation, onAnimationComplete })
 
   return (
     <Animated.View style={[styles.container, { opacity: screenOpacity }]}>
-      <StatusBar barStyle="light-content" backgroundColor="#07080A" translucent />
+      <StatusBar barStyle="light-content" backgroundColor="#000000" translucent />
 
       {/* Warm Golden Ambient Glow */}
       <Animated.View style={[styles.ambientGlow, { opacity: glowOpacity }]} />
@@ -218,7 +218,8 @@ export default function LegalittIntroScreen({ navigation, onAnimationComplete })
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#07080A', // Matte Black
+    minHeight: Platform.OS === 'web' ? '100vh' : '100%',
+    backgroundColor: '#000000', // Pure Black
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -11,8 +11,6 @@ const ROLE_PERMISSIONS = {
   accounts:              ['dashboard','earnings','withdrawals','reports'],
   forensic_expert:       ['dashboard','cases','documents'],
   property_verification: ['dashboard','cases','documents'],
-  support:               ['dashboard','consultations','support','notifications'],
-  superadmin:            ['dashboard','users','advocates','cases','consultations','ads','roles','earnings','withdrawals','settings','support','reviews','reports','audit','notifications'],
 };
 
 const ROLE_DISPLAY = {
@@ -22,15 +20,15 @@ const ROLE_DISPLAY = {
   accounts: 'Accounts',
   forensic_expert: 'Forensic Expert',
   property_verification: 'Property Verification',
-  support: 'Support Executive',
-  superadmin: 'Super Admin',
 };
 
 // GET /api/v1/admin/roles/accounts — list all admin accounts
 exports.getAdminAccounts = async (req, res, next) => {
   try {
     const { role, status } = req.query;
-    const filter = { role: { $in: Object.keys(ROLE_PERMISSIONS) } };
+    // Include legacy roles so existing accounts aren't hidden
+    const validRoles = [...Object.keys(ROLE_PERMISSIONS), 'superadmin', 'support'];
+    const filter = { role: { $in: validRoles } };
     if (role) filter.role = role;
     if (status === 'active') filter.isActive = true;
     if (status === 'inactive') filter.isActive = false;
@@ -39,11 +37,14 @@ exports.getAdminAccounts = async (req, res, next) => {
       .select('name email phone role isActive lastSeen createdAt avatar')
       .sort({ createdAt: -1 });
 
-    const data = users.map(u => ({
-      ...u.toJSON(),
-      displayRole: ROLE_DISPLAY[u.role] || u.role,
-      permissions: ROLE_PERMISSIONS[u.role] || [],
-    }));
+    const data = users.map(u => {
+      const displayRoleKey = u.role === 'superadmin' ? 'super_admin' : (u.role === 'support' ? 'support_executive' : u.role);
+      return {
+        ...u.toJSON(),
+        displayRole: ROLE_DISPLAY[displayRoleKey] || u.role,
+        permissions: ROLE_PERMISSIONS[displayRoleKey] || [],
+      };
+    });
 
     res.json({ success: true, data });
   } catch (err) { next(err); }
@@ -52,17 +53,14 @@ exports.getAdminAccounts = async (req, res, next) => {
 // POST /api/v1/admin/roles/accounts — create new admin account
 exports.createAdminAccount = async (req, res, next) => {
   try {
-    const { name, email, phone, role, password, permissions } = req.body;
-    if (!name || !email || !password || !role) {
-      return next(new AppError('Name, email, password and role are required.', 400));
-    }
-    if (!ROLE_PERMISSIONS[role]) {
+    let targetRole = role === 'superadmin' ? 'super_admin' : (role === 'support' ? 'support_executive' : role);
+    if (!ROLE_PERMISSIONS[targetRole]) {
       return next(new AppError('Invalid role.', 400));
     }
     let user = await User.findOne({ email: email.toLowerCase() });
     if (user) {
       // Update existing user role and details to grant admin access
-      user.role = role;
+      user.role = targetRole;
       user.isActive = true;
       if (name) user.name = name.trim();
       if (phone) user.phone = phone;
