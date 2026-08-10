@@ -8,12 +8,15 @@ import { Mail, ArrowLeft } from 'lucide-react';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
+  const [otp, setOtp] = useState('');
+  const [newPassword, setNewPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [step, setStep] = useState(1);
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleRequestOTP = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setMessage('');
@@ -22,12 +25,34 @@ const ForgotPassword = () => {
     try {
       const response = await api.post('/auth/forgot-password', { email });
       if (response.data.success) {
-        setMessage(response.data.message || 'If an account exists, a reset link has been sent.');
+        setMessage(response.data.message || 'A 6-digit reset OTP has been sent to your email.');
+        setStep(2);
       } else {
         setError(response.data.message || 'Failed to send reset link');
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Server error. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setMessage('');
+    setLoading(true);
+
+    try {
+      const response = await api.post('/auth/reset-password', { email, otp, newPassword });
+      if (response.data.success) {
+        alert('Password has been successfully reset. Please log in.');
+        navigate('/login');
+      } else {
+        setError(response.data.message || 'Failed to reset password');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Invalid OTP or server error.');
     } finally {
       setLoading(false);
     }
@@ -57,21 +82,25 @@ const ForgotPassword = () => {
             <img src="/assets/shield-logo.png" alt="Legalitt Shield" className="w-full h-full object-contain relative z-10" />
           </div>
           <h1 className="text-2xl font-bold text-slate-900 mb-2">Reset Password</h1>
-          <p className="text-slate-500 text-sm text-center">Enter your email and we'll send you a reset link.</p>
+          <p className="text-slate-500 text-sm text-center">
+            {step === 1 ? "Enter your email and we'll send you a reset OTP." : "Enter the OTP and your new password."}
+          </p>
         </div>
 
-        {message ? (
-          <div className="p-4 rounded-xl bg-teal-50 border border-teal-200 text-teal-700 text-center">
+        {message && step === 2 && (
+          <div className="p-4 rounded-xl bg-teal-50 border border-teal-200 text-teal-700 text-center text-sm mb-4">
             {message}
           </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-              <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm text-center">
-                {error}
-              </div>
-            )}
+        )}
 
+        {error && (
+          <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm text-center mb-4">
+            {error}
+          </div>
+        )}
+
+        {step === 1 ? (
+          <form onSubmit={handleRequestOTP} className="space-y-4">
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
               <Input
@@ -89,7 +118,41 @@ const ForgotPassword = () => {
               disabled={loading}
               className="w-full h-12 mt-6 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-white rounded-xl font-bold shadow-lg shadow-amber-500/20 transition-all duration-300"
             >
-              {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : "Send Reset Link"}
+              {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : "Send Reset OTP"}
+            </Button>
+          </form>
+        ) : (
+          <form onSubmit={handleResetPassword} className="space-y-4">
+            <div className="relative">
+              <Input
+                type="text"
+                placeholder="6-digit OTP"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value)}
+                maxLength={6}
+                className="h-12 bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 rounded-xl focus-visible:ring-amber-500/50 focus-visible:border-amber-400 text-center tracking-widest font-bold"
+                required
+              />
+            </div>
+            
+            <div className="relative">
+              <Input
+                type="password"
+                placeholder="New Password (min 8 chars)"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                minLength={8}
+                className="h-12 bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 rounded-xl focus-visible:ring-amber-500/50 focus-visible:border-amber-400"
+                required
+              />
+            </div>
+
+            <Button 
+              type="submit" 
+              disabled={loading}
+              className="w-full h-12 mt-6 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-400 hover:to-teal-500 text-white rounded-xl font-bold shadow-lg shadow-teal-500/20 transition-all duration-300"
+            >
+              {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : "Reset Password"}
             </Button>
           </form>
         )}
