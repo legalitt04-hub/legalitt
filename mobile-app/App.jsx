@@ -4,10 +4,18 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import * as SplashScreen from 'expo-splash-screen';
-import * as Notifications from 'expo-notifications';
 import { AuthProvider } from './src/context/AuthContext';
 import { NetworkProvider } from './src/context/NetworkContext';
 import AppNavigator from './src/navigation/AppNavigator';
+
+// Lazy-load expo-notifications — static import crashes if native module
+// (ExpoPushTokenManager) is not registered (e.g. Firebase not linked yet).
+let Notifications = null;
+try {
+  Notifications = require('expo-notifications');
+} catch (e) {
+  console.warn('[App] expo-notifications native module not available:', e?.message);
+}
 
 // Keep splash screen visible while we load (native only)
 if (Platform.OS !== 'web') {
@@ -15,16 +23,20 @@ if (Platform.OS !== 'web') {
     SplashScreen.preventAutoHideAsync();
   } catch (e) { }
 
-  // Configure notification handler
-  try {
-    Notifications.setNotificationHandler({
-      handleNotification: async () => ({
-        shouldShowAlert: true,
-        shouldPlaySound: true,
-        shouldSetBadge: true,
-      }),
-    });
-  } catch (e) { }
+  // Configure notification handler only if module loaded successfully
+  if (Notifications) {
+    try {
+      Notifications.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowAlert: true,
+          shouldPlaySound: true,
+          shouldSetBadge: true,
+        }),
+      });
+    } catch (e) {
+      console.warn('[App] setNotificationHandler failed:', e?.message);
+    }
+  }
 }
 
 class ErrorBoundary extends Component {

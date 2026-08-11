@@ -1,5 +1,5 @@
 // navigation/AppNavigator.jsx - PRODUCTION READY WITH TOKEN VALIDATION & REFRESH
-import { NativeModules } from 'react-native';
+import { NativeModules, Platform, View, ActivityIndicator, Text, StatusBar } from 'react-native';
 
 // Fallback for ZegoCloud NativeModules in Expo Go to prevent crash: Cannot read property 'prefix' of null
 if (Platform.OS !== 'web' && NativeModules) {
@@ -20,8 +20,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../constants/theme';
-import * as SecureStore from 'expo-secure-store';
-import { View, ActivityIndicator, Text, StatusBar, Platform } from 'react-native';
+import * as SecureStore from '../utils/secureStorage';
 import axios from 'axios';
 import Constants from 'expo-constants';
 import { useAuth } from '../context/AuthContext';

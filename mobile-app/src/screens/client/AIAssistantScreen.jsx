@@ -11,7 +11,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import { Audio } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as SecureStore from 'expo-secure-store';
+import * as SecureStore from '../../utils/secureStorage';
 import EventSource from 'react-native-sse';
 import { COLORS, SIZES, SHADOWS } from '../../constants/theme';
 import api, { BASE_URL } from '../../services/api';

@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
-import * as SecureStore from 'expo-secure-store';
+import * as SecureStore from '../utils/secureStorage';
 import Toast from 'react-native-toast-message';
 
 const OFFLINE_QUEUE_KEY = 'legalitt_offline_queue';

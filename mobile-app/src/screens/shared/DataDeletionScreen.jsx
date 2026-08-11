@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import * as SecureStore from 'expo-secure-store';
+import * as SecureStore from '../../utils/secureStorage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const NAVY = '#012464';

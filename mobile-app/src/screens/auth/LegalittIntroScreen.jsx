@@ -7,6 +7,7 @@ import {
   StatusBar,
   Dimensions,
   Image,
+  Platform,
   Easing,
 } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
@@ -44,10 +45,20 @@ export default function LegalittIntroScreen({ navigation, onAnimationComplete })
     }))
   ).current;
 
+  // Safety timeout: always proceed after 6s even if animation fails
+  useEffect(() => {
+    const safetyTimer = setTimeout(() => {
+      if (onAnimationComplete) onAnimationComplete();
+    }, 6000);
+    return () => clearTimeout(safetyTimer);
+  }, [onAnimationComplete]);
+
   useEffect(() => {
     let isMounted = true;
-    StatusBar.setBarStyle('light-content');
-    StatusBar.setBackgroundColor('#000000');
+    if (Platform.OS !== 'web') {
+      try { StatusBar.setBarStyle('light-content'); } catch(e) {}
+      try { StatusBar.setBackgroundColor('#000000'); } catch(e) {}
+    }
 
     const preloadAssets = async () => {
       try {
@@ -163,8 +174,18 @@ export default function LegalittIntroScreen({ navigation, onAnimationComplete })
   });
 
   return (
-    <Animated.View style={[styles.container, { opacity: screenOpacity }]}>
-      <StatusBar barStyle="light-content" backgroundColor="#000000" translucent />
+    <Animated.View
+      style={[
+        styles.container,
+        {
+          opacity: screenOpacity,
+          minHeight: Platform.OS === 'web' ? '100vh' : '100%',
+        },
+      ]}
+    >
+      {Platform.OS !== 'web' && (
+        <StatusBar barStyle="light-content" backgroundColor="#000000" translucent />
+      )}
 
       {/* Warm Golden Ambient Glow */}
       <Animated.View style={[styles.ambientGlow, { opacity: glowOpacity }]} />
@@ -218,7 +239,6 @@ export default function LegalittIntroScreen({ navigation, onAnimationComplete })
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    minHeight: Platform.OS === 'web' ? '100vh' : '100%',
     backgroundColor: '#000000', // Pure Black
     alignItems: 'center',
     justifyContent: 'center',

@@ -3,7 +3,7 @@
 // Used by MyBookingsScreen, ChatScreen, AdvocateDashboard, AuthContext
 
 import { io } from 'socket.io-client';
-import * as SecureStore from 'expo-secure-store';
+import * as SecureStore from '../utils/secureStorage';
 import { BASE_URL } from './api';
 
 // Strip /api/v1 to get base server URL

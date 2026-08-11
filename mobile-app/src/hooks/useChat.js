@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { io } from 'socket.io-client';
-import * as SecureStore from 'expo-secure-store';
+import * as SecureStore from '../utils/secureStorage';
 import { chatAPI, BASE_URL } from '../services/api';
 import { TOKEN_KEY } from '../services/api';
 import Constants from 'expo-constants';

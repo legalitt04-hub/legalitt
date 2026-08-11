@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { Platform } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
+import * as SecureStore from '../utils/secureStorage';
 import Constants from 'expo-constants';
 import NetInfo from '@react-native-community/netinfo';
 import { getCacheKey, getCachedData, setCachedData } from '../utils/offlineCache';
