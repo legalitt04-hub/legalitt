@@ -474,10 +474,26 @@ export default function Consultations() {
                       <span className={`font-semibold ${booking.payment.status === 'paid' ? 'text-green-600' : 'text-orange-600'}`}>
                         ₹{booking.payment.amount} · {booking.payment.status === 'paid' ? '✓ Paid' : 'Pending'}
                       </span>
-                      {booking.documents?.length > 0 && (
-                        <span className="flex items-center gap-1"><Paperclip size={11} /> {booking.documents.length} docs</span>
-                      )}
                     </div>
+
+                    {/* Direct Clickable Uploaded Documents Pills */}
+                    {booking.documents?.length > 0 && (
+                      <div className="mt-2 pt-2 border-t border-gray-100">
+                        <span className="text-[11px] text-gray-500 font-semibold flex items-center gap-1 mb-1.5">
+                          <Paperclip size={11} className="text-teal-600" /> Attached Documents ({booking.documents.length}):
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {booking.documents.map((doc, idx) => (
+                            <a key={idx} href={doc.url} target="_blank" rel="noopener noreferrer"
+                              onClick={e => e.stopPropagation()}
+                              className="inline-flex items-center gap-1.5 text-[11px] font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 px-2.5 py-1 rounded-lg border border-teal-200 transition-colors">
+                              {doc.type === 'image' ? <ImageIcon size={11} /> : <FileText size={11} />}
+                              <span>{doc.name || `Doc ${idx + 1}`}</span>
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Case Progress Bar */}
