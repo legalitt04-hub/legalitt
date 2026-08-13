@@ -227,7 +227,19 @@ export default function MyBookingsScreen({ navigation }) {
         </View>
 
         {/* Advocate Info */}
-        <View style={styles.advocateRow}>
+        <TouchableOpacity
+          style={styles.advocateRow}
+          activeOpacity={item.advocate ? 0.7 : 1}
+          onPress={() => {
+            const advId = item.advocate?._id || item.advocate?.id || item.advocate;
+            if (advId) {
+              navigation.navigate('AdvocateProfile', {
+                advocateId: typeof advId === 'object' ? advId._id : advId,
+                advocateName,
+                advocateAvatar,
+              });
+            }
+          }}>
           {advocateAvatar ? (
             <Image source={{ uri: advocateAvatar }} style={styles.avatar} />
           ) : (
@@ -237,14 +249,19 @@ export default function MyBookingsScreen({ navigation }) {
             </View>
           )}
           <View style={styles.advocateDetails}>
-            <Text style={styles.advocateName}>{advocateName}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Text style={styles.advocateName}>{advocateName}</Text>
+              {item.advocate && (
+                <Ionicons name="chevron-forward" size={16} color="#B89A6A" />
+              )}
+            </View>
             <Text style={styles.advocateTitle}>
               {item.status === 'pending_assignment'
                 ? '⏳ Admin is assigning best advocate for you'
-                : (item.advocate?.specializations?.[0] || 'Advocate & Legal Advisor')}
+                : (item.advocate?.specializations?.[0] ? `${item.advocate.specializations[0]} · Tap to view profile` : 'Advocate & Legal Advisor · Tap to view profile')}
             </Text>
           </View>
-        </View>
+        </TouchableOpacity>
 
         {/* 24h countdown */}
         {deadlineText && (

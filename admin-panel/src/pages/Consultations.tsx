@@ -21,6 +21,7 @@ interface Booking {
   payment: { amount: number; status: string };
   documents: { url: string; name: string; type: string }[];
   clientCity?: string;
+  notes?: string;
   assignmentDeadline: string;
   assignedAt?: string;
   assignedBy?: { name: string };
