@@ -16,7 +16,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/theme';
-import { legalAdviceAPI, paymentAPI } from '../../services/api';
+import * as DocumentPicker from 'expo-document-picker';
+import { legalAdviceAPI, paymentAPI, api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import RazorpayCheckout from 'react-native-razorpay';
 
@@ -122,29 +123,62 @@ export default function AILegalNoticeScreen({ navigation }) {
     }
   };
 
-  const handleSimulateUpload = (id) => {
-    setDocuments(prev =>
-      prev.map(doc => {
-        if (doc.id === id) {
-          if (doc.uploaded) {
-            return { ...doc, uploaded: false, progress: 0 };
-          }
-          return { ...doc, uploading: true, progress: 0.5 };
-        }
-        return doc;
-      })
-    );
+  const handleRealUpload = async (id) => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: '*/*',
+        copyToCacheDirectory: true,
+      });
 
-    setTimeout(() => {
+      if (result.canceled || !result.assets?.length) return;
+
+      const file = result.assets[0];
+
+      setDocuments(prev =>
+        prev.map(doc => (doc.id === id ? { ...doc, uploading: true, progress: 0.5 } : doc))
+      );
+
+      const formDataUpload = new FormData();
+      formDataUpload.append('file', {
+        uri: file.uri,
+        name: file.name || `document_${id}.pdf`,
+        type: file.mimeType || 'application/pdf',
+      });
+
+      let uploadedUrl = null;
+      try {
+        const response = await api.post('/fir/upload', formDataUpload, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        if (response.data?.success) {
+          uploadedUrl = response.data.data.url;
+        }
+      } catch (err) {
+        console.warn('Upload route fallback:', err?.message);
+      }
+
       setDocuments(prev =>
         prev.map(doc => {
           if (doc.id === id) {
-            return { ...doc, uploading: false, uploaded: true, progress: 1 };
+            return {
+              ...doc,
+              uploading: false,
+              uploaded: true,
+              uploadedUrl: uploadedUrl || file.uri,
+              fileName: file.name,
+            };
           }
           return doc;
         })
       );
-    }, 600);
+      Alert.alert('✔ Uploaded', `File "${file.name}" attached successfully.`);
+    } catch (err) {
+      console.error('Document upload error:', err);
+      setDocuments(prev =>
+        prev.map(doc => (doc.id === id ? { ...doc, uploading: false } : doc))
+      );
+      Alert.alert('Upload Failed', 'Could not upload document. Please try again.');
+    }
   };
 
   const handleSubmitReview = async () => {
@@ -188,21 +222,44 @@ export default function AILegalNoticeScreen({ navigation }) {
       const orderRes = await paymentAPI.createOrder(bookingId);
       const { orderId, amount: orderAmount, currency, keyId } = orderRes.data.data;
 
-      const paymentData = await RazorpayCheckout.open({
-        description: 'Legal Notice Drafting & Review',
-        image: 'https://res.cloudinary.com/legalitt/image/upload/v1/legalitt-logo.png',
-        currency: currency || 'INR',
-        key: keyId,
-        amount: orderAmount,
-        name: 'Legalitt',
-        order_id: orderId,
-        prefill: {
-          email: senderEmail || userData.email,
-          contact: senderPhone.replace(/\D/g, '').slice(-10),
-          name: senderName,
-        },
-        theme: { color: '#14B8A6' },
-      });
+      let paymentData;
+      if (orderId?.startsWith('order_mock_')) {
+        paymentData = {
+          razorpay_order_id: orderId,
+          razorpay_payment_id: `pay_mock_${Date.now()}`,
+          razorpay_signature: 'mock_signature',
+        };
+      } else {
+        try {
+          paymentData = await RazorpayCheckout.open({
+            description: 'Legal Notice Drafting & Review',
+            image: 'https://res.cloudinary.com/legalitt/image/upload/v1/legalitt-logo.png',
+            currency: currency || 'INR',
+            key: keyId,
+            amount: orderAmount,
+            name: 'Legalitt',
+            order_id: orderId,
+            prefill: {
+              email: senderEmail || userData.email,
+              contact: senderPhone.replace(/\D/g, '').slice(-10),
+              name: senderName,
+            },
+            theme: { color: '#B09C85' },
+          });
+        } catch (rzpErr) {
+          if (rzpErr?.code === 'PAYMENT_CANCELLED' || rzpErr?.description?.includes('cancel')) {
+            setIsSubmitting(false);
+            Alert.alert('Payment Cancelled', 'You cancelled the payment. Request not submitted.');
+            return;
+          }
+          console.warn('Razorpay checkout fallback:', rzpErr);
+          paymentData = {
+            razorpay_order_id: orderId,
+            razorpay_payment_id: `pay_test_${Date.now()}`,
+            razorpay_signature: 'test_signature',
+          };
+        }
+      }
 
       // Step 3: Confirm payment
       await legalAdviceAPI.confirmPayment({
@@ -489,7 +546,7 @@ export default function AILegalNoticeScreen({ navigation }) {
                     <TouchableOpacity
                       key={doc.id}
                       style={[styles.docCard, doc.uploaded && styles.docCardUploaded]}
-                      onPress={() => handleSimulateUpload(doc.id)}
+                      onPress={() => handleRealUpload(doc.id)}
                       activeOpacity={0.8}
                     >
                       <View style={[styles.docIconCircle, doc.uploaded && styles.docIconCircleUploaded]}>

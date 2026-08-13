@@ -54,21 +54,10 @@ const bookingSchema = new mongoose.Schema({
     required: [true, 'Brief description of legal issue is required'],
     maxlength: [1000, 'Issue description cannot exceed 1000 characters'],
   },
-  // Documents uploaded by client (Cloudinary URLs)
-  documents: [{
-    url: String,
-    name: String,
-    type: String, // 'image', 'pdf', 'doc'
-    uploadedAt: { type: Date, default: Date.now },
-  }],
+  // Documents uploaded by client (Cloudinary URLs or Objects)
+  documents: [mongoose.Schema.Types.Mixed],
   // Documents uploaded by advocate (or by admin on advocate's behalf)
-  advocateDocuments: [{
-    url: String,
-    name: String,
-    type: String,
-    uploadedAt: { type: Date, default: Date.now },
-    uploadedByAdmin: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // set if admin uploaded
-  }],
+  advocateDocuments: [mongoose.Schema.Types.Mixed],
   payment: {
     amount: { type: Number, default: 0 },
     currency: { type: String, default: 'INR' },
