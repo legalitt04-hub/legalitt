@@ -87,8 +87,9 @@ app.use('/api/v1/auth/', mkLimiter(20));
 app.use('/api/v1/ai/', mkLimiter(10, 60 * 1000));
 
 // Body parsing & sanitization
-app.use(express.json({ limit: '10kb' }));
-app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+// 1mb — large enough for bookings with multiple Cloudinary URLs + descriptions
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(mongoSanitize());
 app.use(xssClean());
 app.use(compression());

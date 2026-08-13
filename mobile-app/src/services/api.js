@@ -16,7 +16,9 @@ export const REFRESH_KEY = 'refreshToken';
 const api = axios.create({
   baseURL: BASE_URL,
   timeout: 60000,
-  headers: { 'Content-Type': 'application/json' },
+  // NOTE: Do NOT set Content-Type here — multipart/form-data uploads need
+  // axios to auto-set the boundary, which it can't do if the header is pre-set.
+  // JSON requests get Content-Type: application/json automatically from axios.
 });
 
 api.interceptors.request.use(
@@ -299,9 +301,25 @@ export const legalAdviceAPI = {
 export const uploadAPI = {
   uploadFile: async (fileUri, fileName, mimeType) => {
     const formData = new FormData();
-    formData.append('file', { uri: fileUri, name: fileName, type: mimeType || 'application/octet-stream' });
-    return api.post('/uploads/file', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+    formData.append('file', {
+      uri: fileUri,
+      name: fileName || 'upload',
+      type: mimeType || 'application/octet-stream',
+    });
+    // Do NOT pass Content-Type header manually — axios will set it
+    // automatically with the correct multipart boundary.
+    return api.post('/uploads/document', formData, {
+      timeout: 60000,
+    });
+  },
+  uploadAvatar: async (fileUri, fileName, mimeType) => {
+    const formData = new FormData();
+    formData.append('file', {
+      uri: fileUri,
+      name: fileName || 'avatar.jpg',
+      type: mimeType || 'image/jpeg',
+    });
+    return api.post('/uploads/avatar', formData, {
       timeout: 60000,
     });
   },

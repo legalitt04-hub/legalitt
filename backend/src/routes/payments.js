@@ -18,7 +18,21 @@ router.post('/create-order', protect, authorize('client'), async (req, res, next
     if (booking.payment.status === 'paid')
       return next(new AppError('This booking has already been paid.', 400));
 
-    const order = await razorpay.createOrder(booking.payment.amount, `Booking ${bookingId}`);
+    // Check Razorpay keys are configured
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+      return next(new AppError('Payment gateway not configured. Please contact support.', 503));
+    }
+
+    let order;
+    try {
+      order = await razorpay.createOrder(booking.payment.amount, `Booking ${bookingId}`);
+    } catch (razorpayErr) {
+      // Razorpay SDK errors are not AppErrors — wrap them so the client gets a meaningful message
+      const msg = razorpayErr?.error?.description || razorpayErr?.message || 'Payment gateway error. Please try again.';
+      logger.error(`Razorpay createOrder failed for booking ${bookingId}: ${msg}`);
+      return next(new AppError(msg, 502));
+    }
+
     await Booking.findByIdAndUpdate(bookingId, { 'payment.razorpayOrderId': order.id });
 
     res.json({
@@ -32,6 +46,7 @@ router.post('/create-order', protect, authorize('client'), async (req, res, next
     });
   } catch (err) { next(err); }
 });
+
 
 // ─── POST /api/v1/payments/verify-payment ─────────────────────────────────────
 // Called by mobile after Razorpay payment sheet succeeds.

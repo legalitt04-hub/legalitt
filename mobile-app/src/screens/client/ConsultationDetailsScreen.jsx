@@ -168,11 +168,35 @@ export default function ConsultationDetailsScreen({ navigation, route }) {
         },
       });
     } catch (err) {
-      if (err?.code === 'PAYMENT_CANCELLED') {
-        Alert.alert('Payment Cancelled', 'You cancelled the payment. Your request was not submitted.');
-      } else {
-        Alert.alert('Error', err?.response?.data?.message || 'Something went wrong. Please try again.');
+      // Razorpay cancelled by user
+      if (err?.code === 'PAYMENT_CANCELLED' || err?.description === 'Payment cancelled by user.') {
+        Alert.alert('Payment Cancelled', 'You cancelled the payment. Your request has not been submitted.');
+        return;
       }
+
+      // Razorpay native error (e.g. bad key, network issue during checkout)
+      if (err?.code !== undefined && err?.description) {
+        Alert.alert(
+          'Payment Failed',
+          `Razorpay error: ${err.description}\n\nPlease try again or contact support.`
+        );
+        return;
+      }
+
+      // Backend API error — extract message properly
+      const backendMsg =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.message ||
+        'Something went wrong. Please try again.';
+
+      console.error('ConsultationDetails error:', {
+        status: err?.response?.status,
+        message: backendMsg,
+        url: err?.config?.url,
+      });
+
+      Alert.alert('Error', backendMsg);
     } finally {
       setSubmitting(false);
     }
