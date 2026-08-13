@@ -30,10 +30,15 @@ const AdvocateProfileScreen = ({ navigation, route }) => {
   // Pre-fill with prefetched data for instant display — no loading flash with robust ID parsing
   const [advocate, setAdvocate] = useState(() => {
     if (!prefetchedData) return null;
+    const rawTags = prefetchedData.tags || prefetchedData.specialization || prefetchedData.specializations || [];
+    const tagsArr = Array.isArray(rawTags) ? rawTags : (typeof rawTags === 'string' ? rawTags.split('•').map(t => t.trim()) : [rawTags]).filter(Boolean);
     return {
       ...prefetchedData,
       id: prefetchedData.id || prefetchedData._id || prefetchedData.advocateId || advocateId,
       _id: prefetchedData._id || prefetchedData.id || prefetchedData.advocateId || advocateId,
+      name: prefetchedData.name || prefetchedData.user?.name || "Advocate",
+      tags: tagsArr.length > 0 ? tagsArr : ['Legal Services'],
+      fee: prefetchedData.fee || prefetchedData.consultationFee || 500,
     };
   });
   const [loading, setLoading] = useState(!prefetchedData); // skip loading if we have data
@@ -154,7 +159,7 @@ const AdvocateProfileScreen = ({ navigation, route }) => {
   const handleShare = async () => {
     try {
       await Share.share({
-        message: `Check out Advocate ${advocate.name} on Legalitt. Specializations: ${advocate.tags.join(', ')}. Consultation Fee: ₹${advocate.fee}.`,
+        message: `Check out Advocate ${advocate.name} on Legalitt. Specializations: ${(advocate.tags || advocate.specializations || []).join(', ')}. Consultation Fee: ₹${advocate.fee}.`,
       });
     } catch (error) {
       console.log('Share error:', error);
@@ -220,7 +225,7 @@ const AdvocateProfileScreen = ({ navigation, route }) => {
             </View>
 
             <Text style={styles.title}>{advocate.title}</Text>
-            <Text style={styles.tags}>{advocate.tags.join(' · ')}</Text>
+            <Text style={styles.tags}>{(advocate.tags || advocate.specializations || ['Legal Services']).join(' · ')}</Text>
 
             <View style={styles.ratingRow}>
               <Ionicons name="star" size={12} color="#FCD34D" />
