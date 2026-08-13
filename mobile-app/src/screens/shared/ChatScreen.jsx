@@ -383,52 +383,53 @@ const ChatScreen = ({ navigation, route }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F9FAFB' },
+  container: { flex: 1, backgroundColor: '#FAF9F8' },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FAF9F8' },
 
   header: {
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16,
     paddingTop: 12, paddingBottom: 16, backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1, borderColor: '#F3F4F6'
+    borderBottomWidth: 1, borderColor: '#E8E2D8'
   },
   backBtn: { width: 36, padding: 4 },
   participantAvatar: {
-    width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.primary,
+    width: 36, height: 36, borderRadius: 18, backgroundColor: '#B09C85',
     alignItems: 'center', justifyContent: 'center', marginRight: 10
   },
   avatarImg: { width: '100%', height: '100%', borderRadius: 18 },
   avatarPlaceholderText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
   headerMeta: { flex: 1 },
-  participantName: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary },
+  participantName: { fontSize: 14, fontWeight: '700', color: '#2E2A26' },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
   dotOnline: { backgroundColor: '#10B981' },
   dotOffline: { backgroundColor: '#9CA3AF' },
-  statusLabel: { fontSize: 10, color: COLORS.textSecondary, fontWeight: '500' },
+  statusLabel: { fontSize: 10, color: '#6D6A66', fontWeight: '500' },
   callBtn: {
     width: 36, height: 36, borderRadius: 18,
-    backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center'
+    backgroundColor: '#F8F4EC', alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: '#E8E2D8',
   },
   slotHeaderBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: '#0F131C',
-    paddingVertical: 8,
+    backgroundColor: '#FAF2E8',
+    paddingVertical: 9,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderColor: '#1E2638',
+    borderColor: '#E8E2D8',
   },
   slotHeaderBannerText: {
-    color: '#D4AF37',
+    color: '#8D7865',
     fontSize: 12,
     fontWeight: '700',
   },
 
   offlineBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: '#F59E0B', paddingHorizontal: 16, paddingVertical: 6
+    backgroundColor: '#B45309', paddingHorizontal: 16, paddingVertical: 8
   },
   offlineBannerText: { color: '#FFFFFF', fontSize: 11, fontWeight: '600', flex: 1 },
 
@@ -445,20 +446,20 @@ const styles = StyleSheet.create({
     maxWidth: '82%', borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10,
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 2, elevation: 1
   },
-  bubbleMe: { backgroundColor: COLORS.primary, borderBottomRightRadius: 4 },
-  bubbleThem: { backgroundColor: '#FFFFFF', borderBottomLeftRadius: 4, borderWidth: 1, borderColor: '#F3F4F6' },
+  bubbleMe: { backgroundColor: '#B09C85', borderBottomRightRadius: 4 },
+  bubbleThem: { backgroundColor: '#FFFFFF', borderBottomLeftRadius: 4, borderWidth: 1, borderColor: '#E8E2D8' },
   bubblePending: { opacity: 0.7 },
 
   msgText: { fontSize: 13, lineHeight: 19 },
   textWhite: { color: '#FFFFFF' },
-  textDark: { color: COLORS.textPrimary },
-  textFade: { color: 'rgba(255,255,255,0.6)' },
-  textSecondary: { color: '#9CA3AF' },
+  textDark: { color: '#2E2A26' },
+  textFade: { color: 'rgba(255,255,255,0.7)' },
+  textSecondary: { color: '#6D6A66' },
 
   messageAvatarContainer: { marginRight: 8, justifyContent: 'flex-end', paddingBottom: 4 },
   messageAvatar: { width: 28, height: 28, borderRadius: 14 },
-  messageAvatarPlaceholder: { width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(20, 184, 166, 0.1)', alignItems: 'center', justifyContent: 'center' },
-  messageAvatarInitial: { fontSize: 14, fontWeight: '700', color: COLORS.primary },
+  messageAvatarPlaceholder: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#FAF2E8', alignItems: 'center', justifyContent: 'center' },
+  messageAvatarInitial: { fontSize: 14, fontWeight: '700', color: '#B09C85' },
 
   bubbleMeta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 4 },
   msgTime: { fontSize: 9, fontWeight: '500' },
@@ -468,24 +469,24 @@ const styles = StyleSheet.create({
   documentHint: { fontSize: 10, marginTop: 2 },
 
   typingBubble: { paddingVertical: 8, paddingHorizontal: 12 },
-  typingText: { fontSize: 11, fontStyle: 'italic', color: COLORS.textSecondary, fontWeight: '600' },
+  typingText: { fontSize: 11, fontStyle: 'italic', color: '#6D6A66', fontWeight: '600' },
 
   inputContainer: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF',
-    padding: 10, borderTopWidth: 1, borderColor: '#F3F4F6',
+    padding: 10, borderTopWidth: 1, borderColor: '#E8E2D8',
     paddingBottom: Platform.OS === 'ios' ? 24 : 10
   },
   attachmentBtn: { padding: 8, marginRight: 4 },
   textInput: {
-    flex: 1, backgroundColor: '#F3F4F6', borderRadius: 20,
+    flex: 1, backgroundColor: '#F8F4EC', borderRadius: 20,
     paddingHorizontal: 14, paddingVertical: 8, fontSize: 13,
-    color: COLORS.textPrimary, marginRight: 8
+    color: '#2E2A26', marginRight: 8, borderWidth: 1, borderColor: '#E8E2D8',
   },
   sendBtn: {
     width: 38, height: 38, borderRadius: 19,
-    backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center'
+    backgroundColor: '#B09C85', alignItems: 'center', justifyContent: 'center'
   },
-  sendBtnDisabled: { backgroundColor: '#D1D5DB' },
+  sendBtnDisabled: { backgroundColor: '#D6CFCE' },
   readOnlyInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
