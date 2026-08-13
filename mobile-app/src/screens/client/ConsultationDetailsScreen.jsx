@@ -52,8 +52,7 @@ export default function ConsultationDetailsScreen({ navigation, route }) {
 
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: ['application/pdf', 'image/*', 'application/msword',
-               'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+        type: '*/*',
         copyToCacheDirectory: true,
         multiple: false,
       });

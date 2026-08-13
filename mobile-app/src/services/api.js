@@ -297,12 +297,13 @@ export const legalAdviceAPI = {
   getRequestDetail: (id) => api.get(`/legal-advice/request/${id}`),
 };
 
-// Document Upload to Cloudinary
+// Document Upload to Cloudinary (Native fetch implementation to avoid Axios boundary issues on React Native)
 export const uploadAPI = {
   uploadFile: async (fileUri, fileName, mimeType) => {
+    const token = await SecureStore.getItemAsync(TOKEN_KEY);
     const formData = new FormData();
     const cleanName = fileName || `document_${Date.now()}.${mimeType?.includes('pdf') ? 'pdf' : 'jpg'}`;
-    const cleanType = mimeType || (cleanName.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg');
+    const cleanType = mimeType || (cleanName.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg');
 
     formData.append('file', {
       uri: Platform.OS === 'android' ? fileUri : fileUri.replace('file://', ''),
@@ -310,28 +311,44 @@ export const uploadAPI = {
       type: cleanType,
     });
 
-    return api.post('/uploads/document', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-      transformRequest: (data) => data,
-      timeout: 60000,
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${BASE_URL}/uploads/document`, {
+      method: 'POST',
+      headers,
+      body: formData,
     });
+
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      throw new Error(json.message || 'Upload failed');
+    }
+    return { data: json };
   },
   uploadAvatar: async (fileUri, fileName, mimeType) => {
+    const token = await SecureStore.getItemAsync(TOKEN_KEY);
     const formData = new FormData();
     formData.append('file', {
       uri: Platform.OS === 'android' ? fileUri : fileUri.replace('file://', ''),
       name: fileName || 'avatar.jpg',
       type: mimeType || 'image/jpeg',
     });
-    return api.post('/uploads/avatar', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-      transformRequest: (data) => data,
-      timeout: 60000,
+
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${BASE_URL}/uploads/avatar`, {
+      method: 'POST',
+      headers,
+      body: formData,
     });
+
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      throw new Error(json.message || 'Upload failed');
+    }
+    return { data: json };
   },
 };
 
