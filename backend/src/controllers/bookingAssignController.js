@@ -142,19 +142,17 @@ exports.getNearbyAdvocatesForBooking = async (req, res, next) => {
       ];
     }
 
-    // High performance queries with field projection (.select)
+    // Fetch ALL advocates in database without 200 cap, sorted by rating
     const [nearbyAdvocates, allAdvocates, totalAdvocatesCount] = await Promise.all([
       Advocate.find(cityFilter)
         .select('user specializations rating consultationFee location experience verificationStatus isVerified')
         .populate('user', 'name avatar phone email')
         .sort({ 'rating.average': -1, createdAt: -1 })
-        .limit(100)
         .lean(),
       Advocate.find(allFilter)
         .select('user specializations rating consultationFee location experience verificationStatus isVerified')
         .populate('user', 'name avatar phone email')
         .sort({ 'rating.average': -1, createdAt: -1 })
-        .limit(200)
         .lean(),
       Advocate.countDocuments({ verificationStatus: { $ne: 'rejected' } }),
     ]);

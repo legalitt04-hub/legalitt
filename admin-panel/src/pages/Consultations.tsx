@@ -182,7 +182,7 @@ export default function Consultations() {
   const openPanel = async (booking: Booking) => {
     setSelectedBooking(booking);
     setPanelOpen(true);
-    setShowAllAdvocates(false);
+    setShowAllAdvocates(true); // Show ALL advocates across all cities by default
     setAdvocateSearch('');
     setSpecFilter('');
     setCityFilter('');
