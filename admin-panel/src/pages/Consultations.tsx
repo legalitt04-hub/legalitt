@@ -105,13 +105,11 @@ export default function Consultations() {
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [nearbyAdvocates, setNearbyAdvocates] = useState<NearbyAdvocate[]>([]);
   const [allAdvocates, setAllAdvocates] = useState<NearbyAdvocate[]>([]);
-  const [advocateSearch, setAdvocateSearch] = useState('');
-  const [advocatePage, setAdvocatePage] = useState(1);
-  const ADV_PAGE_SIZE = 10;
-  const [assigning, setAssigning] = useState<string | null>(null);
-  const [showAllAdvocates, setShowAllAdvocates] = useState(false);
-  const [panelOpen, setPanelOpen] = useState(false);
-  const [loadingNearby, setLoadingNearby] = useState(false);
+  const [totalAdvocatesCount, setTotalAdvocatesCount] = useState(0);
+  const [specFilter, setSpecFilter] = useState('');
+  const [cityFilter, setCityFilter] = useState('');
+  const [minRating, setMinRating] = useState<number>(0);
+  const [sortBy, setSortBy] = useState<'rating' | 'fee_low' | 'fee_high' | 'name'>('rating');
 
   const [summary, setSummary] = useState({ pending: 0, active: 0, completed: 0, total: 0, revenue: 0 });
 
@@ -173,14 +171,23 @@ export default function Consultations() {
     };
   }, [activeTab, fetchBookings]);
 
-  // ─── Open assignment panel ───────────────────────────────────────────────
-  const [totalAdvocatesCount, setTotalAdvocatesCount] = useState(0);
+  const [advocateSearch, setAdvocateSearch] = useState('');
+  const [advocatePage, setAdvocatePage] = useState(1);
+  const ADV_PAGE_SIZE = 10;
+  const [assigning, setAssigning] = useState<string | null>(null);
+  const [showAllAdvocates, setShowAllAdvocates] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [loadingNearby, setLoadingNearby] = useState(false);
 
   const openPanel = async (booking: Booking) => {
     setSelectedBooking(booking);
     setPanelOpen(true);
     setShowAllAdvocates(false);
     setAdvocateSearch('');
+    setSpecFilter('');
+    setCityFilter('');
+    setMinRating(0);
+    setSortBy('rating');
     setAdvocatePage(1);
     setLoadingNearby(true);
     try {
@@ -197,6 +204,43 @@ export default function Consultations() {
     }
   };
 
+  // Unique lists for filter dropdowns
+  const uniqueSpecs = Array.from(new Set(
+    allAdvocates.flatMap(a => a.specializations || [])
+  )).filter(Boolean).sort();
+
+  const uniqueCities = Array.from(new Set(
+    allAdvocates.map(a => a.location?.address?.city).filter(Boolean) as string[]
+  )).sort();
+
+  // Filtered & Sorted Advocates List
+  const advocatesDisplay = (showAllAdvocates ? allAdvocates : nearbyAdvocates).filter(a => {
+    if (advocateSearch) {
+      const q = advocateSearch.toLowerCase();
+      const matchSearch =
+        a.user?.name?.toLowerCase().includes(q) ||
+        a.user?.email?.toLowerCase().includes(q) ||
+        a.location?.address?.city?.toLowerCase().includes(q) ||
+        a.specializations?.some(s => s.toLowerCase().includes(q));
+      if (!matchSearch) return false;
+    }
+    if (specFilter && !a.specializations?.some(s => s.toLowerCase() === specFilter.toLowerCase())) {
+      return false;
+    }
+    if (cityFilter && (a.location?.address?.city || '').toLowerCase() !== cityFilter.toLowerCase()) {
+      return false;
+    }
+    if (minRating > 0 && (a.rating?.average || 5.0) < minRating) {
+      return false;
+    }
+    return true;
+  }).sort((a, b) => {
+    if (sortBy === 'rating') return (b.rating?.average || 5) - (a.rating?.average || 5);
+    if (sortBy === 'fee_low') return (a.consultationFee || 0) - (b.consultationFee || 0);
+    if (sortBy === 'fee_high') return (b.consultationFee || 0) - (a.consultationFee || 0);
+    if (sortBy === 'name') return (a.user?.name || '').localeCompare(b.user?.name || '');
+    return 0;
+  });
   // ─── Assign Advocate ─────────────────────────────────────────────────────
   const handleAssign = async (advocateId: string, advocateName: string) => {
     if (!selectedBooking) return;
@@ -205,7 +249,7 @@ export default function Consultations() {
     try {
       const res = await api.post(`/admin/bookings/${selectedBooking._id}/assign`, {
         advocateId,
-        sendWhatsApp: false, // Enable when WhatsApp Business account is ready
+        sendWhatsApp: false,
       });
       if (res.data?.success) {
         alert(`✅ ${advocateName} has been assigned successfully!\n\nClient and advocate have been notified via app.`);
@@ -240,17 +284,6 @@ export default function Consultations() {
       b.issue?.toLowerCase().includes(s) || b._id.includes(s) || b.clientCity?.toLowerCase().includes(s);
     const matchService = !serviceFilter || b.serviceType === serviceFilter;
     return matchSearch && matchService;
-  });
-
-  const advocatesDisplay = (showAllAdvocates ? allAdvocates : nearbyAdvocates).filter(a => {
-    if (!advocateSearch) return true;
-    const q = advocateSearch.toLowerCase();
-    return (
-      a.user?.name?.toLowerCase().includes(q) ||
-      a.user?.email?.toLowerCase().includes(q) ||
-      a.location?.address?.city?.toLowerCase().includes(q) ||
-      a.specializations?.some(s => s.toLowerCase().includes(q))
-    );
   });
 
   // ─── Render ───────────────────────────────────────────────────────────────
@@ -628,9 +661,68 @@ export default function Consultations() {
 
                   <div className="relative mb-3">
                     <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input value={advocateSearch} onChange={e => setAdvocateSearch(e.target.value)}
+                    <input value={advocateSearch} onChange={e => { setAdvocateSearch(e.target.value); setAdvocatePage(1); }}
                       placeholder="Search advocate by name, city, email, or specialization..."
                       className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                  </div>
+
+                  {/* ── Advocate Filters Bar ── */}
+                  <div className="bg-gray-50 p-3 rounded-xl border border-gray-200 mb-3 space-y-2">
+                    <div className="flex items-center justify-between text-xs font-semibold text-gray-700">
+                      <span className="flex items-center gap-1.5"><Filter size={12} className="text-teal-600" /> Filter Advocates</span>
+                      {(specFilter || cityFilter || minRating > 0 || advocateSearch) && (
+                        <button onClick={() => { setSpecFilter(''); setCityFilter(''); setMinRating(0); setAdvocateSearch(''); setAdvocatePage(1); }}
+                          className="text-xs text-red-600 hover:underline flex items-center gap-1">
+                          <X size={12} /> Reset Filters
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                      {/* Specialization Filter */}
+                      <div>
+                        <select value={specFilter} onChange={e => { setSpecFilter(e.target.value); setAdvocatePage(1); }}
+                          className="w-full px-2 py-1.5 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-500 font-medium text-gray-700">
+                          <option value="">All Specializations</option>
+                          {uniqueSpecs.map(s => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* City Filter */}
+                      <div>
+                        <select value={cityFilter} onChange={e => { setCityFilter(e.target.value); setAdvocatePage(1); }}
+                          className="w-full px-2 py-1.5 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-500 font-medium text-gray-700">
+                          <option value="">All Cities</option>
+                          {uniqueCities.map(c => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Rating Filter */}
+                      <div>
+                        <select value={minRating} onChange={e => { setMinRating(Number(e.target.value)); setAdvocatePage(1); }}
+                          className="w-full px-2 py-1.5 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-500 font-medium text-gray-700">
+                          <option value="0">All Ratings</option>
+                          <option value="4.0">⭐ 4.0 & above</option>
+                          <option value="4.5">⭐ 4.5 & above</option>
+                          <option value="4.8">⭐ 4.8 & above</option>
+                        </select>
+                      </div>
+
+                      {/* Sort By */}
+                      <div>
+                        <select value={sortBy} onChange={e => setSortBy(e.target.value as any)}
+                          className="w-full px-2 py-1.5 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-500 font-medium text-gray-700">
+                          <option value="rating">Top Rated First</option>
+                          <option value="fee_low">Fee: Low to High</option>
+                          <option value="fee_high">Fee: High to Low</option>
+                          <option value="name">Name: A to Z</option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
 
                   {loadingNearby ? (
