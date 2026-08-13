@@ -1109,17 +1109,23 @@ exports.uploadDocumentForClient = async (req, res, next) => {
 
     if (!req.file) return next(new (require('../middlewares/errorHandler').AppError)('No file uploaded.', 400));
 
+    const isPdf = req.file.mimetype?.includes('pdf') || req.file.originalname?.toLowerCase().endsWith('.pdf');
+    const isImage = req.file.mimetype?.startsWith('image/');
+    const resourceType = isImage ? 'image' : isPdf ? 'raw' : 'auto';
+
     let result;
     if (req.file.path) {
       result = await cloudinary.uploader.upload(req.file.path, {
         folder: 'legalitt/admin-uploads',
-        resource_type: 'auto',
+        resource_type: resourceType,
+        use_filename: true,
+        unique_filename: true,
       });
       try { fs.unlinkSync(req.file.path); } catch (e) {}
     } else if (req.file.buffer) {
       result = await new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
-          { folder: 'legalitt/admin-uploads', resource_type: 'auto' },
+          { folder: 'legalitt/admin-uploads', resource_type: resourceType, use_filename: true, unique_filename: true },
           (err, res) => err ? reject(err) : resolve(res)
         );
         stream.end(req.file.buffer);

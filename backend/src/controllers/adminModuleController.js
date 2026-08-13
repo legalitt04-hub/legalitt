@@ -207,10 +207,14 @@ exports.uploadDocForBooking = async (req, res, next) => {
     const booking = await Booking.findById(bookingId);
     if (!booking) return next(new AppError('Booking not found.', 404));
 
+    const isPdf = req.file.mimetype?.includes('pdf') || req.file.originalname?.toLowerCase().endsWith('.pdf');
+    const isImage = req.file.mimetype?.startsWith('image/');
+    const resourceType = isImage ? 'image' : isPdf ? 'raw' : 'auto';
+
     // Upload to Cloudinary
     const result = await new Promise((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
-        { folder: `legalitt/admin-doc-uploads/${side}`, resource_type: 'auto' },
+        { folder: `legalitt/admin-doc-uploads/${side}`, resource_type: resourceType, use_filename: true, unique_filename: true },
         (err, res) => err ? reject(err) : resolve(res)
       );
       stream.end(req.file.buffer);

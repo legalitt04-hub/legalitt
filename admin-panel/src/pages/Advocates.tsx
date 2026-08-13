@@ -148,7 +148,7 @@ export default function Advocates() {
   const exportCSV = () => {
     const rows = [['Name', 'Email', 'Bar Council', 'Status', 'City', 'Fee', 'Rating']];
     advocates.forEach(a => rows.push([
-      a.user.name, a.user.email, a.barCouncilId || '',
+      a.user?.name || 'Advocate', a.user?.email || 'N/A', a.barCouncilId || '',
       a.verificationStatus, a.location?.address?.city || '',
       String(a.consultationFee || 0), String(a.rating?.average || 0),
     ]));
@@ -246,8 +246,8 @@ export default function Advocates() {
                           </div>
                         )}
                           <div>
-                            <p className="font-semibold text-gray-900">{adv.user.name}</p>
-                            <p className="text-xs text-gray-400">{adv.user.email}</p>
+                            <p className="font-semibold text-gray-900">{adv.user?.name || 'Advocate'}</p>
+                            <p className="text-xs text-gray-400">{adv.user?.email || '—'}</p>
                           </div>
                         </div>
                       </td>
@@ -342,9 +342,9 @@ export default function Advocates() {
                   <div className="w-14 h-14 rounded-full bg-gradient-to-br from-teal-400 to-indigo-500 flex items-center justify-center text-white text-xl font-bold flex-shrink-0 shadow-md">{selectedAdv.user?.name?.[0] || 'A'}</div>
                 )}
                 <div>
-                  <p className="font-bold text-gray-900 text-base">{selectedAdv.user.name}</p>
-                  <p className="text-xs text-gray-500 flex items-center gap-1.5 mt-0.5"><Mail className="w-3 h-3" /> {selectedAdv.user.email}</p>
-                  {selectedAdv.user.phone && <p className="text-xs text-gray-500 flex items-center gap-1.5 mt-0.5"><Phone className="w-3 h-3" /> {selectedAdv.user.phone}</p>}
+                  <p className="font-bold text-gray-900 text-base">{selectedAdv.user?.name || 'Advocate'}</p>
+                  <p className="text-xs text-gray-500 flex items-center gap-1.5 mt-0.5"><Mail className="w-3 h-3" /> {selectedAdv.user?.email || '—'}</p>
+                  {selectedAdv.user?.phone && <p className="text-xs text-gray-500 flex items-center gap-1.5 mt-0.5"><Phone className="w-3 h-3" /> {selectedAdv.user.phone}</p>}
                 </div>
               </div>
 

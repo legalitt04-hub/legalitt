@@ -49,6 +49,9 @@ router.post('/chat', protect, aiRateLimiter, async (req, res, next) => {
 
     if (!messages?.length) return next(new AppError('Messages are required.', 400));
 
+    const lastUserMsg = (messages || []).filter(m => m.role === 'user').pop();
+    const userMessage = lastUserMsg?.content || messages[messages.length - 1]?.content || 'Legal Query';
+
 const SYSTEM_PROMPT = `You are an expert AI Legal Assistant specializing in Indian law.
 Provide accurate, structured, and clear legal guidance formatted professionally.
 
