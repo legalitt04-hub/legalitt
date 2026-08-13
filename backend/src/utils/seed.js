@@ -64,6 +64,21 @@ async function seed() {
     { upsert: true }
   );
   console.log('Admin created: admin@legalitt.com / Admin@12345');
+
+  // Create test client
+  await User.findOneAndUpdate(
+    { email: 'testclient@legalitt.com' },
+    {
+      name: 'Test Client',
+      email: 'testclient@legalitt.com',
+      password: await bcrypt.hash('Client@12345', 12),
+      role: 'client',
+      isEmailVerified: true,
+      phone: '+919876543210',
+    },
+    { upsert: true }
+  );
+  console.log('Test Client created: testclient@legalitt.com / Client@12345');
   console.log('Seeding complete!');
   process.exit(0);
 }

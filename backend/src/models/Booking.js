@@ -61,6 +61,14 @@ const bookingSchema = new mongoose.Schema({
     type: String, // 'image', 'pdf', 'doc'
     uploadedAt: { type: Date, default: Date.now },
   }],
+  // Documents uploaded by advocate (or by admin on advocate's behalf)
+  advocateDocuments: [{
+    url: String,
+    name: String,
+    type: String,
+    uploadedAt: { type: Date, default: Date.now },
+    uploadedByAdmin: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // set if admin uploaded
+  }],
   payment: {
     amount: { type: Number, default: 0 },
     currency: { type: String, default: 'INR' },

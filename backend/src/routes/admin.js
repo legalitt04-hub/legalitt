@@ -49,6 +49,9 @@ router.patch('/advocates/:id/suspend',      adminController.suspendAdvocate);
 router.get('/settings',               adminController.getSettings);
 router.put('/settings',               adminController.updateSettings);
 
+// ─── Legal Requests (Legal Advice + Legal Notice) ────────────────────────────
+router.get('/legal-requests',         adminController.getLegalRequests);
+
 // ─── New Modules (Phase 3 Integration) ────────────────────────────────────────
 const adminModuleController = require('../controllers/adminModuleController');
 router.get('/cases',                  adminModuleController.getCases);
@@ -57,6 +60,7 @@ router.delete('/cases/:id',           adminModuleController.deleteCase);
 router.get('/services',               adminModuleController.getServices);
 router.put('/services/:id',           adminModuleController.updateService);
 router.get('/documents',              adminModuleController.getDocuments);
+router.post('/documents/upload-for-booking', upload.single('file'), adminModuleController.uploadDocForBooking);
 router.get('/support-tickets',        adminModuleController.getSupportTickets);
 router.put('/support-tickets/:id',    adminModuleController.updateSupportTicket);
 router.get('/ai-drafts',              adminModuleController.getAIDrafts);
@@ -113,5 +117,22 @@ router.post('/roles/accounts',             roleController.createAdminAccount);
 router.patch('/roles/accounts/:id',        roleController.updateAdminAccount);
 router.delete('/roles/accounts/:id',       roleController.deleteAdminAccount);
 router.post('/roles/accounts/:id/reset-password', roleController.resetAdminPassword);
+
+// ─── Phase 4: User Notes ─────────────────────────────────────────────────────
+router.get('/users/:id/notes',           adminController.getUserNotes);
+router.post('/users/:id/notes',          adminController.addUserNote);
+router.delete('/users/:id/notes/:noteId', adminController.deleteUserNote);
+
+// ─── Phase 4: Payment History ─────────────────────────────────────────────────
+router.get('/payment-history',           adminController.getPaymentHistory);
+
+// ─── Phase 4: Transaction History ────────────────────────────────────────────
+router.get('/transactions',              adminController.getTransactionHistory);
+
+// ─── Phase 4: Upload Document for Client ─────────────────────────────────────
+router.post('/upload-for-client',        upload.single('file'), adminController.uploadDocumentForClient);
+
+// ─── Phase 4: Create Case + Register Client ──────────────────────────────────
+router.post('/create-case-for-client',   adminController.createCaseForClient);
 
 module.exports = router;

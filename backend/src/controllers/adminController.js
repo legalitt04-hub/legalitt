@@ -828,3 +828,301 @@ exports.suspendAdvocate = async (req, res, next) => {
     res.json({ success: true, data: { verificationStatus: newStatus } });
   } catch (err) { next(err); }
 };
+
+// ─── Legal Requests (Legal Advice + Legal Notice) ────────────────────────────
+exports.getLegalRequests = async (req, res, next) => {
+  try {
+    const Booking = require('../models/Booking');
+    const { status, serviceType, page = 1, limit = 20 } = req.query;
+
+    const filter = {
+      serviceType: { $in: ['legal_advice', 'legal_notice', 'property_research'] },
+    };
+    if (status) filter.status = status;
+    if (serviceType && serviceType !== 'all') filter.serviceType = serviceType;
+
+    const skip = (Number(page) - 1) * Number(limit);
+    const [requests, total] = await Promise.all([
+      Booking.find(filter)
+        .populate('client', 'name email phone avatar')
+        .populate({ path: 'advocate', populate: { path: 'user', select: 'name avatar' } })
+        .sort('-createdAt')
+        .skip(skip)
+        .limit(Number(limit)),
+      Booking.countDocuments(filter),
+    ]);
+
+    res.json({
+      success: true,
+      data: requests,
+      total,
+      page: Number(page),
+      pages: Math.ceil(total / Number(limit)),
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PHASE 4 ADMIN FEATURES
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── User Internal Notes ──────────────────────────────────────────────────────
+exports.getUserNotes = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id).select('_id name email');
+    if (!user) return next(new (require('../middlewares/errorHandler').AppError)('User not found.', 404));
+    // Notes stored as embedded array in user doc via virtual — use separate query
+    const notes = await require('../models/UserNote').find({ user: req.params.id }).populate('createdBy', 'name').sort('-createdAt');
+    res.json({ success: true, data: notes });
+  } catch (err) { next(err); }
+};
+
+exports.addUserNote = async (req, res, next) => {
+  try {
+    const { note } = req.body;
+    if (!note?.trim()) return next(new (require('../middlewares/errorHandler').AppError)('Note text is required.', 400));
+    const UserNote = require('../models/UserNote');
+    const created = await UserNote.create({ user: req.params.id, note: note.trim(), createdBy: req.user._id });
+    await created.populate('createdBy', 'name');
+    res.status(201).json({ success: true, data: created });
+  } catch (err) { next(err); }
+};
+
+exports.deleteUserNote = async (req, res, next) => {
+  try {
+    const UserNote = require('../models/UserNote');
+    await UserNote.findByIdAndDelete(req.params.noteId);
+    res.json({ success: true, message: 'Note deleted.' });
+  } catch (err) { next(err); }
+};
+
+// ─── Payment History ─────────────────────────────────────────────────────────
+exports.getPaymentHistory = async (req, res, next) => {
+  try {
+    const Booking = require('../models/Booking');
+    const { userId, advocateId, page = 1, limit = 20, status } = req.query;
+    const filter = { 'payment.status': { $in: ['paid', 'refunded', 'failed', 'pending'] } };
+    if (status && status !== 'all') filter['payment.status'] = status;
+    if (userId) filter.client = userId;
+    if (advocateId) filter.advocate = advocateId;
+
+    const skip = (Number(page) - 1) * Number(limit);
+    const [payments, total, summary] = await Promise.all([
+      Booking.find(filter)
+        .populate('client', 'name email phone avatar')
+        .populate({ path: 'advocate', populate: { path: 'user', select: 'name avatar' } })
+        .sort('-createdAt')
+        .skip(skip)
+        .limit(Number(limit))
+        .lean(),
+      Booking.countDocuments(filter),
+      Booking.aggregate([
+        { $match: { 'payment.status': 'paid' } },
+        { $group: {
+          _id: null,
+          totalCollected: { $sum: '$payment.amount' },
+          totalBookings: { $sum: 1 },
+          avgAmount: { $avg: '$payment.amount' },
+        }},
+      ]),
+    ]);
+
+    res.json({
+      success: true,
+      data: payments,
+      total,
+      page: Number(page),
+      pages: Math.ceil(total / Number(limit)),
+      summary: summary[0] || { totalCollected: 0, totalBookings: 0, avgAmount: 0 },
+    });
+  } catch (err) { next(err); }
+};
+
+// ─── Transaction History (full ledger) ───────────────────────────────────────
+exports.getTransactionHistory = async (req, res, next) => {
+  try {
+    const Booking = require('../models/Booking');
+    const Advocate = require('../models/Advocate');
+    const Withdrawal = require('../models/Withdrawal');
+    const { userId, advocateId, type, page = 1, limit = 25, from, to } = req.query;
+
+    // Build date filter
+    const dateFilter = {};
+    if (from) dateFilter.$gte = new Date(from);
+    if (to) dateFilter.$lte = new Date(to);
+
+    // 1. Paid bookings (client payments)
+    const bookingFilter = { 'payment.status': 'paid' };
+    if (userId) bookingFilter.client = userId;
+    if (advocateId) bookingFilter.advocate = advocateId;
+    if (from || to) bookingFilter['payment.paidAt'] = dateFilter;
+
+    // 2. Withdrawals (advocate payouts)
+    const withdrawalFilter = { status: { $in: ['completed', 'pending', 'processing'] } };
+    if (advocateId) withdrawalFilter.advocate = advocateId;
+    if (from || to) withdrawalFilter.createdAt = dateFilter;
+
+    const [bookings, withdrawals, settingsDoc] = await Promise.all([
+      (type === 'payout' ? Promise.resolve([]) : Booking.find(bookingFilter)
+        .populate('client', 'name email avatar')
+        .populate({ path: 'advocate', populate: { path: 'user', select: 'name avatar' } })
+        .sort('-createdAt').limit(200).lean()),
+      (type === 'payment' ? Promise.resolve([]) : Withdrawal.find(withdrawalFilter)
+        .populate({ path: 'advocate', populate: { path: 'user', select: 'name avatar' } })
+        .sort('-createdAt').limit(200).lean()),
+      require('../models/Settings').findOne({ singletonId: 'global' }),
+    ]);
+
+    const commissionRate = settingsDoc?.commissionRate || 15;
+
+    // Merge into unified ledger
+    const transactions = [
+      ...bookings.map(b => ({
+        _id: b._id,
+        type: 'payment',
+        date: b.payment?.paidAt || b.createdAt,
+        amount: b.payment?.amount || 0,
+        commission: Math.round((b.payment?.amount || 0) * commissionRate / 100),
+        advocateNet: Math.round((b.payment?.amount || 0) * (100 - commissionRate) / 100),
+        status: b.payment?.status,
+        client: b.client,
+        advocate: b.advocate?.user || null,
+        serviceType: b.serviceType,
+        description: `Payment - ${b.serviceType?.replace(/_/g, ' ')}`,
+        razorpayId: b.payment?.razorpayPaymentId,
+      })),
+      ...withdrawals.map(w => ({
+        _id: w._id,
+        type: 'payout',
+        date: w.createdAt,
+        amount: w.amount || 0,
+        commission: 0,
+        advocateNet: w.amount || 0,
+        status: w.status,
+        client: null,
+        advocate: w.advocate?.user || null,
+        serviceType: null,
+        description: `Payout - ${w.method || 'Bank Transfer'}`,
+        razorpayId: null,
+      })),
+    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    const pageNum = Number(page);
+    const limitNum = Number(limit);
+    const paginated = transactions.slice((pageNum - 1) * limitNum, pageNum * limitNum);
+
+    const totalPayments = bookings.reduce((s, b) => s + (b.payment?.amount || 0), 0);
+    const totalPayouts = withdrawals.reduce((s, w) => s + (w.amount || 0), 0);
+    const totalCommission = Math.round(totalPayments * commissionRate / 100);
+
+    res.json({
+      success: true,
+      data: paginated,
+      total: transactions.length,
+      page: pageNum,
+      pages: Math.ceil(transactions.length / limitNum),
+      summary: { totalPayments, totalPayouts, totalCommission, commissionRate, netPlatformRevenue: totalCommission },
+    });
+  } catch (err) { next(err); }
+};
+
+// ─── Admin Upload Document for Client ────────────────────────────────────────
+exports.uploadDocumentForClient = async (req, res, next) => {
+  try {
+    const cloudinary = require('cloudinary').v2;
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET,
+    });
+
+    if (!req.file) return next(new (require('../middlewares/errorHandler').AppError)('No file uploaded.', 400));
+
+    const result = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        { folder: 'legalitt/admin-uploads', resource_type: 'auto' },
+        (err, res) => err ? reject(err) : resolve(res)
+      );
+      stream.end(req.file.buffer);
+    });
+
+    // If bookingId provided, attach doc to booking
+    if (req.body.bookingId) {
+      const Booking = require('../models/Booking');
+      await Booking.findByIdAndUpdate(req.body.bookingId, {
+        $push: { documents: { url: result.secure_url, name: req.file.originalname, type: req.file.mimetype?.includes('image') ? 'image' : 'pdf', uploadedAt: new Date() } }
+      });
+    }
+
+    res.json({ success: true, data: { url: result.secure_url, name: req.file.originalname, size: req.file.size } });
+  } catch (err) { next(err); }
+};
+
+// ─── Create Case + Register Client (Admin flow) ───────────────────────────────
+exports.createCaseForClient = async (req, res, next) => {
+  try {
+    const Booking = require('../models/Booking');
+    const crypto = require('crypto');
+    const {
+      clientName, clientEmail, clientPhone, clientCity,
+      issueDescription, serviceType, consultationMode, documents,
+      advocateId, amount,
+    } = req.body;
+
+    if (!clientEmail || !issueDescription) {
+      return next(new (require('../middlewares/errorHandler').AppError)('Client email and issue description are required.', 400));
+    }
+
+    // 1. Find or create client user
+    let client = await User.findOne({ email: clientEmail.toLowerCase() });
+    let isNewUser = false;
+    let generatedPassword = null;
+
+    if (!client) {
+      isNewUser = true;
+      generatedPassword = crypto.randomBytes(5).toString('hex'); // 10-char password
+      const bcrypt = require('bcryptjs');
+      const hashed = await bcrypt.hash(generatedPassword, 12);
+      client = await User.create({
+        name: clientName || clientEmail.split('@')[0],
+        email: clientEmail.toLowerCase(),
+        phone: clientPhone || undefined,
+        password: hashed,
+        role: 'client',
+        isEmailVerified: true,
+        address: { city: clientCity || '' },
+      });
+    }
+
+    // 2. Create booking
+    const booking = await Booking.create({
+      client: client._id,
+      advocate: advocateId || undefined,
+      consultationMode: consultationMode || 'chat',
+      serviceType: serviceType || 'legal_advice',
+      type: 'chat',
+      issue: issueDescription,
+      documents: documents || [],
+      payment: { amount: amount || 0, currency: 'INR', status: advocateId ? 'not_required' : 'pending' },
+      status: advocateId ? 'confirmed' : 'pending_assignment',
+      clientCity: clientCity || '',
+      assignedBy: req.user._id,
+      assignedAt: advocateId ? new Date() : undefined,
+    });
+
+    res.status(201).json({
+      success: true,
+      data: {
+        booking,
+        client: { _id: client._id, name: client.name, email: client.email },
+        isNewUser,
+        generatedPassword: isNewUser ? generatedPassword : null,
+        message: isNewUser
+          ? `New client registered. Share credentials: Email: ${client.email}, Password: ${generatedPassword}`
+          : 'Booking created for existing client.',
+      },
+    });
+  } catch (err) { next(err); }
+};

@@ -75,16 +75,161 @@ exports.updateService = async (req, res, next) => {
 };
 
 // ─── Documents ────────────────────────────────────────────────────────────────
+// Returns ALL documents: standalone (Document model) + booking-embedded (both sides)
 exports.getDocuments = async (req, res, next) => {
   try {
-    const documents = await Document.find()
-      .populate('uploadedBy', 'name')
-      .populate('owner', 'name')
-      .sort('-createdAt');
-    res.json({ success: true, data: documents });
+    const Booking = require('../models/Booking');
+    const { search, direction, page = 1, limit = 50 } = req.query;
+
+    // 1. Standalone documents
+    const standaloneDocs = await Document.find()
+      .populate('uploadedBy', 'name avatar role')
+      .populate('owner', 'name avatar role')
+      .sort('-createdAt')
+      .lean();
+
+    // 2. Booking-embedded documents (client uploaded when creating booking)
+    const bookings = await Booking.find({ 'documents.0': { $exists: true } })
+      .populate('client', 'name email avatar')
+      .populate({ path: 'advocate', populate: { path: 'user', select: 'name avatar' } })
+      .select('documents client advocate serviceType createdAt advocateDocuments')
+      .lean();
+
+    // Flatten booking docs into unified format
+    const bookingClientDocs = [];
+    const bookingAdvocateDocs = [];
+
+    bookings.forEach(b => {
+      // Client-uploaded docs (stored in booking.documents)
+      (b.documents || []).forEach(doc => {
+        bookingClientDocs.push({
+          _id: `${b._id}_client_${doc.url?.slice(-8)}`,
+          name: doc.name || 'Document',
+          url: doc.url,
+          type: doc.type || 'pdf',
+          uploadedAt: doc.uploadedAt || b.createdAt,
+          direction: 'client_to_advocate',
+          directionLabel: 'Client → Advocate',
+          uploadedBy: b.client,
+          recipient: b.advocate?.user || null,
+          bookingId: b._id,
+          serviceType: b.serviceType,
+          source: 'booking',
+          category: 'legal',
+        });
+      });
+
+      // Advocate-uploaded docs (stored in booking.advocateDocuments)
+      (b.advocateDocuments || []).forEach(doc => {
+        bookingAdvocateDocs.push({
+          _id: `${b._id}_adv_${doc.url?.slice(-8)}`,
+          name: doc.name || 'Document',
+          url: doc.url,
+          type: doc.type || 'pdf',
+          uploadedAt: doc.uploadedAt || b.createdAt,
+          direction: 'advocate_to_client',
+          directionLabel: 'Advocate → Client',
+          uploadedBy: b.advocate?.user || null,
+          recipient: b.client,
+          bookingId: b._id,
+          serviceType: b.serviceType,
+          source: 'booking',
+          category: 'legal',
+        });
+      });
+    });
+
+    // Normalize standalone docs
+    const normalizedStandalone = standaloneDocs.map(d => ({
+      ...d,
+      direction: 'standalone',
+      directionLabel: 'Standalone Upload',
+      source: 'document_model',
+    }));
+
+    let allDocs = [...bookingClientDocs, ...bookingAdvocateDocs, ...normalizedStandalone]
+      .sort((a, b) => new Date(b.uploadedAt || b.createdAt).getTime() - new Date(a.uploadedAt || a.createdAt).getTime());
+
+    // Filter by direction
+    if (direction && direction !== 'all') {
+      allDocs = allDocs.filter(d => d.direction === direction);
+    }
+
+    // Filter by search
+    if (search) {
+      const q = search.toLowerCase();
+      allDocs = allDocs.filter(d =>
+        d.name?.toLowerCase().includes(q) ||
+        d.uploadedBy?.name?.toLowerCase().includes(q) ||
+        d.recipient?.name?.toLowerCase().includes(q)
+      );
+    }
+
+    const total = allDocs.length;
+    const pageNum = Number(page);
+    const limitNum = Number(limit);
+    const paginated = allDocs.slice((pageNum - 1) * limitNum, pageNum * limitNum);
+
+    res.json({
+      success: true,
+      data: paginated,
+      total,
+      page: pageNum,
+      pages: Math.ceil(total / limitNum),
+      counts: {
+        clientToAdvocate: bookingClientDocs.length,
+        advocateToClient: bookingAdvocateDocs.length,
+        standalone: normalizedStandalone.length,
+        total,
+      },
+    });
   } catch (err) {
     next(err);
   }
+};
+
+// Upload document on behalf of advocate (attaches to booking.advocateDocuments)
+exports.uploadDocForBooking = async (req, res, next) => {
+  try {
+    const cloudinary = require('cloudinary').v2;
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET,
+    });
+
+    const Booking = require('../models/Booking');
+    const { bookingId, side = 'client' } = req.body; // side: 'client' | 'advocate'
+
+    if (!req.file) return next(new AppError('No file uploaded.', 400));
+    if (!bookingId) return next(new AppError('bookingId is required.', 400));
+
+    const booking = await Booking.findById(bookingId);
+    if (!booking) return next(new AppError('Booking not found.', 404));
+
+    // Upload to Cloudinary
+    const result = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        { folder: `legalitt/admin-doc-uploads/${side}`, resource_type: 'auto' },
+        (err, res) => err ? reject(err) : resolve(res)
+      );
+      stream.end(req.file.buffer);
+    });
+
+    const docEntry = {
+      url: result.secure_url,
+      name: req.file.originalname,
+      type: req.file.mimetype?.includes('image') ? 'image' : 'pdf',
+      uploadedAt: new Date(),
+      uploadedByAdmin: req.user._id,
+    };
+
+    // Push to the right side
+    const field = side === 'advocate' ? 'advocateDocuments' : 'documents';
+    await Booking.findByIdAndUpdate(bookingId, { $push: { [field]: docEntry } });
+
+    res.json({ success: true, data: { url: result.secure_url, name: req.file.originalname, side } });
+  } catch (err) { next(err); }
 };
 
 // ─── Support Tickets ──────────────────────────────────────────────────────────
