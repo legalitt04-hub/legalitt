@@ -38,13 +38,15 @@ import RoleManagement from './pages/RoleManagement';
 // Phase 4 — Financial Reporting
 import PaymentHistory from './pages/PaymentHistory';
 import Transactions from './pages/Transactions';
+import ErrorBoundary from './components/ErrorBoundary';
 
 function App() {
   return (
-    <AuthProvider>
-      <RoleProvider>
-        <BrowserRouter>
-        <Routes>
+    <ErrorBoundary>
+      <AuthProvider>
+        <RoleProvider>
+          <BrowserRouter>
+          <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
@@ -92,9 +94,10 @@ function App() {
             <Route path="/roles" element={<RoleManagement />} />
           </Route>
         </Routes>
-      </BrowserRouter>
-      </RoleProvider>
-    </AuthProvider>
+        </BrowserRouter>
+        </RoleProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 
