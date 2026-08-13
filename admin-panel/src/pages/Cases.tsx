@@ -22,6 +22,7 @@ interface Case {
   description?: string;
   notes?: string;
   documents?: Array<{ url: string; name?: string; type?: string; uploadedAt?: string }>;
+  advocateDocuments?: Array<{ url: string; name?: string; type?: string; uploadedAt?: string }>;
   createdAt: string;
   updatedAt: string;
 }
@@ -85,6 +86,7 @@ export default function Cases() {
   // Uploading state for doc modal
   const [isUploading, setIsUploading] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadSide, setUploadSide] = useState<'client' | 'advocate'>('client');
 
   // Create Case Form State
   const [createForm, setCreateForm] = useState({
@@ -633,23 +635,63 @@ export default function Cases() {
                   </div>
                 )}
 
-                {/* Case Documents */}
-                {selectedCase.documents && selectedCase.documents.length > 0 && (
-                  <div className="pt-2">
-                    <p className="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1">
-                      <Paperclip size={12} className="text-teal-600" /> Attached Documents ({selectedCase.documents.length})
+                {/* 👤 Client Documents */}
+                <div className="pt-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                      <Paperclip size={13} className="text-teal-600" /> Documents Uploaded by Client / User ({selectedCase.documents?.length || 0})
                     </p>
+                    <button
+                      onClick={() => { setUploadModalCase(selectedCase); setUploadSide('client'); setSelectedCase(null); }}
+                      className="text-[11px] font-bold text-teal-600 bg-teal-50 px-2 py-0.5 rounded-lg border border-teal-200 hover:bg-teal-100"
+                    >
+                      + Add Client Doc
+                    </button>
+                  </div>
+
+                  {selectedCase.documents && selectedCase.documents.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
                       {selectedCase.documents.map((doc, i) => (
                         <a key={i} href={fixCloudinaryPdfUrl(doc.url)} target="_blank" rel="noreferrer"
                           className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-50 text-teal-700 rounded-lg text-xs font-bold hover:bg-teal-100 border border-teal-200">
                           <FileText size={12} />
-                          <span>{doc.name || `Document ${i + 1}`}</span>
+                          <span>{doc.name || `Client Doc ${i + 1}`}</span>
                         </a>
                       ))}
                     </div>
+                  ) : (
+                    <p className="text-xs text-gray-400 italic">No client documents attached yet</p>
+                  )}
+                </div>
+
+                {/* ⚖️ Advocate Documents */}
+                <div className="pt-3 border-t border-gray-100">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                      <Shield size={13} className="text-indigo-600" /> Documents / Drafts Uploaded by Advocate ({selectedCase.advocateDocuments?.length || 0})
+                    </p>
+                    <button
+                      onClick={() => { setUploadModalCase(selectedCase); setUploadSide('advocate'); setSelectedCase(null); }}
+                      className="text-[11px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-200 hover:bg-indigo-100"
+                    >
+                      + Add Advocate Doc
+                    </button>
                   </div>
-                )}
+
+                  {selectedCase.advocateDocuments && selectedCase.advocateDocuments.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {selectedCase.advocateDocuments.map((doc, i) => (
+                        <a key={i} href={fixCloudinaryPdfUrl(doc.url)} target="_blank" rel="noreferrer"
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-bold hover:bg-indigo-100 border border-indigo-200">
+                          <FileText size={12} />
+                          <span>{doc.name || `Advocate Draft ${i + 1}`}</span>
+                        </a>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-400 italic">No advocate documents uploaded yet</p>
+                  )}
+                </div>
 
                 {selectedCase.notes && (
                   <div className="pt-2 bg-amber-50/70 p-3 rounded-xl border border-amber-200/70">
@@ -746,6 +788,30 @@ export default function Cases() {
                 <p className="text-xs text-gray-500">
                   Upload court notices, evidence, or agreements for <strong className="text-gray-800">#{(uploadModalCase.caseNumber || uploadModalCase._id.slice(-6)).toUpperCase()}</strong>.
                 </p>
+
+                <div className="bg-slate-50 p-3 rounded-2xl border border-gray-200 space-y-2">
+                  <label className="block text-xs font-bold text-gray-700">Upload Target Side:</label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setUploadSide('client')}
+                      className={`flex-1 py-2 text-xs font-bold rounded-xl border transition-all ${
+                        uploadSide === 'client' ? 'bg-teal-600 text-white border-teal-600 shadow-sm' : 'bg-white text-gray-700 border-gray-200'
+                      }`}
+                    >
+                      👤 Client Document
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setUploadSide('advocate')}
+                      className={`flex-1 py-2 text-xs font-bold rounded-xl border transition-all ${
+                        uploadSide === 'advocate' ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white text-gray-700 border-gray-200'
+                      }`}
+                    >
+                      ⚖️ Advocate Document
+                    </button>
+                  </div>
+                </div>
 
                 <input
                   type="file"

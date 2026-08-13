@@ -1134,11 +1134,12 @@ exports.uploadDocumentForClient = async (req, res, next) => {
       return next(new (require('../middlewares/errorHandler').AppError)('Invalid file upload payload.', 400));
     }
 
-    // If bookingId provided, attach doc to booking
+    // If bookingId provided, attach doc to booking (documents vs advocateDocuments)
     if (req.body.bookingId) {
       const Booking = require('../models/Booking');
+      const sideField = req.body.side === 'advocate' ? 'advocateDocuments' : 'documents';
       await Booking.findByIdAndUpdate(req.body.bookingId, {
-        $push: { documents: { url: result.secure_url, name: req.file.originalname, type: req.file.mimetype?.includes('image') ? 'image' : 'pdf', uploadedAt: new Date() } }
+        $push: { [sideField]: { url: result.secure_url, name: req.file.originalname, type: req.file.mimetype?.includes('image') ? 'image' : 'pdf', uploadedAt: new Date() } }
       });
     }
 
