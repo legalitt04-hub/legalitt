@@ -408,13 +408,13 @@ const styles = StyleSheet.create({
   },
   deadlineText: { fontSize: 12, color: '#FBBF24', fontWeight: '600', flex: 1 },
   detailsBox: {
-    backgroundColor: '#19202E', borderRadius: 14, padding: 12,
-    marginBottom: 14, borderWidth: 1, borderColor: '#263044',
+    backgroundColor: '#161D2A', borderRadius: 14, padding: 14,
+    marginBottom: 14, borderWidth: 1, borderColor: '#242E42',
   },
-  issueText: { fontSize: 13, color: '#E2E8F0', lineHeight: 19, marginBottom: 10 },
-  metaRow: { flexDirection: 'row', gap: 16 },
+  issueText: { fontSize: 14, color: '#F8FAFC', fontWeight: '600', lineHeight: 20, marginBottom: 10 },
+  metaRow: { flexDirection: 'row', gap: 16, alignItems: 'center' },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  metaValue: { fontSize: 12, fontWeight: '600', color: '#94A3B8' },
+  metaValue: { fontSize: 12, fontWeight: '700', color: '#94A3B8' },
   actionsRow: { flexDirection: 'row', gap: 8 },
   slotBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 6,

@@ -95,7 +95,7 @@ export default function TrackConsultationScreen({ navigation, route }) {
   };
 
   return (
-    <SafeScreen backgroundColor={LEGAL_THEME.colors.white} barStyle="dark-content">
+    <SafeScreen backgroundColor="#07080A" barStyle="light-content">
       <LogoHeader title="Track Consultation" onBack={() => navigation.goBack()} />
 
       <View style={styles.container}>
@@ -120,12 +120,12 @@ export default function TrackConsultationScreen({ navigation, route }) {
             <View style={styles.cardDivider} />
 
             <View style={styles.meetingDetailRow}>
-              <Ionicons name="calendar-outline" size={18} color={LEGAL_THEME.colors.primaryGold} />
+              <Ionicons name="calendar-outline" size={18} color="#D4AF37" />
               <Text style={styles.meetingTimeText}>{bookingData.scheduledTime}</Text>
             </View>
 
             <View style={styles.meetingDetailRow}>
-              <Ionicons name="hardware-chip-outline" size={18} color={LEGAL_THEME.colors.primaryGold} />
+              <Ionicons name="hardware-chip-outline" size={18} color="#D4AF37" />
               <Text style={styles.meetingTypeText}>{bookingData.selectedType?.title || 'Audio Consultation'} • High Priority</Text>
             </View>
           </View>
@@ -148,7 +148,7 @@ export default function TrackConsultationScreen({ navigation, route }) {
           {/* PRE-CONSULTATION NOTES / CHECKLIST */}
           <View style={styles.notesCard}>
             <View style={styles.notesHeader}>
-              <Ionicons name="information-circle-outline" size={20} color={LEGAL_THEME.colors.primaryGold} />
+              <Ionicons name="information-circle-outline" size={20} color="#D4AF37" />
               <Text style={styles.notesTitle}>Pre-Consultation Checklist</Text>
             </View>
             <View style={styles.notesDivider} />
@@ -163,7 +163,7 @@ export default function TrackConsultationScreen({ navigation, route }) {
           <PrimaryButton
             title="Join Consultation Now"
             onPress={handleJoin}
-            icon={<Ionicons name="call" size={18} color={LEGAL_THEME.colors.white} />}
+            icon={<Ionicons name="call" size={18} color="#07080A" />}
           />
 
           <View style={styles.secondaryRow}>
@@ -187,7 +187,7 @@ export default function TrackConsultationScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: LEGAL_THEME.colors.white,
+    backgroundColor: '#07080A',
   },
   scrollContent: {
     paddingHorizontal: LEGAL_THEME.spacing.screenPadding,
@@ -195,11 +195,12 @@ const styles = StyleSheet.create({
     paddingBottom: 160,
   },
   statusCard: {
-    ...LEGAL_THEME.cards.container,
     padding: 16,
     marginBottom: 20,
-    backgroundColor: '#FFFCF8',
-    borderColor: LEGAL_THEME.colors.primaryGold,
+    backgroundColor: '#121722',
+    borderColor: '#1E2638',
+    borderRadius: 18,
+    borderWidth: 1,
   },
   statusHeaderRow: {
     flexDirection: 'row',
@@ -209,23 +210,23 @@ const styles = StyleSheet.create({
   idContainer: {},
   idLabel: {
     fontSize: 11,
-    color: LEGAL_THEME.colors.secondaryText,
+    color: '#94A3B8',
   },
   idText: {
     fontSize: 16,
     fontWeight: '800',
-    color: LEGAL_THEME.colors.primaryText,
+    color: '#F8FAFC',
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#ECFDF5',
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#A7F3D0',
+    borderColor: 'rgba(16, 185, 129, 0.3)',
   },
   greenDot: {
     width: 8,
@@ -236,11 +237,11 @@ const styles = StyleSheet.create({
   statusBadgeText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#047857',
+    color: '#34D399',
   },
   cardDivider: {
     height: 1,
-    backgroundColor: LEGAL_THEME.colors.border,
+    backgroundColor: '#1E2638',
     marginVertical: 12,
   },
   meetingDetailRow: {
@@ -252,22 +253,25 @@ const styles = StyleSheet.create({
   meetingTimeText: {
     fontSize: 14,
     fontWeight: '700',
-    color: LEGAL_THEME.colors.primaryText,
+    color: '#F8FAFC',
   },
   meetingTypeText: {
     fontSize: 13,
-    color: LEGAL_THEME.colors.secondaryText,
+    color: '#94A3B8',
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: LEGAL_THEME.colors.primaryText,
+    color: '#F8FAFC',
     marginBottom: 10,
   },
   notesCard: {
-    ...LEGAL_THEME.cards.container,
     padding: 16,
     marginBottom: 16,
+    backgroundColor: '#121722',
+    borderColor: '#1E2638',
+    borderRadius: 18,
+    borderWidth: 1,
   },
   notesHeader: {
     flexDirection: 'row',
@@ -277,16 +281,16 @@ const styles = StyleSheet.create({
   notesTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: LEGAL_THEME.colors.primaryText,
+    color: '#F8FAFC',
   },
   notesDivider: {
     height: 1,
-    backgroundColor: LEGAL_THEME.colors.border,
+    backgroundColor: '#1E2638',
     marginVertical: 10,
   },
   bulletText: {
     fontSize: 12,
-    color: LEGAL_THEME.colors.secondaryText,
+    color: '#94A3B8',
     lineHeight: 18,
     marginBottom: 4,
   },
@@ -295,14 +299,14 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: LEGAL_THEME.colors.white,
+    backgroundColor: '#0F131C',
     paddingHorizontal: LEGAL_THEME.spacing.screenPadding,
     paddingVertical: 14,
     borderTopWidth: 1,
-    borderTopColor: LEGAL_THEME.colors.border,
+    borderTopColor: '#1E2638',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.3,
     shadowRadius: 10,
     elevation: 8,
     gap: 10,
