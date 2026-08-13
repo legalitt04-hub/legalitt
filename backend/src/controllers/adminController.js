@@ -1181,6 +1181,24 @@ exports.createCaseForClient = async (req, res, next) => {
       });
     }
 
+    // Safely parse and format documents array
+    let parsedDocs = documents;
+    if (typeof documents === 'string') {
+      try { parsedDocs = JSON.parse(documents); } catch (e) { parsedDocs = []; }
+    }
+    const formattedDocs = Array.isArray(parsedDocs)
+      ? parsedDocs.map((doc, idx) => {
+          if (typeof doc === 'string') {
+            return { url: doc, name: `Document_${idx + 1}`, type: doc.endsWith('.pdf') ? 'pdf' : 'image' };
+          }
+          return {
+            url: doc?.url || doc?.uri || (typeof doc === 'string' ? doc : ''),
+            name: doc?.name || `Document_${idx + 1}`,
+            type: doc?.type || 'document',
+          };
+        }).filter(d => d.url)
+      : [];
+
     // 2. Create booking
     const booking = await Booking.create({
       client: client._id,
@@ -1189,7 +1207,7 @@ exports.createCaseForClient = async (req, res, next) => {
       serviceType: serviceType || 'legal_advice',
       type: 'chat',
       issue: issueDescription,
-      documents: documents || [],
+      documents: formattedDocs,
       payment: { amount: amount || 0, currency: 'INR', status: advocateId ? 'not_required' : 'pending' },
       status: advocateId ? 'confirmed' : 'pending_assignment',
       clientCity: clientCity || '',
