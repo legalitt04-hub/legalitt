@@ -35,6 +35,9 @@ import PendingAdvocates from './pages/PendingAdvocates';
 import Withdrawals from './pages/Withdrawals';
 import AdsManagement from './pages/AdsManagement';
 import RoleManagement from './pages/RoleManagement';
+// Phase 4 — Financial Reporting
+import PaymentHistory from './pages/PaymentHistory';
+import Transactions from './pages/Transactions';
 
 function App() {
   return (
@@ -70,6 +73,8 @@ function App() {
             <Route path="/coupons" element={<Coupons />} />
             <Route path="/pending-advocates" element={<PendingAdvocates />} />
             <Route path="/withdrawals" element={<Withdrawals />} />
+            <Route path="/payment-history" element={<PaymentHistory />} />
+            <Route path="/transactions" element={<Transactions />} />
             
             {/* Workspace & Desk */}
             <Route path="/support" element={<Support />} />

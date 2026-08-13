@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Users, Plus, Search, Edit2, Trash2, X, RefreshCw,
   Eye, Download, ChevronLeft, ChevronRight,
-  ShieldOff, Shield, Key, Mail, Phone, Calendar, Lock
+  ShieldOff, Shield, Key, Mail, Phone, Calendar, Lock,
+  MessageSquare, Send, StickyNote
 } from 'lucide-react';
 import api from '../lib/api';
 
@@ -42,6 +43,12 @@ export default function UsersPage() {
   const [newPw, setNewPw] = useState('');
   const [resetting, setResetting] = useState(false);
   const [showPw, setShowPw] = useState(false);
+  // Notes
+  const [notesUser, setNotesUser] = useState<User | null>(null);
+  const [notes, setNotes] = useState<any[]>([]);
+  const [notesLoading, setNotesLoading] = useState(false);
+  const [newNote, setNewNote] = useState('');
+  const [addingNote, setAddingNote] = useState(false);
   const LIMIT = 15;
 
   const fetchUsers = useCallback(async () => {
@@ -115,6 +122,37 @@ export default function UsersPage() {
     const csv = rows.map(r => r.join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'users.csv'; a.click();
+  };
+
+  // Notes handlers
+  const openNotes = async (user: User) => {
+    setNotesUser(user);
+    setNotesLoading(true);
+    setNotes([]);
+    try {
+      const { data } = await api.get(`/admin/users/${user._id}/notes`);
+      setNotes(data.data || []);
+    } catch { /* ignore */ }
+    finally { setNotesLoading(false); }
+  };
+
+  const handleAddNote = async () => {
+    if (!newNote.trim() || !notesUser) return;
+    setAddingNote(true);
+    try {
+      const { data } = await api.post(`/admin/users/${notesUser._id}/notes`, { note: newNote.trim() });
+      setNotes(prev => [data.data, ...prev]);
+      setNewNote('');
+    } catch (e: any) { alert(e?.response?.data?.message || 'Failed to add note.'); }
+    finally { setAddingNote(false); }
+  };
+
+  const handleDeleteNote = async (noteId: string) => {
+    if (!notesUser) return;
+    try {
+      await api.delete(`/admin/users/${notesUser._id}/notes/${noteId}`);
+      setNotes(prev => prev.filter(n => n._id !== noteId));
+    } catch { /* ignore */ }
   };
 
   return (
@@ -209,6 +247,7 @@ export default function UsersPage() {
                           {user.isActive ? <ShieldOff className="w-3.5 h-3.5" /> : <Shield className="w-3.5 h-3.5" />}
                         </button>
                         <button onClick={() => { setResetTarget(user); setNewPw(''); }} className="p-1.5 rounded-lg bg-violet-50 text-violet-600 hover:bg-violet-100" title="Reset Password"><Key className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => openNotes(user)} className="p-1.5 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100" title="Internal Notes"><StickyNote className="w-3.5 h-3.5" /></button>
                         <button onClick={() => setDeleteId(user._id)} className="p-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button>
                       </div>
                     </td>
@@ -344,6 +383,88 @@ export default function UsersPage() {
               </div>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Internal Notes Slide-Over ────────────────────────────────── */}
+      <AnimatePresence>
+        {notesUser && (
+          <>
+            {/* Backdrop */}
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/40 z-50" onClick={() => setNotesUser(null)} />
+            {/* Panel */}
+            <motion.div
+              initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed top-0 right-0 h-full w-full max-w-md bg-white z-50 shadow-2xl flex flex-col">
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center font-bold text-sm">
+                    {notesUser.name?.[0]?.toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="font-bold text-gray-900 text-sm">{notesUser.name}</p>
+                    <p className="text-xs text-gray-400">Internal Notes</p>
+                  </div>
+                </div>
+                <button onClick={() => setNotesUser(null)} className="p-2 rounded-lg hover:bg-gray-100">
+                  <X className="w-5 h-5 text-gray-400" />
+                </button>
+              </div>
+
+              {/* Add note */}
+              <div className="px-5 py-4 border-b border-gray-100 bg-amber-50/50">
+                <label className="block text-xs font-semibold text-gray-600 mb-2">
+                  <StickyNote className="w-3.5 h-3.5 inline mr-1.5 text-amber-500" />
+                  Add Internal Note
+                </label>
+                <div className="flex gap-2">
+                  <textarea value={newNote} onChange={e => setNewNote(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) handleAddNote(); }}
+                    placeholder="Write an internal note... (Ctrl+Enter to save)"
+                    rows={3}
+                    className="flex-1 px-3 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none" />
+                </div>
+                <button onClick={handleAddNote} disabled={addingNote || !newNote.trim()}
+                  className="mt-2 w-full flex items-center justify-center gap-2 py-2 bg-amber-500 text-white text-sm font-semibold rounded-xl hover:bg-amber-600 disabled:opacity-50">
+                  <Send className="w-3.5 h-3.5" />
+                  {addingNote ? 'Saving...' : 'Save Note'}
+                </button>
+              </div>
+
+              {/* Notes list */}
+              <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+                {notesLoading ? (
+                  <div className="text-center text-gray-400 text-sm py-8 animate-pulse">Loading notes...</div>
+                ) : notes.length === 0 ? (
+                  <div className="text-center py-12">
+                    <StickyNote className="w-10 h-10 text-gray-200 mx-auto mb-2" />
+                    <p className="text-sm text-gray-400">No internal notes yet</p>
+                    <p className="text-xs text-gray-300 mt-1">Notes are only visible to admins</p>
+                  </div>
+                ) : (
+                  notes.map(note => (
+                    <motion.div key={note._id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                      className="bg-amber-50 border border-amber-100 rounded-xl p-4 group relative">
+                      <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">{note.note}</p>
+                      <div className="flex items-center justify-between mt-3">
+                        <div className="text-xs text-gray-400">
+                          <span className="font-semibold text-amber-600">{note.createdBy?.name || 'Admin'}</span>
+                          {' · '}{new Date(note.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                        <button onClick={() => handleDeleteNote(note._id)}
+                          className="opacity-0 group-hover:opacity-100 p-1 rounded-lg bg-red-50 text-red-400 hover:text-red-600 transition-all">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </motion.div>
+                  ))
+                )}
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </div>

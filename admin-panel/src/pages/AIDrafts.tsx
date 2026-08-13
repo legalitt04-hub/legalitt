@@ -26,6 +26,11 @@ export default function AIDrafts() {
   const [selectedDraft, setSelectedDraft] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Computed real stats from API data
+  const today = new Date().toDateString();
+  const todayDrafts = drafts.filter(d => new Date(d.createdAt).toDateString() === today).length;
+  const pendingDrafts = drafts.filter(d => d.status === 'pending' || !d.status).length;
+
   React.useEffect(() => {
     const fetchDrafts = async () => {
       try {
@@ -79,15 +84,15 @@ export default function AIDrafts() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <Card className="p-5 bg-white border-slate-200">
           <p className="text-sm font-medium text-slate-500">Drafts Generated Today</p>
-          <p className="text-3xl font-black text-slate-900 mt-2">124</p>
+          <p className="text-3xl font-black text-slate-900 mt-2">{todayDrafts}</p>
         </Card>
         <Card className="p-5 bg-white border-slate-200">
           <p className="text-sm font-medium text-slate-500">Pending Review</p>
-          <p className="text-3xl font-black text-amber-500 mt-2">12</p>
+          <p className="text-3xl font-black text-amber-500 mt-2">{pendingDrafts}</p>
         </Card>
         <Card className="p-5 bg-white border-slate-200">
-          <p className="text-sm font-medium text-slate-500">Average Confidence</p>
-          <p className="text-3xl font-black text-emerald-500 mt-2">91%</p>
+          <p className="text-sm font-medium text-slate-500">Total AI Drafts</p>
+          <p className="text-3xl font-black text-emerald-500 mt-2">{drafts.length}</p>
         </Card>
       </div>
 

@@ -18,7 +18,10 @@ import {
   Grid,
   Wallet,
   Megaphone,
-  Shield
+  Shield,
+  History,
+  ReceiptText,
+  FolderOpen
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRole } from '../../contexts/RoleContext';
@@ -51,8 +54,10 @@ const navSections = [
   {
     title: 'Financials & Revenue',
     items: [
-      { icon: CreditCard, label: 'Payments & Revenue', path: '/earnings' },
-      { icon: Wallet, label: 'Payouts & Withdrawals', path: '/withdrawals' },
+      { icon: CreditCard, label: 'Payments & Revenue',       path: '/earnings' },
+      { icon: History,    label: 'Payment History',          path: '/payment-history' },
+      { icon: ReceiptText,label: 'Transaction Ledger',       path: '/transactions' },
+      { icon: Wallet,     label: 'Payouts & Withdrawals',    path: '/withdrawals' },
     ]
   },
   {

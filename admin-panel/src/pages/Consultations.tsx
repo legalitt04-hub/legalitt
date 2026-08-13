@@ -100,7 +100,7 @@ export default function Consultations() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'pending_assignment' | 'active_cases' | 'completed' | 'all'>('pending_assignment');
   const [search, setSearch] = useState('');
-  const [serviceFilter, setServiceFilter] = useState('');
+  const [serviceFilter, setServiceFilter] = useState('');  // 'legal_advice' | 'legal_notice' | ''
 
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [nearbyAdvocates, setNearbyAdvocates] = useState<NearbyAdvocate[]>([]);
@@ -320,7 +320,7 @@ export default function Consultations() {
         </div>
       </div>
 
-      {/* Filters */}
+        {/* Filters */}
       <div className="px-6 py-4 flex gap-3 flex-wrap">
         <div className="relative flex-1 min-w-[200px] max-w-xs">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -328,11 +328,28 @@ export default function Consultations() {
             placeholder="Search client, city, issue..."
             className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-teal-500" />
         </div>
-        <select value={serviceFilter} onChange={e => setServiceFilter(e.target.value)}
-          className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-teal-500">
-          <option value="">All Services</option>
-          {Object.entries(SERVICE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-        </select>
+        {/* Service Type Quick Filters */}
+        <div className="flex gap-2 flex-wrap">
+          {[
+            { value: '', label: '🗂 All Services' },
+            { value: 'legal_advice', label: '⚖️ Legal Advice' },
+            { value: 'legal_notice', label: '📄 Legal Notice' },
+            { value: 'property_research', label: '🏠 Property Research' },
+            { value: 'fir_draft', label: '📋 FIR Draft' },
+          ].map(f => (
+            <button
+              key={f.value}
+              onClick={() => setServiceFilter(f.value)}
+              className={`px-3 py-2 rounded-xl text-sm font-semibold border transition-all ${
+                serviceFilter === f.value
+                  ? 'bg-teal-600 text-white border-teal-600 shadow'
+                  : 'bg-white text-gray-600 border-gray-200 hover:border-teal-400 hover:text-teal-700'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Overview KPI Cards */}
