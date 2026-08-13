@@ -12,7 +12,12 @@ import { COLORS, SIZES } from '../../constants/theme';
 const ChatListScreen = ({ navigation }) => {
   const { user } = useAuth();
   const { chats, loading, refetch } = useChatList();
+  const [localChats, setLocalChats] = React.useState([]);
   const [search, setSearch] = useState('');
+
+  React.useEffect(() => {
+    setLocalChats(chats || []);
+  }, [chats]);
 
   const getOtherParticipant = (chat) => {
     if (!chat.participants) return {};
@@ -39,7 +44,7 @@ const ChatListScreen = ({ navigation }) => {
           style: 'destructive', 
           onPress: () => {
             // Filter local state to reflect deletion
-            setChats(prev => prev.filter(c => c._id !== chatId));
+            setLocalChats(prev => prev.filter(c => c._id !== chatId));
             Alert.alert('Success', 'Conversation deleted successfully.');
           } 
         }
@@ -47,7 +52,7 @@ const ChatListScreen = ({ navigation }) => {
     );
   };
 
-  const filteredChats = chats
+  const filteredChats = localChats
     .filter(c => {
       const other = getOtherParticipant(c);
       const otherName = (other.name || '').toLowerCase();

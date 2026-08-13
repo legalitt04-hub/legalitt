@@ -1,53 +1,54 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  ActivityIndicator, Image, RefreshControl, Alert, StatusBar
+  Image, ActivityIndicator, RefreshControl, StatusBar, Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { bookingAPI, legalAdviceAPI } from '../../services/api';
-import { COLORS } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { getSocket } from '../../services/socket';
+import { COLORS } from '../../constants/theme';
+import { LEGAL_THEME } from '../../constants/legalAdviceTheme';
 
 const STATUS_CONFIG = {
   pending_assignment: {
-    bg: 'rgba(217, 119, 6, 0.15)', border: 'rgba(217, 119, 6, 0.4)', text: '#FBBF24', icon: 'time-outline',
+    bg: '#FFFBEB', border: '#FDE68A', text: '#B45309', icon: 'time-outline',
     label: 'Awaiting Advocate (24h)', isWaiting: true,
   },
   pending: {
-    bg: 'rgba(234, 179, 8, 0.15)', border: 'rgba(234, 179, 8, 0.4)', text: '#FACC15', icon: 'hourglass-outline',
+    bg: '#FEF9C3', border: '#FDE047', text: '#854D0E', icon: 'hourglass-outline',
     label: 'Pending Confirmation',
   },
   confirmed: {
-    bg: 'rgba(16, 185, 129, 0.15)', border: 'rgba(16, 185, 129, 0.4)', text: '#34D399', icon: 'checkmark-circle-outline',
+    bg: '#ECFDF5', border: '#A7F3D0', text: '#047857', icon: 'checkmark-circle-outline',
     label: 'Confirmed',
   },
   in_progress: {
-    bg: 'rgba(139, 92, 246, 0.15)', border: 'rgba(139, 92, 246, 0.4)', text: '#A78BFA', icon: 'radio-outline',
+    bg: '#F3E8FF', border: '#DDD6FE', text: '#6B21A8', icon: 'radio-outline',
     label: 'In Progress',
   },
   completed: {
-    bg: 'rgba(59, 130, 246, 0.15)', border: 'rgba(59, 130, 246, 0.4)', text: '#60A5FA', icon: 'shield-checkmark-outline',
+    bg: '#EFF6FF', border: '#BFDBFE', text: '#1E40AF', icon: 'shield-checkmark-outline',
     label: 'Completed',
   },
   cancelled: {
-    bg: 'rgba(239, 68, 68, 0.15)', border: 'rgba(239, 68, 68, 0.4)', text: '#FCA5A5', icon: 'close-circle-outline',
+    bg: '#FEF2F2', border: '#FCA5A5', text: '#991B1B', icon: 'close-circle-outline',
     label: 'Cancelled',
   },
 };
 
 const MODE_ICON = { chat: 'chatbubbles-outline', voice: 'call-outline', video: 'videocam-outline' };
-const MODE_LABEL = { chat: 'Chat', voice: 'Voice Call', video: 'Video Call' };
+const MODE_LABEL = { chat: 'Chat Consultation', voice: 'Voice Call', video: 'Video Call' };
 
 export default function MyBookingsScreen({ navigation }) {
   const { user } = useAuth();
   const userData = user?.user || user || {};
+
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const socketRef = useRef(null);
 
   const fetchBookings = useCallback(async (showRefresh = false) => {
     if (showRefresh) setRefreshing(true);
@@ -84,34 +85,17 @@ export default function MyBookingsScreen({ navigation }) {
     fetchBookings();
   }, [fetchBookings]));
 
-  // ─── Real-time Socket.io: listen for booking_assigned ─────────────────────
+  // Listen to live socket assignment events
   useEffect(() => {
     const socket = getSocket();
-    socketRef.current = socket;
     if (!socket) return;
 
     const handleAssigned = (data) => {
-      setBookings(prev =>
-        prev.map(b => {
-          if (b._id === data.bookingId || b._id?.toString() === data.bookingId?.toString()) {
-            return {
-              ...b,
-              status: 'confirmed',
-              advocate: data.advocate,
-              chat: data.chatId,
-              consultationMode: data.consultationMode,
-              videoRoomId:    data.zegoRoomId,
-              videoRoomToken: data.zegoToken,
-              zegoAppId:      data.zegoAppId,
-            };
-          }
-          return b;
-        })
-      );
+      fetchBookings();
       Alert.alert(
-        '⚖️ Advocate Assigned!',
-        `${data.advocate?.name || 'An advocate'} has been assigned to your legal request. You can now connect with them.`,
-        [{ text: 'View', onPress: () => fetchBookings() }, { text: 'OK' }]
+        'Advocate Assigned! ⚖️',
+        'An advocate has been assigned to your legal request.',
+        [{ text: 'View Requests', onPress: () => fetchBookings() }]
       );
     };
 
@@ -155,10 +139,10 @@ export default function MyBookingsScreen({ navigation }) {
     const slotText = item.notes?.replace('Preferred slot: ', '') || (item.createdAt ? new Date(item.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : null);
 
     return (
-      <View style={{ gap: 8 }}>
+      <View style={{ gap: 10, marginTop: 4 }}>
         {slotText && (
           <View style={styles.slotBanner}>
-            <Ionicons name="time-outline" size={13} color="#D4AF37" />
+            <Ionicons name="time-outline" size={14} color="#8D7865" />
             <Text style={styles.slotBannerText}>Scheduled Slot: {slotText}</Text>
           </View>
         )}
@@ -176,8 +160,8 @@ export default function MyBookingsScreen({ navigation }) {
                 mode: item.consultationMode,
                 scheduledSlot: slotText,
               })}>
-              <Ionicons name="chatbubbles-outline" size={17} color="#07080A" />
-              <Text style={styles.chatBtnText}>Chat</Text>
+              <Ionicons name="chatbubbles-outline" size={17} color="#FFFFFF" />
+              <Text style={styles.chatBtnText}>Start Chat</Text>
             </TouchableOpacity>
           )}
 
@@ -195,7 +179,7 @@ export default function MyBookingsScreen({ navigation }) {
                 mode,
                 bookingId:    item._id,
               })}>
-              <Ionicons name={mode === 'video' ? 'videocam-outline' : 'call-outline'} size={17} color="#fff" />
+              <Ionicons name={mode === 'video' ? 'videocam-outline' : 'call-outline'} size={17} color="#FFFFFF" />
               <Text style={styles.callBtnText}>{mode === 'video' ? 'Video Call' : 'Voice Call'}</Text>
             </TouchableOpacity>
           )}
@@ -237,7 +221,7 @@ export default function MyBookingsScreen({ navigation }) {
             )}
           </View>
           <View style={styles.modeBadge}>
-            <Ionicons name={MODE_ICON[mode] || 'chatbubbles-outline'} size={13} color="#94A3B8" />
+            <Ionicons name={MODE_ICON[mode] || 'chatbubbles-outline'} size={13} color="#6D6A66" />
             <Text style={styles.modeText}>{MODE_LABEL[mode] || 'Chat'}</Text>
           </View>
         </View>
@@ -249,7 +233,7 @@ export default function MyBookingsScreen({ navigation }) {
           ) : (
             <View style={[styles.avatar, styles.avatarPlaceholder]}>
               <Ionicons name={item.status === 'pending_assignment' ? 'time-outline' : 'person'}
-                size={22} color="#D4AF37" />
+                size={22} color="#B89A6A" />
             </View>
           )}
           <View style={styles.advocateDetails}>
@@ -265,7 +249,7 @@ export default function MyBookingsScreen({ navigation }) {
         {/* 24h countdown */}
         {deadlineText && (
           <View style={styles.deadlineBanner}>
-            <Ionicons name="alarm-outline" size={14} color="#F59E0B" />
+            <Ionicons name="alarm-outline" size={14} color="#B45309" />
             <Text style={styles.deadlineText}>{deadlineText}</Text>
           </View>
         )}
@@ -277,8 +261,8 @@ export default function MyBookingsScreen({ navigation }) {
           </Text>
           <View style={styles.metaRow}>
             <View style={styles.metaItem}>
-              <Ionicons name="card-outline" size={14} color="#D4AF37" />
-              <Text style={[styles.metaValue, { color: '#D4AF37' }]}>₹{item.payment?.amount || 0}</Text>
+              <Ionicons name="card-outline" size={14} color="#B89A6A" />
+              <Text style={styles.metaValue}>₹{item.payment?.amount || 499}</Text>
             </View>
             {item.payment?.status === 'paid' && (
               <View style={styles.metaItem}>
@@ -288,7 +272,7 @@ export default function MyBookingsScreen({ navigation }) {
             )}
             {item.documents?.length > 0 && (
               <View style={styles.metaItem}>
-                <Ionicons name="document-attach-outline" size={14} color="#94A3B8" />
+                <Ionicons name="document-attach-outline" size={14} color="#6D6A66" />
                 <Text style={styles.metaValue}>{item.documents.length} doc{item.documents.length > 1 ? 's' : ''}</Text>
               </View>
             )}
@@ -298,7 +282,7 @@ export default function MyBookingsScreen({ navigation }) {
         {/* Action Buttons */}
         {getActionButtons(item) || (item.status === 'pending_assignment' && (
           <View style={styles.waitingBox}>
-            <ActivityIndicator size="small" color="#F59E0B" />
+            <ActivityIndicator size="small" color="#B45309" />
             <Text style={styles.waitingText}>Advocate assignment in progress...</Text>
           </View>
         ))}
@@ -309,35 +293,37 @@ export default function MyBookingsScreen({ navigation }) {
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
       <View style={styles.emptyIconCircle}>
-        <Ionicons name="calendar-outline" size={44} color="#D4AF37" />
+        <Ionicons name="document-text-outline" size={40} color="#B89A6A" />
       </View>
       <Text style={styles.emptyTitle}>No Requests Yet</Text>
       <Text style={styles.emptyText}>
-        You haven't submitted any legal advice or notice requests yet.
+        You haven't requested any legal advice consultations yet.
       </Text>
-      <TouchableOpacity style={styles.exploreBtn} onPress={() => navigation.navigate('ClientMain', { screen: 'Home' })}>
-        <Text style={styles.exploreBtnText}>Get Legal Advice</Text>
+      <TouchableOpacity
+        style={styles.primaryBtn}
+        onPress={() => navigation.navigate('LegalAdviceLanding')}>
+        <Text style={styles.primaryBtnText}>Book Legal Advice</Text>
       </TouchableOpacity>
     </View>
   );
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#07080A" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.canGoBack() ? navigation.goBack() : null}
+        <TouchableOpacity onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('ClientMain')}
           style={styles.backButton}>
-          <Ionicons name="chevron-back" size={22} color="#F1F5F9" />
+          <Ionicons name="chevron-back" size={22} color="#2E2A26" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My Requests</Text>
         <TouchableOpacity style={styles.refreshButton} onPress={() => fetchBookings(true)}>
-          <Ionicons name="refresh-outline" size={22} color="#D4AF37" />
+          <Ionicons name="refresh-outline" size={22} color="#B89A6A" />
         </TouchableOpacity>
       </View>
 
       {loading && bookings.length === 0 ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#D4AF37" />
+          <ActivityIndicator size="large" color="#B89A6A" />
           <Text style={styles.loadingText}>Loading your requests...</Text>
         </View>
       ) : (
@@ -348,7 +334,7 @@ export default function MyBookingsScreen({ navigation }) {
           showsVerticalScrollIndicator={false}
           renderItem={renderBookingCard}
           ListEmptyComponent={renderEmpty}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchBookings(true)} colors={['#D4AF37']} tintColor="#D4AF37" />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchBookings(true)} colors={['#B89A6A']} tintColor="#B89A6A" />}
         />
       )}
     </SafeAreaView>
@@ -356,27 +342,32 @@ export default function MyBookingsScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#07080A' },
+  container: { flex: 1, backgroundColor: '#FAF9F8' },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 14,
-    backgroundColor: '#0F131C', borderBottomWidth: 1, borderColor: '#1E2638',
+    backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderColor: '#E8E2D8',
   },
   backButton: {
     width: 38, height: 38, borderRadius: 19,
-    backgroundColor: '#1E2638', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#F8F4EC', alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: '#E8E2D8',
   },
-  refreshButton: { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(212, 175, 55, 0.1)', alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: '#F8FAFC', letterSpacing: 0.3 },
+  refreshButton: {
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: '#F8F4EC', alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: '#E8E2D8',
+  },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: '#2E2A26', letterSpacing: 0.3 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { marginTop: 12, fontSize: 14, color: '#94A3B8', fontWeight: '500' },
-  listContent: { padding: 16, paddingBottom: 100, gap: 14 },
+  loadingText: { marginTop: 12, fontSize: 14, color: '#6D6A66', fontWeight: '500' },
+  listContent: { padding: 16, paddingBottom: 100, gap: 16 },
   card: {
-    backgroundColor: '#121722', borderRadius: 20, padding: 16,
-    borderWidth: 1, borderColor: '#1E2638',
-    elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8,
+    backgroundColor: '#FFFFFF', borderRadius: 20, padding: 18,
+    borderWidth: 1, borderColor: '#E8E2D8',
+    elevation: 3, shadowColor: '#2E2A26', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10,
   },
-  pendingCard: { borderColor: 'rgba(217, 119, 6, 0.5)', borderWidth: 1.5 },
+  pendingCard: { borderColor: '#FDE047', borderWidth: 1.5 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
   headerLeft: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', flex: 1 },
   statusBadge: {
@@ -385,72 +376,72 @@ const styles = StyleSheet.create({
   },
   statusText: { fontSize: 11, fontWeight: '700' },
   noticeBadge: {
-    backgroundColor: 'rgba(139, 92, 246, 0.2)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 99, borderWidth: 1, borderColor: 'rgba(139, 92, 246, 0.4)',
+    backgroundColor: '#F3E8FF', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 99, borderWidth: 1, borderColor: '#DDD6FE',
   },
-  noticeBadgeText: { fontSize: 10, fontWeight: '700', color: '#C4B5FD' },
+  noticeBadgeText: { fontSize: 10, fontWeight: '700', color: '#6B21A8' },
   modeBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: '#1E2638', paddingHorizontal: 9, paddingVertical: 4, borderRadius: 99,
+    backgroundColor: '#F8F4EC', paddingHorizontal: 9, paddingVertical: 4, borderRadius: 99, borderWidth: 1, borderColor: '#E8E2D8',
   },
-  modeText: { fontSize: 11, color: '#CBD5E1', fontWeight: '600' },
+  modeText: { fontSize: 11, color: '#6D6A66', fontWeight: '600' },
   advocateRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
-  avatar: { width: 46, height: 46, borderRadius: 23, marginRight: 12, borderWidth: 1.5, borderColor: '#D4AF37' },
+  avatar: { width: 46, height: 46, borderRadius: 23, marginRight: 12, borderWidth: 1.5, borderColor: '#B89A6A' },
   avatarPlaceholder: {
-    backgroundColor: 'rgba(212, 175, 55, 0.12)', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#F8F4EC', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E8E2D8',
   },
   advocateDetails: { flex: 1 },
-  advocateName: { fontSize: 15, fontWeight: '800', color: '#F8FAFC', marginBottom: 2 },
-  advocateTitle: { fontSize: 12, color: '#94A3B8' },
+  advocateName: { fontSize: 16, fontWeight: '700', color: '#2E2A26', marginBottom: 2 },
+  advocateTitle: { fontSize: 12, color: '#6D6A66' },
   deadlineBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: 'rgba(245, 158, 11, 0.1)', borderRadius: 12, padding: 10, marginBottom: 12,
-    borderWidth: 1, borderColor: 'rgba(245, 158, 11, 0.3)',
+    backgroundColor: '#FFFBEB', borderRadius: 12, padding: 10, marginBottom: 12,
+    borderWidth: 1, borderColor: '#FDE68A',
   },
-  deadlineText: { fontSize: 12, color: '#FBBF24', fontWeight: '600', flex: 1 },
+  deadlineText: { fontSize: 12, color: '#B45309', fontWeight: '600', flex: 1 },
   detailsBox: {
-    backgroundColor: '#161D2A', borderRadius: 14, padding: 14,
-    marginBottom: 14, borderWidth: 1, borderColor: '#242E42',
+    backgroundColor: '#F8F4EC', borderRadius: 14, padding: 14,
+    marginBottom: 14, borderWidth: 1, borderColor: '#E8E2D8',
   },
-  issueText: { fontSize: 14, color: '#F8FAFC', fontWeight: '600', lineHeight: 20, marginBottom: 10 },
+  issueText: { fontSize: 14, color: '#2E2A26', fontWeight: '600', lineHeight: 20, marginBottom: 10 },
   metaRow: { flexDirection: 'row', gap: 16, alignItems: 'center' },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  metaValue: { fontSize: 12, fontWeight: '700', color: '#94A3B8' },
+  metaValue: { fontSize: 12, fontWeight: '700', color: '#6D6A66' },
   actionsRow: { flexDirection: 'row', gap: 8 },
   slotBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: 'rgba(212, 175, 55, 0.1)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6,
-    borderWidth: 1, borderColor: 'rgba(212, 175, 55, 0.3)',
+    backgroundColor: '#FAF2E8', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8,
+    borderWidth: 1, borderColor: '#E8E2D8',
   },
-  slotBannerText: { fontSize: 11, color: '#D4AF37', fontWeight: '700' },
+  slotBannerText: { fontSize: 12, color: '#8D7865', fontWeight: '700' },
   chatBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: '#D4AF37', paddingVertical: 12, borderRadius: 12,
+    backgroundColor: '#B89A6A', paddingVertical: 13, borderRadius: 14,
+    elevation: 2, shadowColor: '#9D7D4D', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 4,
   },
-  chatBtnText: { color: '#07080A', fontSize: 14, fontWeight: '800' },
+  chatBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
   callBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    paddingVertical: 12, borderRadius: 12,
+    paddingVertical: 13, borderRadius: 14,
   },
   voiceBtn: { backgroundColor: '#10B981' },
-  videoBtn: { backgroundColor: '#8B5CF6' },
-  callBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
+  videoBtn: { backgroundColor: '#8D7865' },
+  callBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
   waitingBox: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(245, 158, 11, 0.12)', borderRadius: 12, paddingVertical: 12, gap: 8,
-    borderWidth: 1, borderColor: 'rgba(245, 158, 11, 0.3)',
+    backgroundColor: '#FFFBEB', borderRadius: 12, paddingVertical: 12, gap: 8,
+    borderWidth: 1, borderColor: '#FDE68A',
   },
-  waitingText: { fontSize: 13, color: '#FBBF24', fontWeight: '600' },
+  waitingText: { fontSize: 13, color: '#B45309', fontWeight: '600' },
   emptyContainer: { alignItems: 'center', paddingVertical: 60, paddingHorizontal: 24 },
   emptyIconCircle: {
     width: 80, height: 80, borderRadius: 40,
-    backgroundColor: 'rgba(212, 175, 55, 0.12)', alignItems: 'center',
-    justifyContent: 'center', marginBottom: 24, borderWidth: 1, borderColor: 'rgba(212, 175, 55, 0.3)',
+    backgroundColor: '#F8F4EC', alignItems: 'center',
+    justify.content: 'center', marginBottom: 24, borderWidth: 1, borderColor: '#E8E2D8',
   },
-  emptyTitle: { fontSize: 20, fontWeight: '800', color: '#F8FAFC', marginBottom: 10 },
-  emptyText: { fontSize: 14, color: '#94A3B8', textAlign: 'center', lineHeight: 21, marginBottom: 28 },
-  exploreBtn: {
-    backgroundColor: '#D4AF37', paddingHorizontal: 28, paddingVertical: 14,
-    borderRadius: 99, elevation: 4,
+  emptyTitle: { fontSize: 20, fontWeight: '700', color: '#2E2A26', marginBottom: 10 },
+  emptyText: { fontSize: 14, color: '#6D6A66', textAlign: 'center', lineHeight: 21, marginBottom: 28 },
+  primaryBtn: {
+    backgroundColor: '#B89A6A', paddingVertical: 14, paddingHorizontal: 24, borderRadius: 14,
   },
-  exploreBtnText: { color: '#07080A', fontSize: 16, fontWeight: '800' },
+  primaryBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
 });

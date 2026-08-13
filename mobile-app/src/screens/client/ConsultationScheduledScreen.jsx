@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated, StatusBar } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import SafeScreen from '../../components/SafeScreen';
+import { LEGAL_THEME } from '../../constants/legalAdviceTheme';
 
 export default function ConsultationScheduledScreen({ navigation, route }) {
   const bookingData = route?.params?.bookingData || {};
@@ -28,19 +29,19 @@ export default function ConsultationScheduledScreen({ navigation, route }) {
 
   const steps = isLegalNotice ? [
     { icon: 'checkmark-circle', color: '#10B981', label: 'Request Submitted & Paid', done: true },
-    { icon: 'person-outline', color: '#FBBF24', label: 'Advocate Being Assigned (within 24h)', done: false },
-    { icon: 'document-text-outline', color: '#64748B', label: 'Notice Drafted & Reviewed', done: false },
-    { icon: 'send-outline', color: '#64748B', label: 'Notice Sent to Recipient', done: false },
+    { icon: 'person-outline', color: '#B45309', label: 'Advocate Being Assigned (within 24h)', done: false },
+    { icon: 'document-text-outline', color: '#6D6A66', label: 'Notice Drafted & Reviewed', done: false },
+    { icon: 'send-outline', color: '#6D6A66', label: 'Notice Sent to Recipient', done: false },
   ] : [
     { icon: 'checkmark-circle', color: '#10B981', label: 'Request Submitted & Paid', done: true },
-    { icon: 'person-outline', color: '#FBBF24', label: 'Advocate Being Assigned (within 24h)', done: false },
-    { icon: 'chatbubbles-outline', color: '#64748B', label: `${selectedType.title} with Advocate`, done: false },
-    { icon: 'shield-checkmark-outline', color: '#64748B', label: 'Case Resolved', done: false },
+    { icon: 'person-outline', color: '#B45309', label: 'Advocate Being Assigned (within 24h)', done: false },
+    { icon: 'chatbubbles-outline', color: '#6D6A66', label: `${selectedType.title} with Advocate`, done: false },
+    { icon: 'shield-checkmark-outline', color: '#6D6A66', label: 'Case Resolved', done: false },
   ];
 
   return (
-    <SafeScreen backgroundColor="#07080A" barStyle="light-content">
-      <StatusBar barStyle="light-content" backgroundColor="#07080A" />
+    <SafeScreen backgroundColor="#FAF9F8" barStyle="dark-content">
+      <StatusBar barStyle="dark-content" backgroundColor="#FAF9F8" />
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
 
         {/* Success Icon */}
@@ -87,7 +88,7 @@ export default function ConsultationScheduledScreen({ navigation, route }) {
 
           {/* 24h Notice Banner */}
           <View style={styles.noticeBanner}>
-            <Ionicons name="time-outline" size={20} color="#FBBF24" />
+            <Ionicons name="time-outline" size={20} color="#B45309" />
             <View style={styles.noticeText}>
               <Text style={styles.noticeTitle}>Advocate Assignment in Progress</Text>
               <Text style={styles.noticeDesc}>
@@ -102,11 +103,11 @@ export default function ConsultationScheduledScreen({ navigation, route }) {
           <View style={styles.stepsContainer}>
             {steps.map((step, idx) => (
               <View key={idx} style={styles.stepRow}>
-                <View style={[styles.stepCircle, { backgroundColor: step.done ? 'rgba(16, 185, 129, 0.15)' : '#19202E' }]}>
+                <View style={[styles.stepCircle, { backgroundColor: step.done ? '#ECFDF5' : '#F8F4EC' }]}>
                   <Ionicons name={step.icon} size={18} color={step.color} />
                 </View>
                 {idx < steps.length - 1 && (
-                  <View style={[styles.stepLine, { backgroundColor: step.done ? '#10B981' : '#263044' }]} />
+                  <View style={[styles.stepLine, { backgroundColor: step.done ? '#10B981' : '#E8E2D8' }]} />
                 )}
                 <Text style={[styles.stepLabel, step.done && styles.stepLabelDone]}>{step.label}</Text>
               </View>
@@ -116,7 +117,7 @@ export default function ConsultationScheduledScreen({ navigation, route }) {
           {/* Action Buttons */}
           <TouchableOpacity style={styles.primaryBtn}
             onPress={() => navigation.navigate('MyBookings')}>
-            <Ionicons name="calendar-outline" size={18} color="#07080A" />
+            <Ionicons name="calendar-outline" size={18} color="#FFFFFF" />
             <Text style={styles.primaryBtnText}>View My Requests</Text>
           </TouchableOpacity>
 
@@ -131,57 +132,58 @@ export default function ConsultationScheduledScreen({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, alignItems: 'center', padding: 24, paddingBottom: 48, backgroundColor: '#07080A' },
+  container: { flexGrow: 1, alignItems: 'center', padding: 24, paddingBottom: 48, backgroundColor: '#FAF9F8' },
   iconCircle: {
     width: 96, height: 96, borderRadius: 48,
-    backgroundColor: 'rgba(16, 185, 129, 0.15)', alignItems: 'center',
+    backgroundColor: '#ECFDF5', alignItems: 'center',
     justifyContent: 'center', marginTop: 16, marginBottom: 20,
-    borderWidth: 1, borderColor: 'rgba(16, 185, 129, 0.3)',
+    borderWidth: 1, borderColor: '#A7F3D0',
   },
-  title: { fontSize: 26, fontWeight: '800', color: '#F8FAFC', textAlign: 'center', lineHeight: 34, marginBottom: 10 },
-  subtitle: { fontSize: 14, color: '#94A3B8', textAlign: 'center', lineHeight: 21, marginBottom: 24, paddingHorizontal: 8 },
-  bold: { fontWeight: '700', color: '#F8FAFC' },
-  highlight: { fontWeight: '800', color: '#D4AF37' },
+  title: { fontSize: 26, fontWeight: '700', color: '#2E2A26', textAlign: 'center', lineHeight: 34, marginBottom: 10 },
+  subtitle: { fontSize: 14, color: '#6D6A66', textAlign: 'center', lineHeight: 21, marginBottom: 24, paddingHorizontal: 8 },
+  bold: { fontWeight: '700', color: '#2E2A26' },
+  highlight: { fontWeight: '700', color: '#B89A6A' },
   requestCard: {
-    width: '100%', backgroundColor: '#121722',
-    borderRadius: 18, borderWidth: 1, borderColor: '#1E2638', padding: 16, marginBottom: 16,
+    width: '100%', backgroundColor: '#FFFFFF',
+    borderRadius: 20, borderWidth: 1, borderColor: '#E8E2D8', padding: 18, marginBottom: 16,
+    elevation: 3, shadowColor: '#2E2A26', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 10,
   },
   requestRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8 },
-  requestLabel: { fontSize: 13, color: '#94A3B8', fontWeight: '500' },
-  requestValue: { fontSize: 13, color: '#F8FAFC', fontWeight: '700', maxWidth: '60%', textAlign: 'right' },
-  amountPaid: { color: '#10B981', fontSize: 15, fontWeight: '800' },
-  divider: { height: 1, backgroundColor: '#1E2638' },
+  requestLabel: { fontSize: 13, color: '#6D6A66', fontWeight: '500' },
+  requestValue: { fontSize: 13, color: '#2E2A26', fontWeight: '700', maxWidth: '60%', textAlign: 'right' },
+  amountPaid: { color: '#10B981', fontSize: 15, fontWeight: '700' },
+  divider: { height: 1, backgroundColor: '#E8E2D8' },
   noticeBanner: {
     width: '100%', flexDirection: 'row', alignItems: 'flex-start',
-    backgroundColor: 'rgba(245, 158, 11, 0.12)', borderRadius: 14,
-    borderWidth: 1, borderColor: 'rgba(245, 158, 11, 0.3)', padding: 14, marginBottom: 24, gap: 10,
+    backgroundColor: '#FFFBEB', borderRadius: 14,
+    borderWidth: 1, borderColor: '#FDE68A', padding: 14, marginBottom: 24, gap: 10,
   },
   noticeText: { flex: 1 },
-  noticeTitle: { fontSize: 13, fontWeight: '800', color: '#FBBF24', marginBottom: 4 },
-  noticeDesc: { fontSize: 12, color: '#FDE68A', lineHeight: 17 },
-  stepsTitle: { fontSize: 16, fontWeight: '800', color: '#F8FAFC', alignSelf: 'flex-start', marginBottom: 14 },
+  noticeTitle: { fontSize: 13, fontWeight: '700', color: '#B45309', marginBottom: 4 },
+  noticeDesc: { fontSize: 12, color: '#78350F', lineHeight: 17 },
+  stepsTitle: { fontSize: 16, fontWeight: '700', color: '#2E2A26', alignSelf: 'flex-start', marginBottom: 14 },
   stepsContainer: { width: '100%', marginBottom: 28 },
   stepRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 0, position: 'relative' },
   stepCircle: {
     width: 36, height: 36, borderRadius: 18,
     alignItems: 'center', justifyContent: 'center', marginRight: 12, zIndex: 1,
-    borderWidth: 1, borderColor: '#263044',
+    borderWidth: 1, borderColor: '#E8E2D8',
   },
   stepLine: {
     position: 'absolute', left: 17, top: 36, width: 2, height: 24,
   },
-  stepLabel: { fontSize: 13, color: '#64748B', fontWeight: '500', flex: 1, paddingVertical: 10 },
-  stepLabelDone: { color: '#F8FAFC', fontWeight: '700' },
+  stepLabel: { fontSize: 13, color: '#6D6A66', fontWeight: '500', flex: 1, paddingVertical: 10 },
+  stepLabelDone: { color: '#2E2A26', fontWeight: '700' },
   primaryBtn: {
-    width: '100%', backgroundColor: '#D4AF37',
+    width: '100%', backgroundColor: '#B89A6A',
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    paddingVertical: 16, borderRadius: 14, marginBottom: 12,
-    elevation: 3, shadowColor: '#D4AF37', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8,
+    paddingVertical: 16, borderRadius: 16, marginBottom: 12,
+    elevation: 3, shadowColor: '#9D7D4D', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8,
   },
-  primaryBtnText: { color: '#07080A', fontSize: 16, fontWeight: '800' },
+  primaryBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
   secondaryBtn: {
-    width: '100%', paddingVertical: 14, borderRadius: 14,
-    backgroundColor: '#121722', borderWidth: 1, borderColor: '#1E2638', alignItems: 'center',
+    width: '100%', paddingVertical: 14, borderRadius: 16,
+    backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: '#B89A6A', alignItems: 'center',
   },
-  secondaryBtnText: { color: '#CBD5E1', fontSize: 15, fontWeight: '600' },
+  secondaryBtnText: { color: '#B89A6A', fontSize: 15, fontWeight: '700' },
 });
