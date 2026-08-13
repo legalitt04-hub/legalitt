@@ -922,6 +922,49 @@ exports.addBookingInternalNote = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+// ─── Admin View Chat Messages for Booking ─────────────────────────────────────
+exports.getAdminBookingChatMessages = async (req, res, next) => {
+  try {
+    const { Chat, Message } = require('../models/Chat');
+    const Booking = require('../models/Booking');
+
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) return next(new (require('../middlewares/errorHandler').AppError)('Booking not found.', 404));
+
+    let chat = await Chat.findOne({ booking: req.params.id }).populate('participants', 'name email avatar role');
+    if (!chat && booking.chat) {
+      chat = await Chat.findById(booking.chat).populate('participants', 'name email avatar role');
+    }
+
+    if (!chat) {
+      return res.json({ success: true, data: { chat: null, messages: [] }, message: 'No chat session initialized yet for this booking.' });
+    }
+
+    const messages = await Message.find({ chat: chat._id })
+      .populate('sender', 'name avatar role')
+      .sort({ createdAt: 1 })
+      .lean();
+
+    res.json({
+      success: true,
+      data: {
+        chat: { _id: chat._id, participants: chat.participants, createdAt: chat.createdAt },
+        messages: messages.map(m => ({
+          _id: m._id,
+          senderName: m.sender?.name || 'User',
+          senderRole: m.sender?.role || 'user',
+          senderAvatar: m.sender?.avatar,
+          content: m.content,
+          messageType: m.messageType,
+          fileUrl: m.fileUrl,
+          fileName: m.fileName,
+          createdAt: m.createdAt,
+        })),
+      },
+    });
+  } catch (err) { next(err); }
+};
+
 // ─── Payment History ─────────────────────────────────────────────────────────
 exports.getPaymentHistory = async (req, res, next) => {
   try {

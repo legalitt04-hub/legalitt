@@ -20,6 +20,7 @@ interface Booking {
   status: string;
   payment: { amount: number; status: string };
   documents: { url: string; name: string; type: string }[];
+  advocateDocuments?: { url: string; name: string; type: string }[];
   clientCity?: string;
   notes?: string;
   internalNotes?: { note: string; addedBy?: string; addedAt?: string }[];
@@ -137,6 +138,24 @@ export default function Consultations() {
   });
   const [newInternalNote, setNewInternalNote] = useState('');
   const [submittingNote, setSubmittingNote] = useState(false);
+  const [bookingChatMessages, setBookingChatMessages] = useState<any[]>([]);
+  const [loadingChatMessages, setLoadingChatMessages] = useState(false);
+
+  useEffect(() => {
+    if (selectedBooking?._id) {
+      setLoadingChatMessages(true);
+      api.get(`/admin/bookings/${selectedBooking._id}/chat-messages`)
+        .then(res => {
+          if (res.data?.success) {
+            setBookingChatMessages(res.data.data?.messages || []);
+          }
+        })
+        .catch(() => setBookingChatMessages([]))
+        .finally(() => setLoadingChatMessages(false));
+    } else {
+      setBookingChatMessages([]);
+    }
+  }, [selectedBooking?._id]);
 
   const handleFileUploadForAdmin = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -771,6 +790,50 @@ export default function Consultations() {
                       {submittingNote ? 'Saving...' : 'Add Note'}
                     </button>
                   </div>
+                </div>
+
+                {/* ── Live Consultation Chat Messages ── */}
+                <div className="bg-indigo-50/60 border border-indigo-200/70 rounded-2xl p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-indigo-900 text-sm flex items-center gap-1.5">
+                      <MessageSquare size={14} className="text-indigo-700" /> Live Consultation Chat History
+                    </h3>
+                    <span className="text-[10px] bg-indigo-100 text-indigo-800 font-bold px-2 py-0.5 rounded-full">
+                      {bookingChatMessages.length} messages
+                    </span>
+                  </div>
+
+                  {loadingChatMessages ? (
+                    <div className="text-center py-4 text-xs text-indigo-500 animate-pulse">Loading chat messages...</div>
+                  ) : bookingChatMessages.length > 0 ? (
+                    <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                      {bookingChatMessages.map((m: any, idx: number) => {
+                        const isClient = m.senderRole === 'client';
+                        return (
+                          <div key={idx} className={`p-2.5 rounded-xl text-xs max-w-[85%] ${
+                            isClient ? 'bg-white text-gray-800 border border-indigo-100 self-start mr-auto' : 'bg-teal-700 text-white self-end ml-auto'
+                          }`}>
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                              <span className={`font-bold text-[10px] ${isClient ? 'text-teal-700' : 'text-teal-100'}`}>
+                                {m.senderName} ({m.senderRole === 'advocate' ? 'Advocate' : 'Client'})
+                              </span>
+                              <span className={`text-[9px] ${isClient ? 'text-gray-400' : 'text-teal-200'}`}>
+                                {new Date(m.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                            <p className="leading-relaxed">{m.content}</p>
+                            {m.fileUrl && (
+                              <a href={m.fileUrl} target="_blank" rel="noopener noreferrer" className={`inline-flex items-center gap-1 mt-1 font-bold underline text-[10px] ${isClient ? 'text-blue-600' : 'text-yellow-200'}`}>
+                                📎 {m.fileName || 'Attachment'}
+                              </a>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-indigo-700 italic">No chat messages exchanged yet for this booking.</p>
+                  )}
                 </div>
 
                 {/* ── Status Actions ── */}

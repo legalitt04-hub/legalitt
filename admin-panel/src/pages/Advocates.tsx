@@ -238,11 +238,11 @@ export default function Advocates() {
                     <tr key={adv._id} className="hover:bg-gray-50/50 transition-colors">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
-                        {adv.user.avatar ? (
-                          <img src={adv.user.avatar} alt={adv.user.name} className="w-8 h-8 rounded-full object-cover border border-slate-200 flex-shrink-0" />
+                        {adv.user?.avatar ? (
+                          <img src={adv.user.avatar} alt={adv.user?.name || 'Advocate'} className="w-8 h-8 rounded-full object-cover border border-slate-200 flex-shrink-0" />
                         ) : (
                           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-400 to-indigo-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                            {adv.user.name?.[0]?.toUpperCase()}
+                            {adv.user?.name?.[0]?.toUpperCase() || 'A'}
                           </div>
                         )}
                           <div>
@@ -336,10 +336,10 @@ export default function Advocates() {
               </div>
 
               <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl mb-4">
-                {selectedAdv.user.avatar ? (
-                  <img src={selectedAdv.user.avatar} alt={selectedAdv.user.name} className="w-14 h-14 rounded-full object-cover border-2 border-teal-500 flex-shrink-0 shadow-md" />
+                {selectedAdv.user?.avatar ? (
+                  <img src={selectedAdv.user.avatar} alt={selectedAdv.user?.name || 'Advocate'} className="w-14 h-14 rounded-full object-cover border-2 border-teal-500 flex-shrink-0 shadow-md" />
                 ) : (
-                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-teal-400 to-indigo-500 flex items-center justify-center text-white text-xl font-bold flex-shrink-0 shadow-md">{selectedAdv.user.name?.[0]}</div>
+                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-teal-400 to-indigo-500 flex items-center justify-center text-white text-xl font-bold flex-shrink-0 shadow-md">{selectedAdv.user?.name?.[0] || 'A'}</div>
                 )}
                 <div>
                   <p className="font-bold text-gray-900 text-base">{selectedAdv.user.name}</p>
