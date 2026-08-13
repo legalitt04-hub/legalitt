@@ -163,7 +163,7 @@ exports.getMyBookings = async (req, res, next) => {
     const [bookings, total] = await Promise.all([
       Booking.find(filter)
         .populate({ path: 'advocate', populate: { path: 'user', select: 'name avatar' } })
-        .sort({ date: -1 }).skip(skip).limit(Number(limit)).lean(),
+        .sort({ createdAt: -1 }).skip(skip).limit(Number(limit)).lean(),
       Booking.countDocuments(filter),
     ]);
     res.json({ success: true, data: bookings, pagination: { total, page: Number(page), pages: Math.ceil(total / Number(limit)) } });
