@@ -324,7 +324,7 @@ const SearchFilterScreen = ({ navigation }) => {
           <FlatList
             data={advocates}
             renderItem={renderAdvocateCard}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item, index) => item.id || item._id ? `${item.id || item._id}_${index}` : `sf_${index}`}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.listContent}
             onEndReached={hasMore ? handleLoadMore : null}

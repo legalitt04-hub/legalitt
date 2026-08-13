@@ -278,7 +278,7 @@ export default function MyBookingsScreen({ navigation }) {
       <Text style={styles.emptyText}>
         You haven't submitted any legal advice or notice requests yet.
       </Text>
-      <TouchableOpacity style={styles.exploreBtn} onPress={() => navigation.navigate('HomeTab')}>
+      <TouchableOpacity style={styles.exploreBtn} onPress={() => navigation.navigate('ClientMain', { screen: 'Home' })}>
         <Text style={styles.exploreBtnText}>Get Legal Advice</Text>
       </TouchableOpacity>
     </View>
@@ -305,7 +305,7 @@ export default function MyBookingsScreen({ navigation }) {
       ) : (
         <FlatList
           data={bookings}
-          keyExtractor={(item) => item._id}
+          keyExtractor={(item, index) => item._id ? `${item._id}_${index}` : `booking_${index}`}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           renderItem={renderBookingCard}

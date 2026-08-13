@@ -264,7 +264,7 @@ const SearchScreen = ({ navigation, route }) => {
       <FlatList
         data={advocates}
         renderItem={renderAdvocateCard}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item, index) => item.id || item._id ? `${item.id || item._id}_${index}` : `search_${index}`}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         refreshControl={

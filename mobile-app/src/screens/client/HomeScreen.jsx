@@ -1,43 +1,14 @@
-// screens/client/HomeScreen.jsx - COMPLETE FIX
+// screens/client/HomeScreen.jsx - Production Ready Layout
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, Image,
-  Dimensions, ActivityIndicator, RefreshControl, Alert,
-  LayoutAnimation, Platform, UIManager
+  Dimensions, RefreshControl
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Location from 'expo-location';
 import { COLORS } from '../../constants/theme';
 import SafeScreen from '../../components/SafeScreen';
-import { advocateAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useChatList } from '../../hooks/useChat';
-import { getCachedData } from '../../utils/offlineCache';
-
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
-
-const transformNearbyAdvocates = (rawAdvocates) => {
-  if (!rawAdvocates || !Array.isArray(rawAdvocates)) return [];
-  return rawAdvocates.map(adv => ({
-    id: adv._id,
-    name: adv.user?.name || 'Unknown',
-    avatar: adv.user?.avatar || `https://i.pravatar.cc/150?u=${adv.user?._id || adv._id}`,
-    title: 'Advocate',
-    specializations: adv.specializations || [],
-    specialization: adv.specializations?.join(' • ') || 'Legal Services',
-    rating: adv.rating?.average || 0,
-    reviews: adv.rating?.count || 0,
-    experience: adv.experience || 0,
-    status: adv.isOnline ? 'Online' : 'Offline',
-    consultationFee: adv.consultationFee || 500,
-    distance: adv.distance || 0,
-    distanceMeters: adv.distanceMeters || 0,
-    location: adv.location,
-  }));
-};
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const isSmallDevice = SCREEN_WIDTH < 375;
@@ -46,19 +17,7 @@ export default function HomeScreen({ navigation }) {
   const { user } = useAuth();
   const { chats, refetch } = useChatList();
   const unreadCount = chats.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
-  const [advocates, setAdvocates] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [userLocation, setUserLocation] = useState(null);
-  const [filters, setFilters] = useState({
-    specializations: [],
-    searchMode: 'nearby',
-    city: '',
-    minRating: 0,
-    maxFee: null,
-    minExperience: 0,
-    radius: 5,
-  });
 
   const displayName = user?.name || user?.user?.name || 'User';
   const firstName = displayName.split(' ')[0];
@@ -77,111 +36,24 @@ export default function HomeScreen({ navigation }) {
     return unsubscribe;
   }, [navigation, refetch]);
 
-  useEffect(() => {
-    const loadCached = async () => {
-      try {
-        const cached = await getCachedData('cached_advocates_nearby');
-        if (cached && cached.data) {
-          const transformed = transformNearbyAdvocates(cached.data);
-          setAdvocates(transformed);
-        }
-      } catch (err) {
-        console.error('Error loading cached nearby advocates:', err);
-      }
-    };
-    loadCached();
-    getCurrentLocation();
-  }, []);
-
-  useEffect(() => {
-    if (userLocation) {
-      fetchNearbyAdvocates();
-    }
-  }, [userLocation, filters.radius]);
-
-  const getCurrentLocation = async () => {
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setUserLocation({ latitude: 22.7196, longitude: 75.8577 });
-        return;
-      }
-
-      const location = await Location.getCurrentPositionAsync({});
-      setUserLocation({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      });
-    } catch (error) {
-      console.error('Error getting location:', error);
-      setUserLocation({ latitude: 22.7196, longitude: 75.8577 });
-    }
-  };
-
-  const fetchNearbyAdvocates = async () => {
-    try {
-      setLoading(true);
-      if (!userLocation) return;
-      const { latitude, longitude } = userLocation;
-
-      const response = await advocateAPI.getNearby({
-        lat: latitude,
-        lng: longitude,
-        radius: filters.radius,
-        limit: 20,
-      });
-
-      if (response.data?.success && response.data?.data && response.data.data.length > 0) {
-        const transformedAdvocates = transformNearbyAdvocates(response.data.data);
-        setAdvocates(transformedAdvocates);
-      } else {
-        // Fallback to general advocates list if radius yields no nearby advocates
-        const fallbackRes = await advocateAPI.getAdvocates({ limit: 20 });
-        if (fallbackRes.data?.success && fallbackRes.data?.data) {
-          const transformedAdvocates = transformNearbyAdvocates(fallbackRes.data.data);
-          setAdvocates(transformedAdvocates);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching advocates:', error);
-      // Fallback request
-      try {
-        const fallbackRes = await advocateAPI.getAdvocates({ limit: 20 });
-        if (fallbackRes.data?.success && fallbackRes.data?.data) {
-          setAdvocates(transformNearbyAdvocates(fallbackRes.data.data));
-        }
-      } catch (fErr) {
-        console.error('Fallback advocate fetch error:', fErr);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([loadUserData(), fetchNearbyAdvocates()]);
+    refetch();
     setRefreshing(false);
   };
 
-  const [isMoreServicesOpen, setIsMoreServicesOpen] = useState(false);
-
-  const toggleMoreServices = () => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setIsMoreServicesOpen(!isMoreServicesOpen);
-  };
-
+  // 4 main feature cards in requested order: Legal Advice, Legal Notice, Property Research, AI Legal Assistant
   const fourMainCards = [
-    { id: '1', icon: 'location-outline', title: 'Find Nearby Advocates', subtitle: 'Search by Location', cta: 'Open', screen: 'Map' },
-    { id: '2', icon: 'home-outline', title: 'Property Research Report', subtitle: 'Verify Ownership & Records', cta: 'Get Report', screen: 'PropertyResearchLanding' },
-    { id: '3', icon: 'scale-outline', title: 'Legal Advice', subtitle: 'Get Expert Legal Guidance', cta: 'Get Advice', screen: 'LegalAdviceLanding' },
-    { id: '4', icon: 'document-text-outline', title: 'Legal Notice', subtitle: 'Create Legal Notice', cta: 'Create', screen: 'AILegalNotice' },
+    { id: '1', icon: 'scale-outline', title: 'Legal Advice', subtitle: 'Get Expert Legal Guidance', cta: 'Get Advice', screen: 'LegalAdviceLanding' },
+    { id: '2', icon: 'document-text-outline', title: 'Legal Notice', subtitle: 'Create Legal Notice', cta: 'Create', screen: 'AILegalNotice' },
+    { id: '3', icon: 'home-outline', title: 'Property Research Report', subtitle: 'Verify Ownership & Records', cta: 'Get Report', screen: 'PropertyResearchLanding' },
+    { id: '4', icon: 'sparkles-outline', title: 'AI Legal Assistant', subtitle: 'Instant AI Guidance', cta: 'Chat Now', screen: 'AI' },
   ];
 
+  // More Services list (displayed directly without dropdown)
   const moreServicesList = [
     { id: '5', icon: 'document-text-outline', title: 'FIR Draft Generator', subtitle: 'Generate Drafts', screen: 'FIRTypeSelector' },
     { id: '6', icon: 'calendar-outline', title: 'My Bookings', subtitle: 'Track Consultations', screen: 'MyBookings' },
-    { id: '7', icon: 'bookmark-outline', title: 'Saved Advocates', subtitle: 'Bookmarked Lawyers', screen: 'SavedAdvocates' },
   ];
 
   return (
@@ -219,23 +91,20 @@ export default function HomeScreen({ navigation }) {
             <IconButton onPress={() => navigation.navigate('Notifications')}>
               <Ionicons name="notifications-outline" size={18} color="#6B7280" />
             </IconButton>
-            <IconButton onPress={() => navigation.navigate('SavedAdvocates')}>
-              <Ionicons name="bookmark-outline" size={18} color="#0D9488" />
-            </IconButton>
           </View>
         </View>
 
-        {/* AI Hero Card - First Card Below Greeting */}
-        <TouchableOpacity style={styles.aiHero} onPress={() => navigation.navigate('AI')} activeOpacity={0.9}>
+        {/* Hero Card */}
+        <TouchableOpacity style={styles.aiHero} onPress={() => navigation.navigate('LegalAdviceLanding')} activeOpacity={0.9}>
           <View style={styles.aiHeroContent}>
             <View style={styles.aiIcon}>
-              <Ionicons name="sparkles" size={20} color="#FFFFFF" />
+              <Ionicons name="scale-outline" size={22} color="#FFFFFF" />
             </View>
             <View style={styles.aiText}>
-              <Text style={styles.aiTitle}>Chat With AI Legal Assistant</Text>
-              <Text style={styles.aiSubtitle}>Get instant legal guidance</Text>
+              <Text style={styles.aiTitle}>Get Expert Legal Advice Now</Text>
+              <Text style={styles.aiSubtitle}>Consult verified legal experts online</Text>
               <View style={styles.aiButton}>
-                <Text style={styles.aiButtonText}>Chat with AI</Text>
+                <Text style={styles.aiButtonText}>Get Advice</Text>
               </View>
             </View>
           </View>
@@ -255,82 +124,31 @@ export default function HomeScreen({ navigation }) {
           ))}
         </View>
 
-        {/* View All / More Services Dropdown Accordion */}
+        {/* More Services Section (Directly Visible) */}
         <View style={styles.moreServicesSection}>
-          <View style={styles.moreServicesHeaderRow}>
-            <Text style={styles.moreServicesTitle}>More Services</Text>
-            <TouchableOpacity
-              onPress={toggleMoreServices}
-              style={styles.viewAllToggleBtn}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.viewAllToggleText}>
-                View All {isMoreServicesOpen ? '▲' : '▼'}
-              </Text>
-            </TouchableOpacity>
-          </View>
+          <Text style={styles.moreServicesTitle}>More Services</Text>
 
-          {isMoreServicesOpen && (
-            <View style={styles.moreServicesDropdownContainer}>
-              {moreServicesList.map((service) => (
-                <TouchableOpacity
-                  key={service.id}
-                  style={styles.moreServiceItemCard}
-                  onPress={() => navigation.navigate(service.screen)}
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.moreServiceIconCircle}>
-                    <Ionicons name={service.icon} size={20} color={COLORS.primary} />
-                  </View>
-                  <View style={styles.moreServiceTextCol}>
-                    <Text style={styles.moreServiceItemTitle}>{service.title}</Text>
-                    <Text style={styles.moreServiceItemSubtitle}>{service.subtitle}</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-        </View>
-
-
-        {/* Nearby Advocates Section */}
-        <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Nearby Advocates ({filters.radius}km)</Text>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('SearchFilter')}
-            style={styles.viewAllButton}
-          >
-            <Text style={styles.viewAllText}>View All</Text>
-            <Ionicons name="chevron-forward" size={16} color={COLORS.primary} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Advocates List - Show only 4 */}
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={COLORS.primary} />
-            <Text style={styles.loadingText}>Finding advocates near you...</Text>
-          </View>
-        ) : advocates.length > 0 ? (
-          <>
-            {advocates.slice(0, 4).map((advocate) => (
-              <AdvocateListCard
-                key={advocate.id}
-                advocate={advocate}
-                onPress={() => navigation.navigate('AdvocateProfile', { id: advocate.id })}
-              />
+          <View style={styles.moreServicesDropdownContainer}>
+            {moreServicesList.map((service) => (
+              <TouchableOpacity
+                key={service.id}
+                style={styles.moreServiceItemCard}
+                onPress={() => navigation.navigate(service.screen)}
+                activeOpacity={0.8}
+              >
+                <View style={styles.moreServiceIconCircle}>
+                  <Ionicons name={service.icon} size={20} color={COLORS.primary} />
+                </View>
+                <View style={styles.moreServiceTextCol}>
+                  <Text style={styles.moreServiceItemTitle}>{service.title}</Text>
+                  <Text style={styles.moreServiceItemSubtitle}>{service.subtitle}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+              </TouchableOpacity>
             ))}
-
-            {/* ✅ See All Button after 4 advocates */}
-          </>
-        ) : (
-          <View style={styles.loadingContainer}>
-            <Ionicons name="search-outline" size={64} color="#D1D5DB" />
-            <Text style={styles.loadingText}>No advocates found</Text>
-            <Text style={styles.emptySubtext}>Try adjusting your filters</Text>
           </View>
-        )}
+        </View>
+
       </ScrollView>
     </SafeScreen>
   );
@@ -355,59 +173,12 @@ const IconButton = ({ children, onPress }) => (
   </TouchableOpacity>
 );
 
-const AdvocateListCard = ({ advocate, onPress }) => (
-  <TouchableOpacity style={styles.advocateListCard} onPress={onPress} activeOpacity={0.9}>
-    <View style={styles.advocateCardHeader}>
-      <Image source={{ uri: advocate.avatar }} style={styles.listAdvocateAvatar} />
-      <View style={styles.listAdvocateInfo}>
-        <View style={styles.listNameRow}>
-          <Text style={styles.listAdvocateName} numberOfLines={1}>{advocate.name}</Text>
-          <View style={styles.verifiedBadge}>
-            <Text style={styles.verifiedCheck}>✓</Text>
-          </View>
-        </View>
-        <Text style={styles.listAdvocateTitle}>{advocate.title}</Text>
-        <Text style={styles.listAdvocateSpecialization} numberOfLines={1}>{advocate.specialization}</Text>
-        <View style={styles.listRatingRow}>
-          <Ionicons name="star" size={12} color="#FCD34D" />
-          <Text style={styles.listRatingText}>{advocate.rating.toFixed(1)}</Text>
-          <Text style={styles.listReviewCount}>({advocate.reviews})</Text>
-          {advocate.distance > 0 && (
-            <>
-              <Text style={styles.listReviewCount}> • </Text>
-              <Text style={styles.listReviewCount}>{advocate.distance.toFixed(1)}km</Text>
-            </>
-          )}
-        </View>
-      </View>
-    </View>
-
-    <View style={styles.advocateCardFooter}>
-      <View style={styles.statusBadge}>
-        <View style={[styles.statusDot, { backgroundColor: advocate.status === 'Online' ? '#10B981' : '#9CA3AF' }]} />
-        <Text style={styles.statusText}>{advocate.status}</Text>
-      </View>
-      <Text style={styles.consultationRateText}>₹{advocate.consultationFee}/consultation</Text>
-    </View>
-
-    <View style={styles.actionButtons}>
-      <TouchableOpacity style={styles.viewProfileButton} onPress={onPress}>
-        <Text style={styles.viewProfileText}>View Profile</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.bookNowButton} onPress={onPress}>
-        <Text style={styles.bookNowText}>Book Now</Text>
-      </TouchableOpacity>
-    </View>
-  </TouchableOpacity>
-);
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9FAFB' },
   scrollContent: { paddingBottom: 120 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 16 },
   userInfo: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontSize: 18, fontWeight: '700', color: '#FFFFFF' },
+  avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.primary },
   greeting: { fontSize: 12, color: '#6B7280' },
   userName: { fontSize: 16, fontWeight: '700', color: '#0F172A' },
   headerIcons: { flexDirection: 'row', gap: 8 },
@@ -427,150 +198,13 @@ const styles = StyleSheet.create({
   quickSubtitle: { fontSize: 11, color: '#6B7280', lineHeight: 14, marginBottom: 12 },
   quickCta: { backgroundColor: COLORS.primary, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, alignSelf: 'flex-start' },
   quickCtaText: { fontSize: 11, fontWeight: '600', color: '#FFFFFF' },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: 20, marginBottom: 12 },
-  sectionTitle: { fontSize: 16, fontWeight: '600', color: '#0F172A' },
-  resultsCount: { fontSize: 13, fontWeight: '500', color: '#6B7280', marginHorizontal: 20, marginBottom: 12 },
-  loadingContainer: { padding: 40, alignItems: 'center', justifyContent: 'center' },
-  loadingText: { fontSize: 14, color: '#6B7280', marginTop: 12 },
-  emptySubtext: { fontSize: 12, color: '#9CA3AF', marginTop: 4 },
-  verifiedBadge: { width: 16, height: 16, borderRadius: 8, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' },
-  verifiedCheck: { fontSize: 9, color: '#FFFFFF', fontWeight: '700' },
-  advocateListCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginHorizontal: 20, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 },
-  advocateCardHeader: { flexDirection: 'row', gap: 12, marginBottom: 12 },
-  listAdvocateAvatar: { width: 56, height: 56, borderRadius: 14 },
-  listAdvocateInfo: { flex: 1 },
-  listNameRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 },
-  listAdvocateName: { fontSize: 14, fontWeight: '600', color: '#0F172A' },
-  listAdvocateTitle: { fontSize: 12, color: '#6B7280', marginBottom: 2 },
-  listAdvocateSpecialization: { fontSize: 11, color: '#9CA3AF', marginBottom: 4 },
-  listRatingRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  listRatingText: { fontSize: 12, fontWeight: '500', color: '#0F172A' },
-  listReviewCount: { fontSize: 11, color: '#6B7280' },
-  advocateCardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#F3F4F6', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-  statusDot: { width: 6, height: 6, borderRadius: 3 },
-  statusText: { fontSize: 11, fontWeight: '500', color: '#6B7280' },
-  consultationRateText: { fontSize: 12, fontWeight: '600', color: '#0F172A' },
-  actionButtons: { flexDirection: 'row', gap: 8 },
-  viewProfileButton: { flex: 1, backgroundColor: '#F3F4F6', paddingVertical: 10, borderRadius: 12, alignItems: 'center' },
-  viewProfileText: { fontSize: 13, fontWeight: '600', color: '#374151' },
-  bookNowButton: { flex: 1, backgroundColor: COLORS.primary, paddingVertical: 10, borderRadius: 12, alignItems: 'center' },
-  bookNowText: { fontSize: 13, fontWeight: '600', color: '#FFFFFF' },
-  seeAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: 20,
-    marginTop: 8,
-    marginBottom: 20,
-    paddingVertical: 14,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: COLORS.primary,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3
-  },
-  seeAllButtonText: { fontSize: 15, fontWeight: '600', color: COLORS.primary },
-  sectionHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginHorizontal: 20,
-    marginTop: 24,
-    marginBottom: 12,
-  },
-  viewAllButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  viewAllText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: COLORS.primary,
-  },
-  badgeDot: {
-    position: 'absolute',
-    right: -4,
-    top: -4,
-    backgroundColor: '#EF4444',
-    borderRadius: 5,
-    width: 10,
-    height: 10,
-    borderWidth: 1.5,
-    borderColor: '#FFFFFF',
-  },
-  moreServicesSection: {
-    marginHorizontal: 20,
-    marginBottom: 16,
-  },
-  moreServicesHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  moreServicesTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#0F172A',
-  },
-  viewAllToggleBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-  },
-  viewAllToggleText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.primary,
-  },
-  moreServicesDropdownContainer: {
-    gap: 10,
-    marginTop: 6,
-  },
-  moreServiceItemCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: '#E8E2D8',
-  },
-  moreServiceIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F8F4EC',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  moreServiceTextCol: {
-    flex: 1,
-  },
-  moreServiceItemTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#0F172A',
-    marginBottom: 2,
-  },
-  moreServiceItemSubtitle: {
-    fontSize: 11,
-    color: '#6B7280',
-  },
+  badgeDot: { position: 'absolute', right: -4, top: -4, backgroundColor: '#EF4444', borderRadius: 5, width: 10, height: 10, borderWidth: 1.5, borderColor: '#FFFFFF' },
+  moreServicesSection: { marginHorizontal: 20, marginBottom: 16 },
+  moreServicesTitle: { fontSize: 16, fontWeight: '600', color: '#0F172A', marginBottom: 12 },
+  moreServicesDropdownContainer: { gap: 10 },
+  moreServiceItemCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 16, padding: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3, borderWidth: 1, borderColor: '#E8E2D8' },
+  moreServiceIconCircle: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#F8F4EC', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  moreServiceTextCol: { flex: 1 },
+  moreServiceItemTitle: { fontSize: 14, fontWeight: '600', color: '#0F172A', marginBottom: 2 },
+  moreServiceItemSubtitle: { fontSize: 11, color: '#6B7280' },
 });
-

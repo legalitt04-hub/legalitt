@@ -109,42 +109,48 @@ const AIAssistantScreen = ({ navigation }) => {
     return new Promise(async (resolve, reject) => {
       try {
         const token = await SecureStore.getItemAsync('authToken');
-        const url = `${BASE_URL}/ai/stream?message=${encodeURIComponent(userMessage)}&conversationId=${currentConversationId || ''}`;
+        const url = `${BASE_URL}/ai/stream?message=${encodeURIComponent(userMessage)}&conversationId=${currentConversationId || ''}&token=${encodeURIComponent(token || '')}`;
         
+        const streamingId = 'streaming_' + Date.now();
         let fullReply = '';
-        setMessages(prev => [...prev, { id: 'streaming', role: 'model', content: '' }]);
+        setMessages(prev => [...prev.filter(m => !m.id?.startsWith('streaming_')), { id: streamingId, role: 'model', content: '' }]);
 
         const es = new EventSource(url, {
           headers: { Authorization: `Bearer ${token}` }
         });
 
         es.addEventListener('message', (event) => {
-          const data = JSON.parse(event.data);
-          
-          if (data.chunk) {
-            fullReply += data.chunk;
-            setMessages(prev => prev.map(m => 
-              m.id === 'streaming' ? { ...m, content: fullReply } : m
-            ));
-            setTimeout(() => flatRef.current?.scrollToEnd({ animated: false }), 20);
-          }
-
-          if (data.done) {
-            if (!currentConversationId) {
-              setCurrentConversationId(data.conversationId);
-              fetchHistory();
+          try {
+            const data = JSON.parse(event.data);
+            
+            if (data.chunk) {
+              fullReply += data.chunk;
+              setMessages(prev => prev.map(m => 
+                m.id === streamingId ? { ...m, content: fullReply } : m
+              ));
+              setTimeout(() => flatRef.current?.scrollToEnd({ animated: false }), 20);
             }
-            setMessages(prev => prev.map(m => 
-              m.id === 'streaming' ? { ...m, id: Date.now().toString() + '_ai', content: fullReply + DISCLAIMER } : m
-            ));
-            es.close();
-            setTimeout(() => flatRef.current?.scrollToEnd({ animated: true }), 50);
-            resolve(true);
-          }
 
-          if (data.error) {
+            if (data.done) {
+              if (!currentConversationId && data.conversationId) {
+                setCurrentConversationId(data.conversationId);
+                fetchHistory();
+              }
+              setMessages(prev => prev.map(m => 
+                m.id === streamingId ? { ...m, id: Date.now().toString() + '_ai', content: fullReply + DISCLAIMER } : m
+              ));
+              es.close();
+              setTimeout(() => flatRef.current?.scrollToEnd({ animated: true }), 50);
+              resolve(true);
+            }
+
+            if (data.error) {
+              es.close();
+              reject(new Error(data.error));
+            }
+          } catch (err) {
             es.close();
-            reject(new Error(data.error));
+            reject(err);
           }
         });
 
@@ -165,17 +171,52 @@ const AIAssistantScreen = ({ navigation }) => {
     const q = text || input.trim();
     if (!q && !uploadedDoc) return;
 
-    setMessages(prev => [...prev, { id: Date.now().toString(), role: 'user', content: q }]);
+    const userMessageObj = { id: Date.now().toString(), role: 'user', content: q };
+    setMessages(prev => [...prev, userMessageObj]);
     setInput('');
     setLoading(true);
 
     setTimeout(() => flatRef.current?.scrollToEnd({ animated: true }), 50);
 
     try {
+      // 1. Try SSE Streaming first
       await sendToAI(q, uploadedDoc?.content);
       setUploadedDoc(null);
-    } catch (error) {
-      setMessages(prev => [...prev, { id: Date.now().toString() + '_err', role: 'model', content: 'Error connecting to AI.' }]);
+    } catch (streamingError) {
+      console.warn('Streaming failed, trying standard API fallback:', streamingError?.message);
+      // Remove any partial streaming placeholder
+      setMessages(prev => prev.filter(m => !m.id?.startsWith('streaming_')));
+
+      try {
+        // 2. Fallback: Standard HTTP POST request
+        const res = await api.post('/ai/chat', {
+          messages: [{ role: 'user', content: q }],
+          conversationId: currentConversationId,
+        });
+
+        if (res.data?.success && res.data?.data?.reply) {
+          const aiReply = res.data.data.reply;
+          if (res.data.data.conversationId && !currentConversationId) {
+            setCurrentConversationId(res.data.data.conversationId);
+            fetchHistory();
+          }
+          setMessages(prev => [...prev, {
+            id: Date.now().toString() + '_ai',
+            role: 'model',
+            content: aiReply,
+          }]);
+          setUploadedDoc(null);
+        } else {
+          throw new Error('Fallback response invalid');
+        }
+      } catch (fallbackError) {
+        console.error('All AI endpoints failed:', fallbackError);
+        setMessages(prev => [...prev, {
+          id: Date.now().toString() + '_err',
+          role: 'model',
+          content: 'Sorry, I couldn\'t connect to the AI service. Please verify your connection and try again.',
+        }]);
+      }
     } finally {
       setLoading(false);
       setTimeout(() => flatRef.current?.scrollToEnd({ animated: true }), 100);
@@ -238,7 +279,7 @@ const AIAssistantScreen = ({ navigation }) => {
             <FlatList
               ref={flatRef}
               data={messages}
-              keyExtractor={(item) => item.id}
+              keyExtractor={(item, index) => item.id ? `${item.id}_${index}` : `msg_${index}`}
               renderItem={renderMsg}
               contentContainerStyle={styles.msgList}
               keyboardShouldPersistTaps="handled"

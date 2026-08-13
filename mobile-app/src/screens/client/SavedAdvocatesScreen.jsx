@@ -161,7 +161,7 @@ const SavedAdvocatesScreen = ({ navigation }) => {
       ) : (
         <FlatList
           data={advocates}
-          keyExtractor={(item) => item._id}
+          keyExtractor={(item, index) => item._id ? `${item._id}_${index}` : `saved_${index}`}
           renderItem={renderAdvocate}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}

@@ -136,7 +136,7 @@ const MyDraftsScreen = ({ navigation }) => {
       ) : itemsToDisplay.length > 0 ? (
         <FlatList
           data={itemsToDisplay}
-          keyExtractor={item => item.id}
+          keyExtractor={(item, index) => item.id ? `${item.id}_${index}` : `draft_${index}`}
           renderItem={renderVaultItem}
           contentContainerStyle={styles.list}
           refreshControl={
