@@ -48,6 +48,19 @@ exports.createLegalRequest = async (req, res, next) => {
     };
     const bookingAmount = amount || priceMap[consultationMode] || 499;
 
+    const formattedDocs = Array.isArray(documents)
+      ? documents.map((doc, idx) => {
+          if (typeof doc === 'string') {
+            return { url: doc, name: `Document_${idx + 1}`, type: doc.endsWith('.pdf') ? 'pdf' : 'image' };
+          }
+          return {
+            url: doc?.url || doc?.uri || (typeof doc === 'string' ? doc : ''),
+            name: doc?.name || `Document_${idx + 1}`,
+            type: doc?.type || 'document',
+          };
+        }).filter(d => d.url)
+      : [];
+
     const booking = await Booking.create({
       client: req.user._id,
       // advocate: undefined — admin will assign
@@ -55,7 +68,7 @@ exports.createLegalRequest = async (req, res, next) => {
       serviceType,
       type: consultationMode === 'video' ? 'video' : consultationMode === 'voice' ? 'phone' : 'chat',
       issue: `[${issueCategory || 'General'}] ${issueDescription.trim()}`,
-      documents: documents || [],
+      documents: formattedDocs,
       payment: {
         amount: bookingAmount,
         currency: 'INR',

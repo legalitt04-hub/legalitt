@@ -118,7 +118,10 @@ export default function ConsultationDetailsScreen({ navigation, route }) {
         issueCategory: selectedMatter.id,
         issueDescription: description.trim(),
         preferredSlot,
-        documents: uploadedFiles.map(f => ({ url: f.url, name: f.name, type: f.type })),
+        documents: uploadedFiles.map((f, idx) => {
+          if (typeof f === 'string') return { url: f, name: `Attachment_${idx + 1}`, type: f.endsWith('.pdf') ? 'pdf' : 'image' };
+          return { url: f.url || f.uri || (typeof f === 'string' ? f : ''), name: f.name || `Attachment_${idx + 1}`, type: f.type || 'document' };
+        }).filter(d => d.url),
         clientCity: city.trim() || userData.address?.city || '',
         amount,
       });
