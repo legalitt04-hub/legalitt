@@ -1099,6 +1099,8 @@ exports.getTransactionHistory = async (req, res, next) => {
 exports.uploadDocumentForClient = async (req, res, next) => {
   try {
     const cloudinary = require('cloudinary').v2;
+    const fs = require('fs');
+
     cloudinary.config({
       cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
       api_key: process.env.CLOUDINARY_API_KEY,
@@ -1107,13 +1109,24 @@ exports.uploadDocumentForClient = async (req, res, next) => {
 
     if (!req.file) return next(new (require('../middlewares/errorHandler').AppError)('No file uploaded.', 400));
 
-    const result = await new Promise((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(
-        { folder: 'legalitt/admin-uploads', resource_type: 'auto' },
-        (err, res) => err ? reject(err) : resolve(res)
-      );
-      stream.end(req.file.buffer);
-    });
+    let result;
+    if (req.file.path) {
+      result = await cloudinary.uploader.upload(req.file.path, {
+        folder: 'legalitt/admin-uploads',
+        resource_type: 'auto',
+      });
+      try { fs.unlinkSync(req.file.path); } catch (e) {}
+    } else if (req.file.buffer) {
+      result = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: 'legalitt/admin-uploads', resource_type: 'auto' },
+          (err, res) => err ? reject(err) : resolve(res)
+        );
+        stream.end(req.file.buffer);
+      });
+    } else {
+      return next(new (require('../middlewares/errorHandler').AppError)('Invalid file upload payload.', 400));
+    }
 
     // If bookingId provided, attach doc to booking
     if (req.body.bookingId) {
@@ -1124,7 +1137,12 @@ exports.uploadDocumentForClient = async (req, res, next) => {
     }
 
     res.json({ success: true, data: { url: result.secure_url, name: req.file.originalname, size: req.file.size } });
-  } catch (err) { next(err); }
+  } catch (err) {
+    if (req.file?.path) {
+      try { require('fs').unlinkSync(req.file.path); } catch (e) {}
+    }
+    next(err);
+  }
 };
 
 // ─── Create Case + Register Client (Admin flow) ───────────────────────────────
