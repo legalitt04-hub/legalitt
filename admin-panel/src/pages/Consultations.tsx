@@ -43,6 +43,14 @@ interface NearbyAdvocate {
   verificationStatus: string;
 }
 
+const fixCloudinaryPdfUrl = (url?: string) => {
+  if (!url) return '#';
+  if (url.includes('/image/upload/') && url.toLowerCase().includes('.pdf')) {
+    return url.replace('/image/upload/', '/raw/upload/');
+  }
+  return url;
+};
+
 // ─── Status Config ───────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { color: string; bg: string; label: string; icon: React.ReactNode }> = {
   pending_assignment: { color: '#D97706', bg: '#FEF3C7', label: 'Awaiting Assignment', icon: <Clock size={13} /> },
@@ -597,7 +605,7 @@ export default function Consultations() {
                         </span>
                         <div className="flex flex-wrap gap-1.5">
                           {booking.documents.map((doc, idx) => (
-                            <a key={idx} href={doc.url} target="_blank" rel="noopener noreferrer"
+                            <a key={idx} href={fixCloudinaryPdfUrl(doc.url)} target="_blank" rel="noopener noreferrer"
                               onClick={e => e.stopPropagation()}
                               className="inline-flex items-center gap-1.5 text-[11px] font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 px-2.5 py-1 rounded-lg border border-teal-200 transition-colors">
                               {doc.type === 'image' ? <ImageIcon size={11} /> : <FileText size={11} />}
@@ -740,7 +748,7 @@ export default function Consultations() {
                       </span>
                       <div className="flex flex-wrap gap-2">
                         {selectedBooking.documents.map((doc, i) => (
-                          <a key={i} href={doc.url} target="_blank" rel="noopener noreferrer"
+                          <a key={i} href={fixCloudinaryPdfUrl(doc.url)} target="_blank" rel="noopener noreferrer"
                             className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-100 transition-colors">
                             {doc.type === 'image' ? <ImageIcon size={12} /> : <FileText size={12} />}
                             {doc.name?.length > 20 ? doc.name.substring(0, 20) + '...' : doc.name || `Document ${i + 1}`}

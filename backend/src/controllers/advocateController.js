@@ -100,29 +100,35 @@ exports.getNearby = async (req, res, next) => {
 
     console.log(`📍 Nearby query: lat=${latitude}, lng=${longitude}, radius=${radiusKm}km, page=${pageNum}`);
 
-    // Get limit+1 to check if there are more (can't use countDocuments with $nearSphere on Atlas)
-    const advocates = await Advocate.find({
-      isVerified: true,
-      verificationStatus: 'approved',
-      location: {
-        $nearSphere: {
-          $geometry: {
-            type: 'Point',
-            coordinates: [longitude, latitude],
+    // Calculate distance for all advocates and sort by distance ascending
+    let advocates = [];
+    try {
+      advocates = await Advocate.find({
+        isVerified: true,
+        verificationStatus: 'approved',
+        location: {
+          $nearSphere: {
+            $geometry: {
+              type: 'Point',
+              coordinates: [longitude, latitude],
+            },
+            $maxDistance: radiusMeters,
           },
-          $maxDistance: radiusMeters,
         },
-      },
-    })
-      .populate('user', 'name avatar isActive')
-      .skip(skip)
-      .limit(maxResults + 1)
-      .lean();
+      })
+        .populate('user', 'name avatar isActive')
+        .skip(skip)
+        .limit(maxResults + 1)
+        .lean();
+    } catch (nearErr) {
+      console.warn('⚠️ Atlas $nearSphere fallback to general find:', nearErr.message);
+      advocates = await Advocate.find({ isVerified: true, verificationStatus: 'approved' })
+        .populate('user', 'name avatar isActive')
+        .lean();
+    }
 
     const hasMore = advocates.length > maxResults;
     const results = hasMore ? advocates.slice(0, maxResults) : advocates;
-    
-    console.log(`✅ Found ${results.length} advocates on page ${pageNum}, hasMore: ${hasMore}`);
 
     // Apply additional filters
     let filteredResults = results;
@@ -143,9 +149,12 @@ exports.getNearby = async (req, res, next) => {
         adv.consultationFee <= maxFeeNum
       );
     }
-    // Calculate distances
+
+    // Calculate distances & sort by distance ascending (closest first)
     const advocatesWithDistance = filteredResults.map(advocate => {
-      const [advLng, advLat] = advocate.location.coordinates;
+      const coords = advocate.location?.coordinates || [75.8577, 22.7196];
+      const advLng = coords[0];
+      const advLat = coords[1];
       
       const R = 6371;
       const dLat = toRad(advLat - latitude);
@@ -162,7 +171,7 @@ exports.getNearby = async (req, res, next) => {
         distance: Math.round(distance * 100) / 100,
         distanceMeters: Math.round(distance * 1000),
       };
-    });
+    }).sort((a, b) => a.distance - b.distance);
 
     res.json({
       success: true,
