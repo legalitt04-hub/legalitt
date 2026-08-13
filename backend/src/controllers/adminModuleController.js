@@ -14,11 +14,78 @@ const { AppError } = require('../middlewares/errorHandler');
 // ─── Cases ────────────────────────────────────────────────────────────────────
 exports.getCases = async (req, res, next) => {
   try {
-    const cases = await Case.find()
-      .populate('client', 'name email avatar')
-      .populate('advocate', 'name email avatar')
-      .sort('-createdAt');
-    res.json({ success: true, data: cases });
+    const { page = 1, limit = 15, status, serviceType, search } = req.query;
+    const Booking = require('../models/Booking');
+
+    const bookingFilter = {};
+    if (status) {
+      if (status === 'open') bookingFilter.status = { $in: ['open', 'confirmed', 'pending_assignment'] };
+      else if (status === 'pending') bookingFilter.status = { $in: ['pending', 'pending_assignment'] };
+      else if (status === 'in_progress') bookingFilter.status = 'in_progress';
+      else if (status === 'resolved') bookingFilter.status = 'completed';
+      else if (status === 'closed') bookingFilter.status = 'cancelled';
+    }
+    if (serviceType) bookingFilter.serviceType = serviceType;
+
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const bookings = await Booking.find(bookingFilter)
+      .populate('user', 'name email phone avatar')
+      .populate({
+        path: 'advocate',
+        populate: { path: 'user', select: 'name email phone avatar' }
+      })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit))
+      .lean();
+
+    const total = await Booking.countDocuments(bookingFilter);
+
+    const formattedCases = bookings.map(b => ({
+      _id: b._id,
+      caseNumber: b.bookingId || `LGT-${b._id.toString().slice(-6).toUpperCase()}`,
+      title: b.issueDescription?.split('\n')[0]?.substring(0, 60) || b.issueCategory || `${(b.serviceType || 'Legal').replace(/_/g, ' ')} Case`,
+      client: {
+        _id: b.user?._id,
+        name: b.user?.name || b.recipientDetails?.name || 'Client',
+        email: b.user?.email || b.recipientDetails?.email || 'N/A',
+        phone: b.user?.phone || b.recipientDetails?.phone || 'N/A',
+      },
+      advocate: b.advocate ? {
+        _id: b.advocate._id,
+        user: {
+          name: b.advocate.user?.name || 'Assigned Advocate',
+          email: b.advocate.user?.email,
+          avatar: b.advocate.user?.avatar,
+        },
+        specializations: b.advocate.specializations || [],
+      } : null,
+      serviceType: b.serviceType || 'legal_notice',
+      status: b.status === 'confirmed' || b.status === 'pending_assignment' ? 'open' : b.status === 'in_progress' ? 'in_progress' : b.status === 'completed' ? 'resolved' : b.status === 'cancelled' ? 'closed' : 'pending',
+      priority: b.priority || 'medium',
+      payment: {
+        amount: b.amount || b.payment?.amount || 1499,
+        status: b.payment?.status || (b.paymentStatus === 'completed' ? 'paid' : 'pending'),
+      },
+      description: b.issueDescription || b.notes,
+      notes: b.adminNotes,
+      documents: b.documents || [],
+      advocateDocuments: b.advocateDocuments || [],
+      createdAt: b.createdAt,
+      updatedAt: b.updatedAt,
+    }));
+
+    res.json({
+      success: true,
+      data: formattedCases,
+      pagination: {
+        total,
+        page: Number(page),
+        pages: Math.ceil(total / Number(limit)),
+        hasMore: (Number(page) * Number(limit)) < total,
+      }
+    });
   } catch (err) {
     next(err);
   }
