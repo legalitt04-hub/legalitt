@@ -186,21 +186,29 @@ function toRad(degrees) {
 
 exports.getAdvocateById = async (req, res, next) => {
   try {
-    let advocate = await Advocate.findById(req.params.id)
-      .populate('user', 'name email avatar phone isActive')
-      .lean();
+    const mongoose = require('mongoose');
+    const id = req.params.id;
+    if (!id || id === 'undefined' || id === 'null') {
+      return res.status(400).json({ success: false, message: 'Invalid advocate ID' });
+    }
 
-    if (!advocate) {
-      // Fallback: Check if the provided ID is a User ID
-      advocate = await Advocate.findOne({ user: req.params.id })
+    let advocate = null;
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      advocate = await Advocate.findById(id)
         .populate('user', 'name email avatar phone isActive')
         .lean();
+
+      if (!advocate) {
+        advocate = await Advocate.findOne({ user: id })
+          .populate('user', 'name email avatar phone isActive')
+          .lean();
+      }
     }
 
     if (!advocate) {
       return res.status(404).json({
         success: false,
-        message: 'Advocate not found',
+        message: 'Advocate profile not found',
       });
     }
 

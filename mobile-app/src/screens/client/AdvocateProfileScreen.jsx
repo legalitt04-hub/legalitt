@@ -167,7 +167,7 @@ const AdvocateProfileScreen = ({ navigation, route }) => {
     <View style={styles.container}>
       {/* Header - floats over content */}
       <LinearGradient
-        colors={['#14B8A6', '#0D9488']}
+        colors={['#B09C85', '#8D7865']}
         style={[styles.header, { paddingTop: insets.top + 10 }]}
       >
         <TouchableOpacity
@@ -183,7 +183,7 @@ const AdvocateProfileScreen = ({ navigation, route }) => {
           <Ionicons
             name={isSaved ? 'bookmark' : 'bookmark-outline'}
             size={22}
-            color={isSaved ? '#0D9488' : '#FFFFFF'}
+            color={isSaved ? '#B09C85' : '#FFFFFF'}
           />
         </TouchableOpacity>
       </LinearGradient>
@@ -196,7 +196,12 @@ const AdvocateProfileScreen = ({ navigation, route }) => {
         {/* Profile Header */}
         <View style={styles.profileHeader}>
           <View style={styles.avatarContainer}>
-            <Image source={{ uri: advocate.avatar }} style={styles.avatar} />
+            <Image
+              source={{
+                uri: advocate.avatar || route?.params?.advocateAvatar || `https://i.pravatar.cc/150?u=${advocate._id || advocate.id}`
+              }}
+              style={styles.avatar}
+            />
             {advocate.online && (
               <View style={styles.onlineBadge}>
                 <Text style={styles.onlineBadgeText}>● Online</Text>
@@ -271,7 +276,7 @@ const AdvocateProfileScreen = ({ navigation, route }) => {
             style={styles.shareIconButton}
             onPress={handleShare}
           >
-            <Ionicons name="share-social-outline" size={24} color="#0D9488" />
+            <Ionicons name="share-social-outline" size={24} color="#B09C85" />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.bookButton}
@@ -786,7 +791,7 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     borderRadius: 8,
-    backgroundColor: COLORS.primary,
+    backgroundColor: '#B09C85',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -858,7 +863,7 @@ const styles = StyleSheet.create({
   },
   tabActive: {
     borderBottomWidth: 2,
-    borderBottomColor: COLORS.primary,
+    borderBottomColor: '#B09C85',
   },
   tabText: {
     fontSize: 14,
@@ -866,8 +871,8 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   tabTextActive: {
-    color: COLORS.primary,
-    fontWeight: '600',
+    color: '#B09C85',
+    fontWeight: '700',
   },
   tabContent: {
     paddingHorizontal: 20,
@@ -1050,19 +1055,19 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: 28,
     borderWidth: 1.5,
-    borderColor: '#0D9488',
+    borderColor: '#B09C85',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F0FDFA',
+    backgroundColor: '#FAF2E8',
   },
   bookButton: {
     flex: 1,
-    backgroundColor: COLORS.primary,
+    backgroundColor: '#B09C85',
     height: 56,
     borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: COLORS.primary,
+    shadowColor: '#B09C85',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

@@ -231,12 +231,25 @@ export default function MyBookingsScreen({ navigation }) {
           style={styles.advocateRow}
           activeOpacity={item.advocate ? 0.7 : 1}
           onPress={() => {
-            const advId = item.advocate?._id || item.advocate?.id || item.advocate;
+            const advObj = item.advocate;
+            const advId = typeof advObj === 'object' ? (advObj._id || advObj.id || advObj.user?._id) : advObj;
             if (advId) {
               navigation.navigate('AdvocateProfile', {
-                advocateId: typeof advId === 'object' ? advId._id : advId,
+                advocateId: advId,
                 advocateName,
                 advocateAvatar,
+                prefetchedData: typeof advObj === 'object' ? {
+                  _id: advObj._id || advId,
+                  id: advObj._id || advId,
+                  userId: advObj.user?._id || advObj.user,
+                  name: advocateName,
+                  avatar: advocateAvatar,
+                  specializations: advObj.specializations || [],
+                  experience: advObj.experience || 5,
+                  consultationFee: advObj.consultationFee || 999,
+                  rating: advObj.rating?.average || 4.9,
+                  location: advObj.location,
+                } : null,
               });
             }
           }}>
