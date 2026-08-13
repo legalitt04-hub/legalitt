@@ -436,7 +436,7 @@ const styles = StyleSheet.create({
   emptyIconCircle: {
     width: 80, height: 80, borderRadius: 40,
     backgroundColor: '#F8F4EC', alignItems: 'center',
-    justify.content: 'center', marginBottom: 24, borderWidth: 1, borderColor: '#E8E2D8',
+    justifyContent: 'center', marginBottom: 24, borderWidth: 1, borderColor: '#E8E2D8',
   },
   emptyTitle: { fontSize: 20, fontWeight: '700', color: '#2E2A26', marginBottom: 10 },
   emptyText: { fontSize: 14, color: '#6D6A66', textAlign: 'center', lineHeight: 21, marginBottom: 28 },
