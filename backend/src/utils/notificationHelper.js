@@ -29,9 +29,9 @@ exports.createNotification = async ({ recipientId, senderId, title, message, typ
 
     const expoToken = recipient?.expoPushToken || recipient?.fcmToken;
 
-    // 3. Trigger Expo Push Notification if token exists
-    if (expoToken && expoToken.startsWith('ExponentPushToken')) {
-      logger.info(`Sending Expo Push Notification to: ${expoToken}`);
+    // 3. Trigger Push Notification if token exists
+    if (expoToken && (expoToken.startsWith('ExponentPushToken') || expoToken.length > 10)) {
+      logger.info(`Sending Push Notification to token: ${expoToken}`);
       try {
         await axios.post('https://exp.host/--/api/v2/push/send', {
           to: expoToken,
@@ -51,7 +51,7 @@ exports.createNotification = async ({ recipientId, senderId, title, message, typ
         });
         logger.info(`Push notification dispatched successfully to ${expoToken}`);
       } catch (pushErr) {
-        logger.error(`Failed to dispatch Expo push notification: ${pushErr.message}`);
+        logger.error(`Failed to dispatch push notification: ${pushErr.message}`);
       }
     }
 

@@ -119,6 +119,30 @@ export default function MyBookingsScreen({ navigation }) {
     return () => socket.off('booking_assigned', handleAssigned);
   }, [fetchBookings]);
 
+  const handleOpenSession = (actionType, item, params) => {
+    const rawSlot = item.notes?.replace('Preferred slot: ', '');
+    if (rawSlot && item.status !== 'in_progress') {
+      const slotDate = new Date(rawSlot);
+      if (!isNaN(slotDate.getTime())) {
+        const diffMins = (slotDate.getTime() - Date.now()) / 60000;
+        if (diffMins > 15) {
+          Alert.alert(
+            '⏰ Session Not Started Yet',
+            `Your consultation session is scheduled for: ${rawSlot}.\n\nChat and calls will open 15 minutes before your scheduled slot time. You will receive a push notification when it starts!`,
+            [{ text: 'OK' }]
+          );
+          return;
+        }
+      }
+    }
+
+    if (actionType === 'chat') {
+      navigation.navigate('Chat', params);
+    } else if (actionType === 'call') {
+      navigation.navigate('VideoCall', params);
+    }
+  };
+
   const getActionButtons = (item) => {
     const advocate = item.advocate?.user || {};
     const advocateName = advocate.name || 'Advocate';
@@ -141,7 +165,7 @@ export default function MyBookingsScreen({ navigation }) {
         <View style={styles.actionsRow}>
           {item.chat && (
             <TouchableOpacity style={styles.chatBtn}
-              onPress={() => navigation.navigate('Chat', {
+              onPress={() => handleOpenSession('chat', item, {
                 chatId: item.chat,
                 advocateName, advocateAvatar,
                 advocateId: advocate._id || item.advocate?._id,
@@ -160,7 +184,7 @@ export default function MyBookingsScreen({ navigation }) {
           {(mode === 'voice' || mode === 'video') && item.videoRoomId && (
             <TouchableOpacity
               style={[styles.callBtn, mode === 'video' ? styles.videoBtn : styles.voiceBtn]}
-              onPress={() => navigation.navigate('VideoCall', {
+              onPress={() => handleOpenSession('call', item, {
                 zegoRoomId:   item.videoRoomId,
                 zegoToken:    item.videoRoomToken,
                 zegoAppId:    item.zegoAppId || parseInt(process.env.EXPO_PUBLIC_ZEGO_APP_ID || '0'),
