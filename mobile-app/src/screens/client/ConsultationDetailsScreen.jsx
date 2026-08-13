@@ -83,7 +83,9 @@ export default function ConsultationDetailsScreen({ navigation, route }) {
           size: fileSizeMB.toFixed(1) + ' MB',
         }]);
       } catch (uploadErr) {
-        Alert.alert('Upload Failed', 'Could not upload document. Please try again.');
+        const msg = uploadErr?.response?.data?.message || uploadErr?.message || 'Could not upload document.';
+        console.error('Upload document error:', uploadErr?.response?.data || uploadErr);
+        Alert.alert('Upload Failed', msg);
       } finally {
         setUploading(false);
       }

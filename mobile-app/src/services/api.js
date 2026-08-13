@@ -301,25 +301,35 @@ export const legalAdviceAPI = {
 export const uploadAPI = {
   uploadFile: async (fileUri, fileName, mimeType) => {
     const formData = new FormData();
+    const cleanName = fileName || `document_${Date.now()}.${mimeType?.includes('pdf') ? 'pdf' : 'jpg'}`;
+    const cleanType = mimeType || (cleanName.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg');
+
     formData.append('file', {
-      uri: fileUri,
-      name: fileName || 'upload',
-      type: mimeType || 'application/octet-stream',
+      uri: Platform.OS === 'android' ? fileUri : fileUri.replace('file://', ''),
+      name: cleanName,
+      type: cleanType,
     });
-    // Do NOT pass Content-Type header manually — axios will set it
-    // automatically with the correct multipart boundary.
+
     return api.post('/uploads/document', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      transformRequest: (data) => data,
       timeout: 60000,
     });
   },
   uploadAvatar: async (fileUri, fileName, mimeType) => {
     const formData = new FormData();
     formData.append('file', {
-      uri: fileUri,
+      uri: Platform.OS === 'android' ? fileUri : fileUri.replace('file://', ''),
       name: fileName || 'avatar.jpg',
       type: mimeType || 'image/jpeg',
     });
     return api.post('/uploads/avatar', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      transformRequest: (data) => data,
       timeout: 60000,
     });
   },

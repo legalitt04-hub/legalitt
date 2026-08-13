@@ -14,11 +14,24 @@ cloudinary.config({
 const storage = multer.memoryStorage();
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  limits: { fileSize: 25 * 1024 * 1024 }, // 25MB max
   fileFilter: (req, file, cb) => {
-    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
-    if (allowed.includes(file.mimetype)) return cb(null, true);
-    cb(new AppError('Only images and PDFs are allowed.', 400));
+    const mimetype = (file.mimetype || '').toLowerCase();
+    const originalname = (file.originalname || '').toLowerCase();
+    
+    // Check extension
+    const isAllowedExt = /\.(jpg|jpeg|png|webp|gif|pdf|doc|docx|txt|rtf)$/i.test(originalname);
+    // Check mime type (include application/octet-stream which Android DocumentPicker returns)
+    const isAllowedMime = 
+      mimetype.startsWith('image/') ||
+      mimetype.includes('pdf') ||
+      mimetype.includes('word') ||
+      mimetype.includes('document') ||
+      mimetype === 'application/octet-stream' ||
+      !mimetype;
+
+    if (isAllowedExt || isAllowedMime) return cb(null, true);
+    cb(new AppError('Only images, PDFs, and Word documents are allowed.', 400));
   },
 });
 
