@@ -45,8 +45,8 @@ interface NearbyAdvocate {
 
 const fixCloudinaryPdfUrl = (url?: string) => {
   if (!url) return '#';
-  if (url.includes('/image/upload/') && url.toLowerCase().includes('.pdf')) {
-    return url.replace('/image/upload/', '/raw/upload/');
+  if (url.includes('/image/upload/') && !url.includes('/fl_attachment/') && url.toLowerCase().includes('.pdf')) {
+    return url.replace('/image/upload/', '/image/upload/fl_attachment/');
   }
   return url;
 };
