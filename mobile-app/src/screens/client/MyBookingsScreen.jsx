@@ -60,7 +60,15 @@ export default function MyBookingsScreen({ navigation }) {
       const regular = regularRes.status === 'fulfilled' ? (regularRes.value?.data?.data || []) : [];
       const legal = legalRes.status === 'fulfilled' ? (legalRes.value?.data?.data || []) : [];
 
-      const all = [...regular, ...legal].sort((a, b) =>
+      // Merge and deduplicate by _id
+      const bookingMap = new Map();
+      [...regular, ...legal].forEach(item => {
+        if (item?._id) {
+          bookingMap.set(item._id.toString(), item);
+        }
+      });
+
+      const all = Array.from(bookingMap.values()).sort((a, b) =>
         new Date(b.createdAt) - new Date(a.createdAt)
       );
       setBookings(all);
@@ -120,43 +128,54 @@ export default function MyBookingsScreen({ navigation }) {
 
     if (!isConfirmed || !item.advocate) return null;
 
-    return (
-      <View style={styles.actionsRow}>
-        {item.chat && (
-          <TouchableOpacity style={styles.chatBtn}
-            onPress={() => navigation.navigate('Chat', {
-              chatId: item.chat,
-              advocateName, advocateAvatar,
-              advocateId: advocate._id || item.advocate?._id,
-              zegoRoomId:  item.videoRoomId,
-              zegoToken:   item.videoRoomToken,
-              zegoAppId:   item.zegoAppId || 0,
-              zegoAppSign: '',
-              mode: item.consultationMode,
-            })}>
-            <Ionicons name="chatbubbles-outline" size={17} color="#07080A" />
-            <Text style={styles.chatBtnText}>Chat</Text>
-          </TouchableOpacity>
-        )}
+    const slotText = item.notes?.replace('Preferred slot: ', '') || (item.createdAt ? new Date(item.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : null);
 
-        {(mode === 'voice' || mode === 'video') && item.videoRoomId && (
-          <TouchableOpacity
-            style={[styles.callBtn, mode === 'video' ? styles.videoBtn : styles.voiceBtn]}
-            onPress={() => navigation.navigate('VideoCall', {
-              zegoRoomId:   item.videoRoomId,
-              zegoToken:    item.videoRoomToken,
-              zegoAppId:    item.zegoAppId || parseInt(process.env.EXPO_PUBLIC_ZEGO_APP_ID || '0'),
-              zegoAppSign:  process.env.EXPO_PUBLIC_ZEGO_APP_SIGN || '',
-              advocateName,
-              myUserId:     userData._id || '',
-              myUserName:   userData.name || 'Client',
-              mode,
-              bookingId:    item._id,
-            })}>
-            <Ionicons name={mode === 'video' ? 'videocam-outline' : 'call-outline'} size={17} color="#fff" />
-            <Text style={styles.callBtnText}>{mode === 'video' ? 'Video Call' : 'Voice Call'}</Text>
-          </TouchableOpacity>
+    return (
+      <View style={{ gap: 8 }}>
+        {slotText && (
+          <View style={styles.slotBanner}>
+            <Ionicons name="time-outline" size={13} color="#D4AF37" />
+            <Text style={styles.slotBannerText}>Scheduled Slot: {slotText}</Text>
+          </View>
         )}
+        <View style={styles.actionsRow}>
+          {item.chat && (
+            <TouchableOpacity style={styles.chatBtn}
+              onPress={() => navigation.navigate('Chat', {
+                chatId: item.chat,
+                advocateName, advocateAvatar,
+                advocateId: advocate._id || item.advocate?._id,
+                zegoRoomId:  item.videoRoomId,
+                zegoToken:   item.videoRoomToken,
+                zegoAppId:   item.zegoAppId || 0,
+                zegoAppSign: '',
+                mode: item.consultationMode,
+                scheduledSlot: slotText,
+              })}>
+              <Ionicons name="chatbubbles-outline" size={17} color="#07080A" />
+              <Text style={styles.chatBtnText}>Chat</Text>
+            </TouchableOpacity>
+          )}
+
+          {(mode === 'voice' || mode === 'video') && item.videoRoomId && (
+            <TouchableOpacity
+              style={[styles.callBtn, mode === 'video' ? styles.videoBtn : styles.voiceBtn]}
+              onPress={() => navigation.navigate('VideoCall', {
+                zegoRoomId:   item.videoRoomId,
+                zegoToken:    item.videoRoomToken,
+                zegoAppId:    item.zegoAppId || parseInt(process.env.EXPO_PUBLIC_ZEGO_APP_ID || '0'),
+                zegoAppSign:  process.env.EXPO_PUBLIC_ZEGO_APP_SIGN || '',
+                advocateName,
+                myUserId:     userData._id || '',
+                myUserName:   userData.name || 'Client',
+                mode,
+                bookingId:    item._id,
+              })}>
+              <Ionicons name={mode === 'video' ? 'videocam-outline' : 'call-outline'} size={17} color="#fff" />
+              <Text style={styles.callBtnText}>{mode === 'video' ? 'Video Call' : 'Voice Call'}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     );
   };
@@ -292,7 +311,7 @@ export default function MyBookingsScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      {loading ? (
+      {loading && bookings.length === 0 ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#D4AF37" />
           <Text style={styles.loadingText}>Loading your requests...</Text>
@@ -373,6 +392,12 @@ const styles = StyleSheet.create({
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   metaValue: { fontSize: 12, fontWeight: '600', color: '#94A3B8' },
   actionsRow: { flexDirection: 'row', gap: 8 },
+  slotBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: 'rgba(212, 175, 55, 0.1)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6,
+    borderWidth: 1, borderColor: 'rgba(212, 175, 55, 0.3)',
+  },
+  slotBannerText: { fontSize: 11, color: '#D4AF37', fontWeight: '700' },
   chatBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     backgroundColor: '#D4AF37', paddingVertical: 12, borderRadius: 12,

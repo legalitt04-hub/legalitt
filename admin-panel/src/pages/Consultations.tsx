@@ -463,6 +463,12 @@ export default function Consultations() {
                       {booking.issue}
                     </p>
 
+                    {/* Booking Time / Slot Display */}
+                    <div className="flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-100 mb-3 font-semibold">
+                      <Clock size={13} className="text-amber-600 flex-shrink-0" />
+                      <span>Slot: {booking.notes?.replace('Preferred slot: ', '') || (booking.createdAt ? new Date(booking.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Flexible Slot (Within 24h)')}</span>
+                    </div>
+
                     <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
                       <span className={`font-semibold ${booking.payment.status === 'paid' ? 'text-green-600' : 'text-orange-600'}`}>
                         ₹{booking.payment.amount} · {booking.payment.status === 'paid' ? '✓ Paid' : 'Pending'}

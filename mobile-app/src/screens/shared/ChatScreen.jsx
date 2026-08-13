@@ -6,8 +6,25 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+
+// Safe lazy-load: expo-notifications crashes if ExpoPushTokenManager native module is missing
+let Notifications = null;
+try { Notifications = require('expo-notifications'); } catch (e) {}
+
+// Configure notification handler only if module loaded
+if (Notifications) {
+  try {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+      }),
+    });
+  } catch (e) {}
+}
+
 import * as ImagePicker from 'expo-image-picker';
-import * as Notifications from 'expo-notifications';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useChat } from '../../hooks/useChat';
@@ -15,19 +32,11 @@ import { COLORS } from '../../constants/theme';
 import { formatDate } from '../../utils/helpers';
 import { useNetwork } from '../../context/NetworkContext';
 
-// Configure notification handler for foreground notifications
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
-
 const ChatScreen = ({ navigation, route }) => {
   const {
     chatId, advocateName, advocateAvatar, advocateId,
     zegoRoomId, zegoToken, zegoAppId, zegoAppSign, mode: callMode,
+    scheduledSlot,
   } = route.params || {};
   const { user } = useAuth();
   const { isConnected } = useNetwork();
@@ -285,6 +294,16 @@ const ChatScreen = ({ navigation, route }) => {
         </TouchableOpacity>
       </View>
 
+      {/* Scheduled Slot Banner */}
+      {scheduledSlot && (
+        <View style={styles.slotHeaderBanner}>
+          <Ionicons name="time-outline" size={14} color="#D4AF37" />
+          <Text style={styles.slotHeaderBannerText}>
+            Session Slot: {scheduledSlot}
+          </Text>
+        </View>
+      )}
+
       {/* Error / Offline banner */}
       {(error || !isConnected) && (
         <View style={styles.offlineBanner}>
@@ -389,6 +408,22 @@ const styles = StyleSheet.create({
   callBtn: {
     width: 36, height: 36, borderRadius: 18,
     backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center'
+  },
+  slotHeaderBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#0F131C',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderColor: '#1E2638',
+  },
+  slotHeaderBannerText: {
+    color: '#D4AF37',
+    fontSize: 12,
+    fontWeight: '700',
   },
 
   offlineBanner: {

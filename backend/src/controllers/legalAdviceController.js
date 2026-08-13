@@ -112,6 +112,16 @@ exports.createLegalRequest = async (req, res, next) => {
       });
     }
 
+    // Send instant in-app notification to client
+    await createNotification({
+      recipientId: req.user._id,
+      senderId: req.user._id,
+      title: 'Case Request Registered! 📋',
+      message: `Your ${serviceType.replace(/_/g, ' ')} request (ID: LEG-${booking._id.toString().slice(-6).toUpperCase()}) has been registered. Verified advocate will be assigned within 24h.`,
+      type: 'booking_created',
+      relatedId: booking._id,
+    });
+
     res.status(201).json({
       success: true,
       data: {
@@ -166,6 +176,16 @@ exports.confirmLegalPayment = async (req, res, next) => {
     await booking.save();
 
     logger.info(`Legal request payment confirmed: ${booking._id} — ₹${booking.payment.amount}`);
+
+    // Send instant in-app notification to client for payment
+    await createNotification({
+      recipientId: req.user._id,
+      senderId: req.user._id,
+      title: 'Payment Confirmed! 💳',
+      message: `Payment of ₹${booking.payment.amount} confirmed for case #LEG-${booking._id.toString().slice(-6).toUpperCase()}. Advocate assignment in progress.`,
+      type: 'payment_success',
+      relatedId: booking._id,
+    });
 
     // Notify admin via socket that payment is confirmed
     const io = req.app.get('io');
