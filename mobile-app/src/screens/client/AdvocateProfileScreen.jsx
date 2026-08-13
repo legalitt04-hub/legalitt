@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../constants/theme';
 import { advocateAPI, chatAPI } from '../../services/api';
+import profileAPI from '../../services/profileAPI';
 
 const AdvocateProfileScreen = ({ navigation, route }) => {
   const advocateId = route?.params?.id || route?.params?.advocateId;
@@ -75,10 +76,9 @@ const AdvocateProfileScreen = ({ navigation, route }) => {
         }
         // Only check saved status if NOT pre-filled from params
         if (!isSavedInitial) {
-          const { default: profileAPI } = await import('../../services/profileAPI');
           const savedRes = await profileAPI.getSavedAdvocates();
-          if (savedRes.data.success) {
-            const savedIds = savedRes.data.data.map(a => typeof a === 'object' ? a._id : a);
+          if (savedRes?.data?.success) {
+            const savedIds = (savedRes.data.data || []).map(a => typeof a === 'object' ? a._id : a);
             setIsSaved(savedIds.includes(advocateId));
           }
         }
@@ -131,9 +131,8 @@ const AdvocateProfileScreen = ({ navigation, route }) => {
 
   const toggleSave = async () => {
     try {
-      const { default: profileAPI } = await import('../../services/profileAPI');
       const response = await profileAPI.toggleSavedAdvocate(advocateId);
-      if (response.data.success) setIsSaved(response.data.isSaved);
+      if (response?.data?.success) setIsSaved(response.data.isSaved);
     } catch (error) {
       console.error("Error toggling save", error);
     }
