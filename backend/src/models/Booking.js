@@ -119,6 +119,18 @@ const bookingSchema = new mongoose.Schema({
     ref: 'Booking',
   },
   notes: String,
+  internalNotes: [{
+    note: { type: String, required: true },
+    addedBy: { type: String, default: 'Admin' },
+    addedAt: { type: Date, default: Date.now }
+  }],
+  advocatePayout: {
+    amount: { type: Number, default: 0 },
+    status: { type: String, enum: ['pending', 'paid'], default: 'pending' },
+    paidAt: Date,
+    commissionPercent: { type: Number, default: 20 },
+  },
+  createdByAdmin: { type: Boolean, default: false },
   cancellationReason: String,
   cancelledBy: { type: String, enum: ['client', 'advocate', 'admin'] },
   // WhatsApp notification tracking

@@ -134,5 +134,6 @@ router.post('/upload-for-client',        upload.single('file'), adminController.
 
 // ─── Phase 4: Create Case + Register Client ──────────────────────────────────
 router.post('/create-case-for-client',   adminController.createCaseForClient);
+router.post('/bookings/:id/internal-notes', adminController.addBookingInternalNote);
 
 module.exports = router;

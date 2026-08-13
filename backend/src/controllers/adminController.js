@@ -898,6 +898,30 @@ exports.deleteUserNote = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+// ─── Booking Internal Notes ───────────────────────────────────────────────────
+exports.addBookingInternalNote = async (req, res, next) => {
+  try {
+    const { note } = req.body;
+    if (!note?.trim()) return next(new (require('../middlewares/errorHandler').AppError)('Note text is required.', 400));
+    const Booking = require('../models/Booking');
+    const booking = await Booking.findByIdAndUpdate(
+      req.params.id,
+      {
+        $push: {
+          internalNotes: {
+            note: note.trim(),
+            addedBy: req.user?.name || 'Admin',
+            addedAt: new Date(),
+          },
+        },
+      },
+      { new: true }
+    );
+    if (!booking) return next(new (require('../middlewares/errorHandler').AppError)('Booking not found.', 404));
+    res.json({ success: true, data: booking.internalNotes, message: 'Internal note added successfully.' });
+  } catch (err) { next(err); }
+};
+
 // ─── Payment History ─────────────────────────────────────────────────────────
 exports.getPaymentHistory = async (req, res, next) => {
   try {

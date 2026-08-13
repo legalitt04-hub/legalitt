@@ -22,6 +22,7 @@ interface Booking {
   documents: { url: string; name: string; type: string }[];
   clientCity?: string;
   notes?: string;
+  internalNotes?: { note: string; addedBy?: string; addedAt?: string }[];
   assignmentDeadline: string;
   assignedAt?: string;
   assignedBy?: { name: string };
@@ -116,6 +117,92 @@ export default function Consultations() {
 
   const wsRef = useRef<WebSocket | null>(null);
   const [newBookingAlert, setNewBookingAlert] = useState<{ clientName: string; serviceType: string } | null>(null);
+
+  // ─── Phase 4 State: Manual Case Creation & Internal Notes ───
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [submittingCase, setSubmittingCase] = useState(false);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    clientName: '',
+    clientEmail: '',
+    clientPhone: '',
+    clientCity: 'Jabalpur',
+    serviceType: 'legal_advice',
+    consultationMode: 'chat',
+    preferredSlot: 'Tomorrow, 10:30 AM',
+    issueDescription: '',
+    amount: 499,
+    advocateId: '',
+    documents: [] as { url: string; name: string; type: string }[],
+  });
+  const [newInternalNote, setNewInternalNote] = useState('');
+  const [submittingNote, setSubmittingNote] = useState(false);
+
+  const handleFileUploadForAdmin = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingDoc(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await api.post('/admin/upload-for-client', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      if (res.data.success) {
+        setCreateForm(prev => ({
+          ...prev,
+          documents: [...prev.documents, { url: res.data.data.url, name: res.data.data.name, type: file.type.includes('image') ? 'image' : 'pdf' }],
+        }));
+      }
+    } catch (err: any) {
+      alert('Upload failed: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setUploadingDoc(false);
+    }
+  };
+
+  const handleCreateCaseSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!createForm.clientEmail.trim()) return alert('Client email is required.');
+    if (!createForm.issueDescription.trim()) return alert('Issue description is required.');
+
+    setSubmittingCase(true);
+    try {
+      const res = await api.post('/admin/create-case-for-client', createForm);
+      if (res.data.success) {
+        alert(res.data.data.message || 'Case created successfully!');
+        setShowCreateModal(false);
+        setCreateForm({
+          clientName: '', clientEmail: '', clientPhone: '', clientCity: 'Jabalpur',
+          serviceType: 'legal_advice', consultationMode: 'chat', preferredSlot: 'Tomorrow, 10:30 AM',
+          issueDescription: '', amount: 499, advocateId: '', documents: [],
+        });
+        fetchBookings();
+      }
+    } catch (err: any) {
+      alert('Failed to create case: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setSubmittingCase(false);
+    }
+  };
+
+  const handleAddInternalNote = async () => {
+    if (!selectedBooking || !newInternalNote.trim()) return;
+    setSubmittingNote(true);
+    try {
+      const res = await api.post(`/admin/bookings/${selectedBooking._id}/internal-notes`, { note: newInternalNote.trim() });
+      if (res.data.success) {
+        const updatedNotes = res.data.data;
+        setSelectedBooking(prev => prev ? { ...prev, internalNotes: updatedNotes } : null);
+        setBookings(prev => prev.map(b => b._id === selectedBooking._id ? { ...b, internalNotes: updatedNotes } : b));
+        setNewInternalNote('');
+      }
+    } catch (err: any) {
+      alert('Failed to add internal note: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setSubmittingNote(false);
+    }
+  };
 
   // ─── Fetch Bookings ──────────────────────────────────────────────────────
   const fetchBookings = useCallback(async () => {
@@ -321,11 +408,18 @@ export default function Consultations() {
             <h1 className="text-2xl font-bold text-gray-900">Legal Requests</h1>
             <p className="text-sm text-gray-500 mt-0.5">Manage client legal advice & notice assignments</p>
           </div>
-          <button onClick={fetchBookings}
-            className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-xl font-medium hover:bg-teal-700 transition-colors">
-            <RefreshCw size={15} />
-            Refresh
-          </button>
+          <div className="flex gap-2">
+            <button onClick={() => setShowCreateModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-xl font-bold hover:bg-amber-700 transition-colors shadow-sm text-sm">
+              <Paperclip size={15} />
+              + Create Case / Upload Docs
+            </button>
+            <button onClick={fetchBookings}
+              className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-xl font-medium hover:bg-teal-700 transition-colors">
+              <RefreshCw size={15} />
+              Refresh
+            </button>
+          </div>
         </div>
 
         {/* Tabs */}
@@ -638,6 +732,47 @@ export default function Consultations() {
                   )}
                 </div>
 
+                {/* ── Internal Admin Notes ── */}
+                <div className="bg-amber-50/70 border border-amber-200/80 rounded-2xl p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-amber-900 text-sm flex items-center gap-1.5">
+                      <FileText size={14} className="text-amber-700" /> Internal Admin Notes (Private)
+                    </h3>
+                  </div>
+
+                  {(selectedBooking.internalNotes && selectedBooking.internalNotes.length > 0) ? (
+                    <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                      {selectedBooking.internalNotes.map((n: any, idx: number) => (
+                        <div key={idx} className="bg-white p-2.5 rounded-xl border border-amber-100 text-xs shadow-2xs">
+                          <p className="text-gray-800 font-medium">{n.note}</p>
+                          <p className="text-[10px] text-gray-400 mt-1">
+                            — {n.addedBy || 'Admin'} · {new Date(n.addedAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-amber-700 italic">No internal notes added yet.</p>
+                  )}
+
+                  <div className="flex gap-2 pt-1">
+                    <input
+                      type="text"
+                      placeholder="Add private note for admin team..."
+                      value={newInternalNote}
+                      onChange={e => setNewInternalNote(e.target.value)}
+                      className="flex-1 text-xs px-3 py-2 bg-white border border-amber-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                    <button
+                      onClick={handleAddInternalNote}
+                      disabled={submittingNote || !newInternalNote.trim()}
+                      className="px-3 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold transition-colors flex-shrink-0"
+                    >
+                      {submittingNote ? 'Saving...' : 'Add Note'}
+                    </button>
+                  </div>
+                </div>
+
                 {/* ── Status Actions ── */}
                 {selectedBooking.status !== 'pending_assignment' && (
                   <div>
@@ -845,6 +980,120 @@ export default function Consultations() {
               </div>
             </motion.div>
           </>
+        )}
+      </AnimatePresence>
+      {/* ── Create Case Modal ── */}
+      <AnimatePresence>
+        {showCreateModal && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl max-w-xl w-full p-6 max-h-[90vh] overflow-y-auto shadow-2xl">
+              <div className="flex items-center justify-between border-b pb-3 mb-4">
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">+ Create Case & Upload Documents</h2>
+                  <p className="text-xs text-gray-500">Auto-register client and create booking directly from Admin Panel</p>
+                </div>
+                <button onClick={() => setShowCreateModal(false)} className="p-2 hover:bg-gray-100 rounded-xl"><X size={18} /></button>
+              </div>
+
+              <form onSubmit={handleCreateCaseSubmit} className="space-y-4 text-xs">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-semibold text-gray-700 mb-1 block">Client Full Name</label>
+                    <input type="text" placeholder="e.g. Ramesh Sharma" value={createForm.clientName}
+                      onChange={e => setCreateForm({ ...createForm, clientName: e.target.value })}
+                      className="w-full p-2.5 border rounded-xl bg-gray-50 text-gray-900" />
+                  </div>
+                  <div>
+                    <label className="font-semibold text-gray-700 mb-1 block">Client Email (Required)</label>
+                    <input type="email" required placeholder="client@example.com" value={createForm.clientEmail}
+                      onChange={e => setCreateForm({ ...createForm, clientEmail: e.target.value })}
+                      className="w-full p-2.5 border rounded-xl bg-gray-50 text-gray-900" />
+                  </div>
+                  <div>
+                    <label className="font-semibold text-gray-700 mb-1 block">Phone Number</label>
+                    <input type="text" placeholder="9876543210" value={createForm.clientPhone}
+                      onChange={e => setCreateForm({ ...createForm, clientPhone: e.target.value })}
+                      className="w-full p-2.5 border rounded-xl bg-gray-50 text-gray-900" />
+                  </div>
+                  <div>
+                    <label className="font-semibold text-gray-700 mb-1 block">City</label>
+                    <input type="text" placeholder="Jabalpur" value={createForm.clientCity}
+                      onChange={e => setCreateForm({ ...createForm, clientCity: e.target.value })}
+                      className="w-full p-2.5 border rounded-xl bg-gray-50 text-gray-900" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="font-semibold text-gray-700 mb-1 block">Service Type</label>
+                    <select value={createForm.serviceType} onChange={e => setCreateForm({ ...createForm, serviceType: e.target.value })}
+                      className="w-full p-2.5 border rounded-xl bg-gray-50 font-medium text-gray-900">
+                      <option value="legal_advice">Legal Advice</option>
+                      <option value="legal_notice">Legal Notice</option>
+                      <option value="property_research">Property Research</option>
+                      <option value="fir_draft">FIR Draft</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="font-semibold text-gray-700 mb-1 block">Mode</label>
+                    <select value={createForm.consultationMode} onChange={e => setCreateForm({ ...createForm, consultationMode: e.target.value })}
+                      className="w-full p-2.5 border rounded-xl bg-gray-50 font-medium text-gray-900">
+                      <option value="chat">Chat</option>
+                      <option value="voice">Voice Call</option>
+                      <option value="video">Video Call</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="font-semibold text-gray-700 mb-1 block">Amount (₹)</label>
+                    <input type="number" value={createForm.amount} onChange={e => setCreateForm({ ...createForm, amount: Number(e.target.value) })}
+                      className="w-full p-2.5 border rounded-xl bg-gray-50 font-bold text-teal-700" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="font-semibold text-gray-700 mb-1 block">Scheduled Slot</label>
+                  <input type="text" value={createForm.preferredSlot} onChange={e => setCreateForm({ ...createForm, preferredSlot: e.target.value })}
+                    className="w-full p-2.5 border rounded-xl bg-gray-50 text-gray-900" placeholder="e.g. Tomorrow, 10:30 AM" />
+                </div>
+
+                <div>
+                  <label className="font-semibold text-gray-700 mb-1 block">Legal Issue Description (Required)</label>
+                  <textarea rows={3} required placeholder="Describe the legal concern or agreement details..." value={createForm.issueDescription}
+                    onChange={e => setCreateForm({ ...createForm, issueDescription: e.target.value })}
+                    className="w-full p-2.5 border rounded-xl bg-gray-50 text-gray-900" />
+                </div>
+
+                {/* File Upload Section */}
+                <div className="border-t pt-3">
+                  <label className="font-semibold text-gray-700 mb-1.5 block flex items-center gap-1">
+                    <Paperclip size={13} className="text-teal-600" /> Upload Case Documents (Client Files)
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <input type="file" onChange={handleFileUploadForAdmin} disabled={uploadingDoc}
+                      className="text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100" />
+                    {uploadingDoc && <span className="text-xs text-teal-600 font-semibold animate-pulse">Uploading file...</span>}
+                  </div>
+                  {createForm.documents.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {createForm.documents.map((d, idx) => (
+                        <span key={idx} className="bg-teal-50 border border-teal-200 text-teal-800 text-[11px] px-2.5 py-1 rounded-lg font-medium flex items-center gap-1">
+                          📄 {d.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end gap-3 pt-3 border-t">
+                  <button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 border rounded-xl font-medium">Cancel</button>
+                  <button type="submit" disabled={submittingCase} className="px-5 py-2 bg-amber-600 text-white rounded-xl font-bold hover:bg-amber-700">
+                    {submittingCase ? 'Creating Case...' : 'Create Case & Register'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>
