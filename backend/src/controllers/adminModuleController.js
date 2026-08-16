@@ -15,6 +15,8 @@ const { AppError } = require('../middlewares/errorHandler');
 exports.getCases = async (req, res, next) => {
   try {
     const { page = 1, limit = 15, status, serviceType, search } = req.query;
+    require('../models/User');
+    require('../models/Advocate');
     const Booking = require('../models/Booking');
 
     const bookingFilter = {};
@@ -30,7 +32,7 @@ exports.getCases = async (req, res, next) => {
     const skip = (Number(page) - 1) * Number(limit);
 
     const bookings = await Booking.find(bookingFilter)
-      .populate('user', 'name email phone avatar')
+      .populate('client', 'name email phone avatar')
       .populate({
         path: 'advocate',
         populate: { path: 'user', select: 'name email phone avatar' }
@@ -42,39 +44,43 @@ exports.getCases = async (req, res, next) => {
 
     const total = await Booking.countDocuments(bookingFilter);
 
-    const formattedCases = bookings.map(b => ({
-      _id: b._id,
-      caseNumber: b.bookingId || `LGT-${b._id.toString().slice(-6).toUpperCase()}`,
-      title: b.issueDescription?.split('\n')[0]?.substring(0, 60) || b.issueCategory || `${(b.serviceType || 'Legal').replace(/_/g, ' ')} Case`,
-      client: {
-        _id: b.user?._id,
-        name: b.user?.name || b.recipientDetails?.name || 'Client',
-        email: b.user?.email || b.recipientDetails?.email || 'N/A',
-        phone: b.user?.phone || b.recipientDetails?.phone || 'N/A',
-      },
-      advocate: b.advocate ? {
-        _id: b.advocate._id,
-        user: {
-          name: b.advocate.user?.name || 'Assigned Advocate',
-          email: b.advocate.user?.email,
-          avatar: b.advocate.user?.avatar,
+    const formattedCases = bookings.map(b => {
+      const clientObj = b.client || {};
+      const advObj = b.advocate || null;
+      return {
+        _id: b._id,
+        caseNumber: b.bookingId || `LGT-${b._id.toString().slice(-6).toUpperCase()}`,
+        title: (b.issue || b.issueDescription || b.notes || `${b.type || b.serviceType || 'Legal'} Case`).split('\n')[0]?.substring(0, 65),
+        client: {
+          _id: clientObj._id,
+          name: clientObj.name || b.recipientDetails?.name || 'Client',
+          email: clientObj.email || b.recipientDetails?.email || 'N/A',
+          phone: clientObj.phone || b.recipientDetails?.phone || 'N/A',
         },
-        specializations: b.advocate.specializations || [],
-      } : null,
-      serviceType: b.serviceType || 'legal_notice',
-      status: b.status === 'confirmed' || b.status === 'pending_assignment' ? 'open' : b.status === 'in_progress' ? 'in_progress' : b.status === 'completed' ? 'resolved' : b.status === 'cancelled' ? 'closed' : 'pending',
-      priority: b.priority || 'medium',
-      payment: {
-        amount: b.amount || b.payment?.amount || 1499,
-        status: b.payment?.status || (b.paymentStatus === 'completed' ? 'paid' : 'pending'),
-      },
-      description: b.issueDescription || b.notes,
-      notes: b.adminNotes,
-      documents: b.documents || [],
-      advocateDocuments: b.advocateDocuments || [],
-      createdAt: b.createdAt,
-      updatedAt: b.updatedAt,
-    }));
+        advocate: advObj ? {
+          _id: advObj._id,
+          user: {
+            name: advObj.user?.name || 'Assigned Advocate',
+            email: advObj.user?.email,
+            avatar: advObj.user?.avatar,
+          },
+          specializations: advObj.specializations || [],
+        } : null,
+        serviceType: b.serviceType || b.type || 'legal_notice',
+        status: b.status === 'confirmed' || b.status === 'pending_assignment' ? 'open' : b.status === 'in_progress' ? 'in_progress' : b.status === 'completed' ? 'resolved' : b.status === 'cancelled' ? 'closed' : 'pending',
+        priority: b.priority || 'medium',
+        payment: {
+          amount: b.payment?.amount || b.amount || 1499,
+          status: b.payment?.status || (b.paymentStatus === 'completed' ? 'paid' : 'pending'),
+        },
+        description: b.issue || b.issueDescription || b.notes || '',
+        notes: b.adminNotes || '',
+        documents: b.documents || [],
+        advocateDocuments: b.advocateDocuments || [],
+        createdAt: b.createdAt,
+        updatedAt: b.updatedAt,
+      };
+    });
 
     res.json({
       success: true,
@@ -82,7 +88,7 @@ exports.getCases = async (req, res, next) => {
       pagination: {
         total,
         page: Number(page),
-        pages: Math.ceil(total / Number(limit)),
+        pages: Math.ceil(total / Number(limit)) || 1,
         hasMore: (Number(page) * Number(limit)) < total,
       }
     });
