@@ -39,8 +39,10 @@ router.post('/verify-reset-otp', ctrl.verifyResetOTP);
 router.post('/reset-password', ctrl.resetPassword);
 
 
-// Phone OTP (Indian market — MSG91)
-router.post('/send-otp', otpCtrl.sendOTP);
-router.post('/verify-otp', otpCtrl.verifyOTP);
+// Phone OTP (Indian market — MSG91 + Email OTP)
+// send-otp: legacy email OTP handler
+router.post('/send-otp', ctrl.sendOTP);
+// verify-otp: unified handler supporting phone + email OTP (with test OTP bypass)
+router.post('/verify-otp', ctrl.verifyOTP);
 
 module.exports = router;

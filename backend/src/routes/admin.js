@@ -26,6 +26,7 @@ router.get('/earnings',             adminController.getPlatformEarnings);
 
 // ─── Users Management ──────────────────────────────────────────────────
 router.get('/users',                       adminController.getUsersList);
+router.get('/clients',                     adminController.getUsersList);  // alias for /users (client-facing naming)
 router.get('/users/:id',                   adminController.getUserDetail);
 router.post('/users',                      adminController.createUser);
 router.patch('/users/:id',                 adminController.updateUser);
