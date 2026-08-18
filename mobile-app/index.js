@@ -1,75 +1,92 @@
-// CRITICAL: Error handlers must be set before any imports execute
-// so that module-level crashes are visible on screen instead of a blank white page.
-if (typeof window !== 'undefined') {
-  function showError(title, color, message, stack) {
-    try {
-      document.body.style.margin = '0';
-      document.body.style.background = '#050505';
-      document.body.innerHTML =
-        '<div style="color:' + color + ';font-family:monospace;font-size:14px;padding:24px;background:#050505;min-height:100vh;box-sizing:border-box;">' +
-        '<h2 style="color:' + color + ';margin:0 0 12px;">⚠️ ' + title + '</h2>' +
-        '<p style="font-weight:bold;font-size:16px;color:#fff;margin:0 0 16px;">' + message + '</p>' +
-        '<pre style="white-space:pre-wrap;background:#111;padding:16px;border-radius:8px;border:1px solid #333;color:#ccc;font-size:11px;overflow:auto;">' +
-        (stack || 'No stack trace available') +
-        '</pre></div>';
-    } catch(e) { /* fallback: browser already broken */ }
+// ─── TARGETED POLYFILLS FOR REACT NATIVE ──────────────────────────────────────
+// IMPORTANT: We must NOT create a fake `document.createElement` because
+// react-native-web's `canUseDOM` checks for it and if true, runs browser-only
+// code that crashes on Android (e.g. `root instanceof ShadowRoot`).
+//
+// Instead, we only polyfill the specific globals that crash at module-load time.
+
+if (typeof global !== 'undefined') {
+  // ── window event listeners ─────────────────────────────────────────────────
+  // Some packages call window.addEventListener at import time.
+  // React Native has `global` but not full `window` API.
+  if (typeof global.addEventListener !== 'function') {
+    global.addEventListener = function() {};
+  }
+  if (typeof global.removeEventListener !== 'function') {
+    global.removeEventListener = function() {};
   }
 
-  window.onerror = function(message, source, lineno, colno, error) {
-    showError(
-      'WEB RUNTIME ERROR',
-      '#ff4d4d',
-      String(message),
-      error ? error.stack : 'Source: ' + source + ' Line: ' + lineno + ':' + colno
-    );
-    return false;
-  };
-
-  window.onunhandledrejection = function(event) {
-    const reason = event.reason;
-    showError(
-      'UNHANDLED PROMISE REJECTION',
-      '#ffa500',
-      reason ? String(reason.message || reason) : 'Unknown rejection',
-      reason && reason.stack ? reason.stack : String(reason)
-    );
-  };
-}
-
-import { registerRootComponent } from 'expo';
-import { NativeModules, Platform } from 'react-native';
-
-// ─── NativeModules safety stubs ───────────────────────────────────────────────
-// Zego SDK reads NativeModules at import-time on ALL platforms.
-// We must stub them before any import of Zego runs (this is handled in metro config
-// for web, but we keep stubs here as an extra safety net for Expo Go).
-if (NativeModules) {
-  if (!NativeModules.ZegoExpressNativeModule) {
-    NativeModules.ZegoExpressNativeModule = { prefix: 'zego' };
+  // ── ShadowRoot ─────────────────────────────────────────────────────────────
+  // Hermes throws ReferenceError (not just undefined) for `ShadowRoot`.
+  // Even with canUseDOM=false, some deep import chains touch it at parse time.
+  if (typeof global.ShadowRoot === 'undefined') {
+    global.ShadowRoot = function ShadowRoot() {};
   }
-  if (!NativeModules.ZIMNativeModule) {
-    NativeModules.ZIMNativeModule = { prefix: 'zim' };
+  if (typeof global.CSS === 'undefined') {
+    global.CSS = { supports: function() { return false; }, escape: function(v) { return v; } };
   }
-  if (!NativeModules.RNGoogleSignin && Platform.OS !== 'web') {
-    NativeModules.RNGoogleSignin = {
-      BUTTON_SIZE_ICON: 0,
-      BUTTON_SIZE_STANDARD: 0,
-      BUTTON_SIZE_WIDE: 0,
-      BUTTON_COLOR_AUTO: 0,
-      BUTTON_COLOR_LIGHT: 0,
-      BUTTON_COLOR_DARK: 0,
-      SIGN_IN_CANCELLED: '0',
-      IN_PROGRESS: '1',
-      PLAY_SERVICES_NOT_AVAILABLE: '2',
-      SIGN_IN_REQUIRED: '3',
-      signIn: async () => ({}),
-      configure: () => {},
-      currentUserAsync: async () => null,
-      signOut: async () => {},
+
+  // ── window.location ────────────────────────────────────────────────────────
+  // Analytics / routing packages read window.location.href at load time.
+  // Only set if truly missing (React Native usually has it as undefined).
+  if (typeof global.location === 'undefined' || global.location === null) {
+    global.location = {
+      href: 'https://app.legalitt.in/',
+      host: 'app.legalitt.in',
+      hostname: 'app.legalitt.in',
+      protocol: 'https:',
+      pathname: '/',
+      search: '',
+      hash: '',
+      port: '',
+      origin: 'https://app.legalitt.in',
+      assign: function() {},
+      replace: function() {},
+      reload: function() {},
+      toString: function() { return 'https://app.legalitt.in/'; },
+    };
+  }
+
+  // ── Element / Node constructors ────────────────────────────────────────────
+  // Some libs do `instanceof Element` checks.
+  if (typeof global.Element === 'undefined') {
+    global.Element = function Element() {};
+  }
+  if (typeof global.HTMLElement === 'undefined') {
+    global.HTMLElement = function HTMLElement() {};
+  }
+  if (typeof global.Node === 'undefined') {
+    global.Node = function Node() {};
+    global.Node.ELEMENT_NODE = 1;
+    global.Node.TEXT_NODE = 3;
+    global.Node.DOCUMENT_NODE = 9;
+  }
+
+  // ── localStorage (used by some analytics / caching libs) ───────────────────
+  if (typeof global.localStorage === 'undefined') {
+    var _ls = {};
+    global.localStorage = {
+      getItem: function(k) { return _ls[k] !== undefined ? String(_ls[k]) : null; },
+      setItem: function(k, v) { _ls[k] = String(v); },
+      removeItem: function(k) { delete _ls[k]; },
+      clear: function() { Object.keys(_ls).forEach(function(k) { delete _ls[k]; }); },
     };
   }
 }
 
-import App from './App';
-registerRootComponent(App);
+// ─── NativeModules stubs (must run before Zego imports) ──────────────────────
+var RN = require('react-native');
+if (RN.NativeModules) {
+  if (!RN.NativeModules.ZegoExpressNativeModule) {
+    RN.NativeModules.ZegoExpressNativeModule = { prefix: 'zego' };
+  }
+  if (!RN.NativeModules.ZIMNativeModule) {
+    RN.NativeModules.ZIMNativeModule = { prefix: 'zim' };
+  }
+}
 
+// ─── Register App ────────────────────────────────────────────────────────────
+var registerRootComponent = require('expo').registerRootComponent;
+var AppModule = require('./App');
+var App = AppModule.default || AppModule;
+registerRootComponent(App);

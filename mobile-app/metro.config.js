@@ -11,7 +11,6 @@ const KEEP_AWAKE = path.resolve(__dirname, 'src/utils/keepAwakePolyfill.js');
 
 // ─── Platform-aware module resolver ──────────────────────────────────────────
 // For web builds, redirect native-only packages to safe stubs.
-// This catches BOTH direct and transitive imports (extraNodeModules only catches direct ones).
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   if (platform === 'web') {
     // Zego video call SDK — native-only
@@ -44,12 +43,5 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
   // Default resolver for everything else
   return context.resolveRequest(context, moduleName, platform);
 };
-
-// ─── Platform-specific file extensions ───────────────────────────────────────
-// Ensure .web.tsx / .web.jsx are picked before .tsx / .jsx on web
-config.resolver.sourceExts = [
-  'web.tsx', 'web.ts', 'web.jsx', 'web.js',
-  ...config.resolver.sourceExts,
-];
 
 module.exports = config;

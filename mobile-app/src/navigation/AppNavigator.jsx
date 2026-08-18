@@ -12,7 +12,6 @@ if (Platform.OS !== 'web' && NativeModules) {
 }
 
 import AuthLoadingScreen from './AuthLoadingScreen';
-import SearchFilterScreen from '../screens/client/SearchFilterScreen';
 import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import OfflineBanner from '../components/common/OfflineBanner';
@@ -37,8 +36,7 @@ import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 
 // CLIENT SCREENS
 import HomeScreen from '../screens/client/HomeScreen';
-import SearchScreen from '../screens/client/SearchScreen';
-import MapScreen from '../screens/client/MapScreen';
+
 import AIAssistantScreen from '../screens/client/AIAssistantScreen';
 import AdvocateProfileScreen from '../screens/client/AdvocateProfileScreen';
 import FilterScreen from '../screens/client/FilterScreen';
@@ -53,7 +51,7 @@ import FIRPreviewScreen from '../screens/client/FIRPreviewScreen';
 import AILegalNoticeScreen from '../screens/client/AILegalNoticeScreen';
 import MyDraftsScreen from '../screens/client/MyDraftsScreen';
 import ProfileEditScreen from '../screens/client/ProfileEditScreen';
-import SavedAdvocatesScreen from '../screens/client/SavedAdvocatesScreen';
+
 import SettingsScreen from '../screens/client/SettingsScreen';
 import PropertyResearchLandingScreen from '../screens/client/PropertyResearchLandingScreen';
 import PropertyResearchFormScreen from '../screens/client/PropertyResearchFormScreen';
@@ -99,7 +97,7 @@ const TOKEN_KEY = 'authToken';
 const REFRESH_KEY = 'refreshToken';
 const BASE_URL = Constants.expoConfig?.extra?.API_URL;
 
-// CLIENT BOTTOM TABS - 4 TABS WITH OPTIMIZED MAP
+// CLIENT BOTTOM TABS - 3 TABS (Map/Nearby removed)
 const ClientTabs = () => {
   return (
     <Tab.Navigator
@@ -110,8 +108,6 @@ const ClientTabs = () => {
 
           if (route.name === 'Home') {
             iconName = focused ? 'home' : 'home-outline';
-          } else if (route.name === 'Map') {
-            iconName = focused ? 'map' : 'map-outline';
           } else if (route.name === 'AI') {
             iconName = focused ? 'sparkles' : 'sparkles-outline';
           } else if (route.name === 'Profile') {
@@ -144,11 +140,6 @@ const ClientTabs = () => {
         name="Home" 
         component={HomeScreen}
         options={{ title: 'Home' }}
-      />
-      <Tab.Screen 
-        name="Map" 
-        component={MapScreen}
-        options={{ title: 'Map' }}
       />
       <Tab.Screen 
         name="AI" 
@@ -274,7 +265,6 @@ const AppNavigator = () => {
               <Stack.Screen name="OTP" component={OTPScreen} />
               <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
               <Stack.Screen name="AdvocateFlow" component={AdvocateStack} />
-              <Stack.Screen name="SearchFilter" component={SearchFilterScreen} />
               {/* Policy screens reachable from the login/register checkbox links */}
               <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
               <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
@@ -303,10 +293,8 @@ const AppNavigator = () => {
             // ─── CLIENT EXPERIENCE FLOW (AUTHENTICATED) ───────────────────
             <>
               <Stack.Screen name="ClientMain" component={ClientTabs} />
-              <Stack.Screen name="Search" component={SearchScreen} />
               <Stack.Screen name="AdvocateProfile" component={AdvocateProfileScreen} />
               <Stack.Screen name="Filter" component={FilterScreen} />
-              <Stack.Screen name="SearchFilter" component={SearchFilterScreen} />
               <Stack.Screen name="Booking" component={BookingScreen} />
               <Stack.Screen name="Payment" component={PaymentScreen} />
               <Stack.Screen name="PaymentSuccess" component={PaymentSuccessScreen} />
@@ -343,11 +331,6 @@ const AppNavigator = () => {
 
               <Stack.Screen name="Settings" component={SettingsScreen} />
               <Stack.Screen name="Notifications" component={NotificationsScreen} />
-              <Stack.Screen 
-                name="SavedAdvocates" 
-                component={SavedAdvocatesScreen}
-                options={{ animation: 'slide_from_right' }}
-              />
               <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
               <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
               <Stack.Screen name="DataDeletion" component={DataDeletionScreen} />

@@ -1,7 +1,10 @@
 import { useEffect, useRef } from 'react';
-import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { authAPI } from '../services/api';
+
+// Safe lazy-load: crashes if ExpoPushTokenManager native module is missing
+let Notifications = null;
+try { Notifications = require('expo-notifications'); } catch (e) {}
 
 /**
  * Registers the device for push notifications and updates the FCM token on the server.
@@ -12,7 +15,7 @@ export const useNotifications = (isAuthenticated) => {
   const responseListener = useRef();
 
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || !Notifications) return;
 
     const register = async () => {
       try {
@@ -62,8 +65,10 @@ export const useNotifications = (isAuthenticated) => {
     });
 
     return () => {
-      Notifications.removeNotificationSubscription(notificationListener.current);
-      Notifications.removeNotificationSubscription(responseListener.current);
+      if (Notifications) {
+        Notifications.removeNotificationSubscription(notificationListener.current);
+        Notifications.removeNotificationSubscription(responseListener.current);
+      }
     };
   }, [isAuthenticated]);
 };

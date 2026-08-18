@@ -60,11 +60,8 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const webClientId = Constants.expoConfig?.extra?.GOOGLE_WEB_CLIENT_ID
       || '400989529051-9r050me1vuquck9bqk30b6pd1i97k817.apps.googleusercontent.com';
-    const androidClientId = Constants.expoConfig?.extra?.GOOGLE_ANDROID_CLIENT_ID
-      || '400989529051-5jmb7omhkks18b28oqf20b6nk19ggn3u.apps.googleusercontent.com';
     GoogleSignin.configure({
       webClientId,
-      androidClientId,
       offlineAccess: false,
       forceCodeForRefreshToken: false,
     });

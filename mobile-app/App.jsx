@@ -1,5 +1,5 @@
 import React, { useEffect, Component } from 'react';
-import { Platform } from 'react-native';
+import { Platform, View, Text, ScrollView } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
@@ -8,35 +8,11 @@ import { AuthProvider } from './src/context/AuthContext';
 import { NetworkProvider } from './src/context/NetworkContext';
 import AppNavigator from './src/navigation/AppNavigator';
 
-// Lazy-load expo-notifications — static import crashes if native module
-// (ExpoPushTokenManager) is not registered (e.g. Firebase not linked yet).
-let Notifications = null;
-try {
-  Notifications = require('expo-notifications');
-} catch (e) {
-  console.warn('[App] expo-notifications native module not available:', e?.message);
-}
-
 // Keep splash screen visible while we load (native only)
 if (Platform.OS !== 'web') {
   try {
     SplashScreen.preventAutoHideAsync();
   } catch (e) { }
-
-  // Configure notification handler only if module loaded successfully
-  if (Notifications) {
-    try {
-      Notifications.setNotificationHandler({
-        handleNotification: async () => ({
-          shouldShowAlert: true,
-          shouldPlaySound: true,
-          shouldSetBadge: true,
-        }),
-      });
-    } catch (e) {
-      console.warn('[App] setNotificationHandler failed:', e?.message);
-    }
-  }
 }
 
 class ErrorBoundary extends Component {
@@ -50,11 +26,19 @@ class ErrorBoundary extends Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ padding: 20, paddingTop: 50, color: 'red' }}>
-          <h2>Something went wrong.</h2>
-          <pre style={{ whiteSpace: 'pre-wrap' }}>{this.state.error?.toString()}</pre>
-          <pre style={{ whiteSpace: 'pre-wrap', fontSize: 10 }}>{this.state.error?.stack}</pre>
-        </div>
+        <View style={{ flex: 1, padding: 20, paddingTop: 60, backgroundColor: '#1a0000' }}>
+          <Text style={{ color: '#ff4d4d', fontSize: 20, fontWeight: 'bold', marginBottom: 12 }}>
+            ⚠️ Something went wrong
+          </Text>
+          <ScrollView>
+            <Text style={{ color: '#ffffff', fontSize: 14, marginBottom: 16 }}>
+              {this.state.error?.toString()}
+            </Text>
+            <Text style={{ color: '#999999', fontSize: 10 }}>
+              {this.state.error?.stack}
+            </Text>
+          </ScrollView>
+        </View>
       );
     }
     return this.props.children;
