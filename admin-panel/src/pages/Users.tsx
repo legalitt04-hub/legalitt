@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Users, Plus, Search, Edit2, Trash2, X, RefreshCw,
   Eye, Download, ChevronLeft, ChevronRight,
   ShieldOff, Shield, Key, Mail, Phone, Calendar, Lock,
-  MessageSquare, Send, StickyNote
+  MessageSquare, Send, StickyNote, Camera, MapPin, User
 } from 'lucide-react';
 import api from '../lib/api';
 
@@ -17,13 +17,16 @@ interface User {
   isActive: boolean;
   isVerified: boolean;
   avatar?: string;
-  address?: { city?: string; state?: string };
+  address?: { city?: string; state?: string; street?: string };
   createdAt: string;
   lastSeen?: string;
 }
 
 const EMPTY_FORM = { name: '', email: '', phone: '', password: '', role: 'client' };
-const EDIT_FORM = (u: User) => ({ name: u.name, email: u.email, phone: u.phone || '', role: u.role || 'client' });
+const EDIT_FORM = (u: User) => ({
+  name: u.name, email: u.email, phone: u.phone || '', role: u.role || 'client',
+  city: u.address?.city || '', state: u.address?.state || '', street: u.address?.street || '',
+});
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -49,6 +52,10 @@ export default function UsersPage() {
   const [notesLoading, setNotesLoading] = useState(false);
   const [newNote, setNewNote] = useState('');
   const [addingNote, setAddingNote] = useState(false);
+  // Avatar upload
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const LIMIT = 15;
 
   const fetchUsers = useCallback(async () => {
@@ -80,9 +87,22 @@ export default function UsersPage() {
   const handleUpdate = async () => {
     setSaving(true);
     try {
-      await api.patch(`/admin/users/${editUser!._id}`, form);
-      setEditUser(null); fetchUsers();
-    } catch (e: any) { console.error('Update failed:', e); }
+      const fd = new FormData();
+      if (form.name)  fd.append('name',  form.name);
+      if (form.email) fd.append('email', form.email);
+      if (form.phone) fd.append('phone', form.phone);
+      if (form.city)  fd.append('city',  form.city);
+      if (form.state) fd.append('state', form.state);
+      if (form.street) fd.append('street', form.street);
+      if (avatarFile) fd.append('avatar', avatarFile);
+      await api.patch(`/admin/users/${editUser!._id}`, fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setEditUser(null);
+      setAvatarFile(null);
+      setAvatarPreview(null);
+      fetchUsers();
+    } catch (e: any) { console.error('Update failed:', e); alert(e?.response?.data?.message || 'Update failed.'); }
     finally { setSaving(false); }
   };
 
@@ -311,12 +331,47 @@ export default function UsersPage() {
       {(showCreate || editUser) && (
         <AnimatePresence>
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+            <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} className="bg-white rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between p-5 border-b border-gray-100">
-                <h2 className="text-lg font-bold">{editUser ? 'Edit User' : 'Create New User'}</h2>
-                <button onClick={() => { setShowCreate(false); setEditUser(null); }}><X className="w-5 h-5 text-gray-400" /></button>
+                <h2 className="text-lg font-bold">{editUser ? 'Edit User Profile' : 'Create New User'}</h2>
+                <button onClick={() => { setShowCreate(false); setEditUser(null); setAvatarFile(null); setAvatarPreview(null); }}><X className="w-5 h-5 text-gray-400" /></button>
               </div>
               <div className="p-5 space-y-4">
+                {/* Avatar upload (edit mode only) */}
+                {editUser && (
+                  <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
+                    <div className="relative flex-shrink-0">
+                      {avatarPreview || editUser.avatar ? (
+                        <img src={avatarPreview || editUser.avatar} alt="Avatar" className="w-16 h-16 rounded-full object-cover border-2 border-teal-300 shadow" />
+                      ) : (
+                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-400 to-teal-400 flex items-center justify-center text-white text-2xl font-bold shadow">
+                          {editUser.name?.[0]?.toUpperCase()}
+                        </div>
+                      )}
+                      <button
+                        onClick={() => avatarInputRef.current?.click()}
+                        className="absolute -bottom-1 -right-1 w-6 h-6 bg-teal-600 rounded-full flex items-center justify-center shadow-md hover:bg-teal-700"
+                      >
+                        <Camera className="w-3 h-3 text-white" />
+                      </button>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-gray-800">{editUser.name}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{editUser.email}</p>
+                      <button onClick={() => avatarInputRef.current?.click()} className="mt-2 text-xs text-teal-600 font-semibold hover:underline">
+                        {avatarFile ? `✅ ${avatarFile.name}` : '📷 Change Photo'}
+                      </button>
+                    </div>
+                    <input ref={avatarInputRef} type="file" accept="image/*" className="hidden"
+                      onChange={e => {
+                        const f = e.target.files?.[0];
+                        if (f) { setAvatarFile(f); setAvatarPreview(URL.createObjectURL(f)); }
+                      }}
+                    />
+                  </div>
+                )}
+
+                {/* Basic fields */}
                 {[
                   { label: 'Full Name *', key: 'name', placeholder: 'User Name' },
                   { label: 'Email *', key: 'email', placeholder: 'user@example.com' },
@@ -330,16 +385,44 @@ export default function UsersPage() {
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder={f.placeholder} />
                   </div>
                 ))}
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Role</label>
-                  <select value="client" disabled className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-500 cursor-not-allowed">
-                    <option value="client">Client User</option>
-                  </select>
-                </div>
+
+                {/* Address section (edit mode) */}
+                {editUser && (
+                  <div className="space-y-3">
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-teal-500" /> Address</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { label: 'City', key: 'city', placeholder: 'Bhopal' },
+                        { label: 'State', key: 'state', placeholder: 'Madhya Pradesh' },
+                      ].map(f => (
+                        <div key={f.key}>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">{f.label}</label>
+                          <input value={form[f.key] || ''} onChange={e => setForm((p: any) => ({ ...p, [f.key]: e.target.value }))}
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder={f.placeholder} />
+                        </div>
+                      ))}
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Street / Area</label>
+                      <input value={form.street || ''} onChange={e => setForm((p: any) => ({ ...p, street: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder="Vijay Nagar, MP Nagar..." />
+                    </div>
+                  </div>
+                )}
+
+                {!editUser && (
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Role</label>
+                    <select value="client" disabled className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-500 cursor-not-allowed">
+                      <option value="client">Client User</option>
+                    </select>
+                  </div>
+                )}
+
                 <div className="flex gap-3 pt-1">
-                  <button onClick={() => { setShowCreate(false); setEditUser(null); }} className="flex-1 py-2.5 border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-50">Cancel</button>
+                  <button onClick={() => { setShowCreate(false); setEditUser(null); setAvatarFile(null); setAvatarPreview(null); }} className="flex-1 py-2.5 border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-50">Cancel</button>
                   <button onClick={editUser ? handleUpdate : handleCreate} disabled={saving} className="flex-1 py-2.5 bg-teal-600 text-white text-sm font-semibold rounded-xl hover:bg-teal-700 disabled:opacity-50">
-                    {saving ? 'Saving...' : editUser ? 'Update' : 'Create User'}
+                    {saving ? 'Saving...' : editUser ? 'Update Profile' : 'Create User'}
                   </button>
                 </div>
               </div>

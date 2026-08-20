@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   UserCheck, Plus, Search, Edit2, Trash2, X, RefreshCw,
   CheckCircle2, XCircle, PauseCircle, Eye, Download,
   Star, Briefcase, Phone, Mail, MapPin, ChevronLeft, ChevronRight,
-  Filter, EyeOff, ToggleLeft, ToggleRight
+  Filter, EyeOff, ToggleLeft, ToggleRight, Camera
 } from 'lucide-react';
 import api from '../lib/api';
 
@@ -54,6 +54,13 @@ export default function Advocates() {
   const [selectedAdv, setSelectedAdv] = useState<Advocate | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  // Edit advocate state
+  const [editAdv, setEditAdv] = useState<Advocate | null>(null);
+  const [editForm, setEditForm] = useState<any>({});
+  const [editSaving, setEditSaving] = useState(false);
+  const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null);
+  const [editAvatarPreview, setEditAvatarPreview] = useState<string | null>(null);
+  const editAvatarRef = useRef<HTMLInputElement>(null);
   const LIMIT = 15;
 
   const fetchAdvocates = useCallback(async () => {
@@ -143,6 +150,51 @@ export default function Advocates() {
       setDeleteId(null);
       fetchAdvocates();
     } catch (e: any) { console.error('Delete failed:', e); }
+  };
+
+  const openEditAdv = (adv: Advocate) => {
+    setEditAdv(adv);
+    setEditAvatarFile(null);
+    setEditAvatarPreview(null);
+    setEditForm({
+      name: adv.user?.name || '',
+      email: adv.user?.email || '',
+      phone: adv.user?.phone || '',
+      barCouncilId: adv.barCouncilId || adv.barCouncilNumber || '',
+      specializations: (adv.specializations || []).join(', '),
+      city: adv.location?.address?.city || '',
+      state: adv.location?.address?.state || '',
+      street: adv.location?.address?.street || '',
+      consultationFee: adv.consultationFee || '',
+      experience: adv.experience || '',
+    });
+  };
+
+  const handleEditAdvocate = async () => {
+    if (!editAdv) return;
+    setEditSaving(true);
+    try {
+      const fd = new FormData();
+      if (editForm.name) fd.append('name', editForm.name);
+      if (editForm.email) fd.append('email', editForm.email);
+      if (editForm.phone) fd.append('phone', editForm.phone);
+      if (editForm.barCouncilId) fd.append('barCouncilId', editForm.barCouncilId);
+      if (editForm.specializations) fd.append('specializations', editForm.specializations);
+      if (editForm.city) fd.append('city', editForm.city);
+      if (editForm.state) fd.append('state', editForm.state);
+      if (editForm.street) fd.append('street', editForm.street);
+      if (editForm.consultationFee !== '') fd.append('consultationFee', String(editForm.consultationFee));
+      if (editForm.experience !== '') fd.append('experience', String(editForm.experience));
+      if (editAvatarFile) fd.append('avatar', editAvatarFile);
+      await api.patch(`/admin/advocates/${editAdv._id}`, fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setEditAdv(null);
+      setEditAvatarFile(null);
+      setEditAvatarPreview(null);
+      fetchAdvocates();
+    } catch (e: any) { alert(e?.response?.data?.message || 'Update failed.'); }
+    finally { setEditSaving(false); }
   };
 
   const exportCSV = () => {
@@ -273,8 +325,9 @@ export default function Advocates() {
                       <td className="px-4 py-3 text-xs text-gray-600">{adv.location?.address?.city || '—'}</td>
                       <td className="px-4 py-3 text-xs font-semibold text-gray-800">₹{adv.consultationFee || 0}</td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5">
                           <button onClick={() => setSelectedAdv(adv)} className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100" title="View"><Eye className="w-3.5 h-3.5" /></button>
+                          <button onClick={() => openEditAdv(adv)} className="p-1.5 rounded-lg bg-teal-50 text-teal-600 hover:bg-teal-100" title="Edit Profile"><Edit2 className="w-3.5 h-3.5" /></button>
                           {adv.verificationStatus === 'pending' || adv.verificationStatus === 'under_review' ? (
                             <>
                               <button onClick={() => handleVerify(adv._id, 'approve')} className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100" title="Approve"><CheckCircle2 className="w-3.5 h-3.5" /></button>
@@ -508,6 +561,123 @@ export default function Advocates() {
               <div className="flex gap-3">
                 <button onClick={() => setDeleteId(null)} className="flex-1 py-2.5 border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl">Cancel</button>
                 <button onClick={() => handleDelete(deleteId!)} className="flex-1 py-2.5 bg-red-500 text-white text-sm font-semibold rounded-xl hover:bg-red-600">Delete</button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Advocate Modal */}
+      <AnimatePresence>
+        {editAdv && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} className="bg-white rounded-3xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between p-5 border-b border-gray-100">
+                <h2 className="text-lg font-bold text-gray-900">Edit Advocate Profile</h2>
+                <button onClick={() => { setEditAdv(null); setEditAvatarFile(null); setEditAvatarPreview(null); }}>
+                  <X className="w-5 h-5 text-gray-400" />
+                </button>
+              </div>
+              <div className="p-5 space-y-4">
+                {/* Avatar */}
+                <div className="flex items-center gap-4 p-4 bg-gradient-to-br from-teal-50 to-indigo-50 rounded-2xl border border-teal-100">
+                  <div className="relative flex-shrink-0">
+                    {editAvatarPreview || editAdv.user?.avatar ? (
+                      <img src={editAvatarPreview || editAdv.user?.avatar} alt="Avatar" className="w-[72px] h-[72px] rounded-full object-cover border-2 border-teal-400 shadow-lg" />
+                    ) : (
+                      <div className="w-[72px] h-[72px] rounded-full bg-gradient-to-br from-teal-400 to-indigo-500 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
+                        {editAdv.user?.name?.[0]?.toUpperCase() || 'A'}
+                      </div>
+                    )}
+                    <button onClick={() => editAvatarRef.current?.click()} className="absolute -bottom-1 -right-1 w-7 h-7 bg-teal-600 rounded-full flex items-center justify-center shadow-md hover:bg-teal-700 border-2 border-white">
+                      <Camera className="w-3.5 h-3.5 text-white" />
+                    </button>
+                  </div>
+                  <div>
+                    <p className="font-bold text-gray-900">{editAdv.user?.name || 'Advocate'}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{editAdv.user?.email}</p>
+                    <button onClick={() => editAvatarRef.current?.click()} className="mt-2 text-xs font-semibold text-teal-600 hover:underline flex items-center gap-1">
+                      <Camera className="w-3 h-3" />{editAvatarFile ? `${editAvatarFile.name}` : 'Change Photo'}
+                    </button>
+                  </div>
+                  <input ref={editAvatarRef} type="file" accept="image/*" className="hidden"
+                    onChange={e => { const f = e.target.files?.[0]; if (f) { setEditAvatarFile(f); setEditAvatarPreview(URL.createObjectURL(f)); } }}
+                  />
+                </div>
+
+                {/* Personal */}
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5"><UserCheck className="w-3.5 h-3.5 text-teal-500" /> Personal Information</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { label: 'Full Name', key: 'name', placeholder: 'Adv. Name' },
+                    { label: 'Phone', key: 'phone', placeholder: '9876543210' },
+                  ].map(f => (
+                    <div key={f.key}>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">{f.label}</label>
+                      <input value={editForm[f.key] || ''} onChange={e => setEditForm((p: any) => ({ ...p, [f.key]: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder={f.placeholder} />
+                    </div>
+                  ))}
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Email</label>
+                  <input value={editForm.email || ''} onChange={e => setEditForm((p: any) => ({ ...p, email: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder="adv@example.com" />
+                </div>
+
+                {/* Professional */}
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5"><Briefcase className="w-3.5 h-3.5 text-indigo-500" /> Professional Details</p>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Bar Council ID</label>
+                  <input value={editForm.barCouncilId || ''} onChange={e => setEditForm((p: any) => ({ ...p, barCouncilId: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder="BAR/MP/2024/1234" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Specializations (comma separated)</label>
+                  <input value={editForm.specializations || ''} onChange={e => setEditForm((p: any) => ({ ...p, specializations: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder="Civil, Criminal, Family Law..." />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Consultation Fee (Rs.)</label>
+                    <input type="number" value={editForm.consultationFee || ''} onChange={e => setEditForm((p: any) => ({ ...p, consultationFee: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder="999" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Experience (years)</label>
+                    <input type="number" value={editForm.experience || ''} onChange={e => setEditForm((p: any) => ({ ...p, experience: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder="5" />
+                  </div>
+                </div>
+
+                {/* Address */}
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-red-400" /> Location</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { label: 'City', key: 'city', placeholder: 'Bhopal' },
+                    { label: 'State', key: 'state', placeholder: 'Madhya Pradesh' },
+                  ].map(f => (
+                    <div key={f.key}>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">{f.label}</label>
+                      <input value={editForm[f.key] || ''} onChange={e => setEditForm((p: any) => ({ ...p, [f.key]: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder={f.placeholder} />
+                    </div>
+                  ))}
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Street / Area</label>
+                  <input value={editForm.street || ''} onChange={e => setEditForm((p: any) => ({ ...p, street: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder="Near High Court, Vijay Nagar..." />
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button onClick={() => { setEditAdv(null); setEditAvatarFile(null); setEditAvatarPreview(null); }}
+                    className="flex-1 py-2.5 border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-50">Cancel</button>
+                  <button onClick={handleEditAdvocate} disabled={editSaving}
+                    className="flex-1 py-2.5 bg-teal-600 text-white text-sm font-semibold rounded-xl hover:bg-teal-700 disabled:opacity-50">
+                    {editSaving ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </div>
               </div>
             </motion.div>
           </motion.div>

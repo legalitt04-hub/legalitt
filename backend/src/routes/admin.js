@@ -29,7 +29,7 @@ router.get('/users',                       adminController.getUsersList);
 router.get('/clients',                     adminController.getUsersList);  // alias for /users (client-facing naming)
 router.get('/users/:id',                   adminController.getUserDetail);
 router.post('/users',                      adminController.createUser);
-router.patch('/users/:id',                 adminController.updateUser);
+router.patch('/users/:id',                 upload.single('avatar'), adminController.updateUser);
 router.delete('/users/:id',               adminController.deleteUser);
 router.patch('/users/:id/toggle',          adminController.toggleUserBan);
 router.patch('/users/:id/role',            adminController.updateUserRole);
@@ -41,7 +41,7 @@ router.post('/advocates',                   adminController.createAdvocate);
 router.post('/advocates/bulk-upload',       upload.single('file'), adminController.bulkUploadAdvocates);
 router.get('/advocates/:id',                adminController.getAdvocateDetail);
 router.get('/advocates/:id/earnings',       adminController.getAdvocateEarnings);
-router.patch('/advocates/:id',              adminController.updateAdvocate);
+router.patch('/advocates/:id',              upload.single('avatar'), adminController.updateAdvocate);
 router.delete('/advocates/:id',            adminController.deleteAdvocate);
 router.patch('/advocates/:id/verify',       adminController.verifyAdvocate);
 router.patch('/advocates/:id/suspend',      adminController.suspendAdvocate);

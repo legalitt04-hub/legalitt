@@ -753,11 +753,52 @@ exports.createUser = async (req, res, next) => {
 
 exports.updateUser = async (req, res, next) => {
   try {
-    const { name, phone, email } = req.body;
-    const user = await User.findByIdAndUpdate(req.params.id, { name, phone, email }, { new: true }).select('-password -refreshTokens');
+    const cloudinary = require('cloudinary').v2;
+    const fs = require('fs');
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET,
+    });
+
+    const { name, phone, email, city, state, street } = req.body;
+    const updateData = {};
+    if (name)  updateData.name  = name;
+    if (phone) updateData.phone = phone;
+    if (email) updateData.email = email.toLowerCase().trim();
+    if (city || state || street) {
+      updateData.address = { city: city || '', state: state || '', street: street || '' };
+    }
+
+    // Handle avatar upload (file comes via multipart)
+    if (req.file) {
+      let result;
+      if (req.file.path) {
+        result = await cloudinary.uploader.upload(req.file.path, {
+          folder: 'legalitt/avatars', resource_type: 'image',
+          transformation: [{ width: 400, height: 400, crop: 'fill', gravity: 'face' }],
+        });
+        try { fs.unlinkSync(req.file.path); } catch (e) {}
+      } else if (req.file.buffer) {
+        result = await new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            { folder: 'legalitt/avatars', resource_type: 'image',
+              transformation: [{ width: 400, height: 400, crop: 'fill', gravity: 'face' }] },
+            (err, res) => err ? reject(err) : resolve(res)
+          );
+          stream.end(req.file.buffer);
+        });
+      }
+      if (result) updateData.avatar = result.secure_url;
+    }
+
+    const user = await User.findByIdAndUpdate(req.params.id, updateData, { new: true }).select('-password -refreshTokens');
     if (!user) return next(new (require('../middlewares/errorHandler').AppError)('User not found.', 404));
     res.json({ success: true, data: user });
-  } catch (err) { next(err); }
+  } catch (err) {
+    if (req.file?.path) { try { require('fs').unlinkSync(req.file.path); } catch (e) {} }
+    next(err);
+  }
 };
 
 exports.deleteUser = async (req, res, next) => {
@@ -799,11 +840,79 @@ exports.createAdvocate = async (req, res, next) => {
 
 exports.updateAdvocate = async (req, res, next) => {
   try {
-    const Advocate = require('../models/Advocate');
-    const advocate = await Advocate.findByIdAndUpdate(req.params.id, req.body, { new: true }).populate('user', 'name email phone avatar');
+    const cloudinary = require('cloudinary').v2;
+    const fs = require('fs');
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET,
+    });
+
+    const AdvocateModel = require('../models/Advocate');
+    const advocate = await AdvocateModel.findById(req.params.id).populate('user', 'name email phone avatar');
     if (!advocate) return next(new (require('../middlewares/errorHandler').AppError)('Advocate not found.', 404));
-    res.json({ success: true, data: advocate });
-  } catch (err) { next(err); }
+
+    // Fields that belong to User model
+    const { name, phone, email, city, state, street, avatar: avatarUrl,
+            barCouncilId, barCouncilNumber, specializations, consultationFee,
+            experience, bio } = req.body;
+
+    // Update User record
+    const userUpdate = {};
+    if (name)  userUpdate.name  = name;
+    if (phone) userUpdate.phone = phone;
+    if (email) userUpdate.email = email.toLowerCase().trim();
+
+    // Handle avatar photo upload
+    let newAvatarUrl = avatarUrl;
+    if (req.file) {
+      let result;
+      if (req.file.path) {
+        result = await cloudinary.uploader.upload(req.file.path, {
+          folder: 'legalitt/avatars', resource_type: 'image',
+          transformation: [{ width: 400, height: 400, crop: 'fill', gravity: 'face' }],
+        });
+        try { fs.unlinkSync(req.file.path); } catch (e) {}
+      } else if (req.file.buffer) {
+        result = await new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            { folder: 'legalitt/avatars', resource_type: 'image',
+              transformation: [{ width: 400, height: 400, crop: 'fill', gravity: 'face' }] },
+            (err, res) => err ? reject(err) : resolve(res)
+          );
+          stream.end(req.file.buffer);
+        });
+      }
+      if (result) newAvatarUrl = result.secure_url;
+    }
+    if (newAvatarUrl) userUpdate.avatar = newAvatarUrl;
+
+    if (Object.keys(userUpdate).length > 0) {
+      await User.findByIdAndUpdate(advocate.user._id, userUpdate);
+    }
+
+    // Update Advocate record
+    const advUpdate = {};
+    if (barCouncilId || barCouncilNumber) advUpdate.barCouncilId = barCouncilId || barCouncilNumber;
+    if (specializations) {
+      advUpdate.specializations = Array.isArray(specializations)
+        ? specializations
+        : specializations.split(',').map((s) => s.trim()).filter(Boolean);
+    }
+    if (consultationFee !== undefined) advUpdate.consultationFee = Number(consultationFee) || 0;
+    if (experience !== undefined) advUpdate.experience = Number(experience) || 0;
+    if (bio !== undefined) advUpdate.bio = bio;
+    if (city || state || street) {
+      advUpdate['location.address'] = { city: city || '', state: state || '', street: street || '' };
+    }
+
+    const updated = await AdvocateModel.findByIdAndUpdate(req.params.id, advUpdate, { new: true })
+      .populate('user', 'name email phone avatar');
+    res.json({ success: true, data: updated });
+  } catch (err) {
+    if (req.file?.path) { try { require('fs').unlinkSync(req.file.path); } catch (e) {} }
+    next(err);
+  }
 };
 
 exports.deleteAdvocate = async (req, res, next) => {
