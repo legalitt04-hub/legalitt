@@ -584,62 +584,55 @@ export default function Cases() {
                   </div>
                 )}
 
-                {/* 👤 Client Documents */}
-                <div className="pt-2">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
-                      <Paperclip size={13} className="text-teal-600" /> Documents Uploaded by Client / User ({selectedCase.documents?.length || 0})
+                {/* Documents Shared Between Advocate & Client */}
+                <div className="space-y-4">
+                  {/* Client / User Documents */}
+                  <div className="bg-teal-50/60 border border-teal-100 rounded-2xl p-4">
+                    <p className="text-xs font-bold text-teal-800 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                      <Paperclip size={13} className="text-teal-600" />
+                      Client Documents ({selectedCase.documents?.length || 0})
                     </p>
-                    <button
-                      onClick={() => { setUploadModalCase(selectedCase); setUploadSide('client'); setSelectedCase(null); }}
-                      className="text-[11px] font-bold text-teal-600 bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-200 hover:bg-teal-100"
-                    >
-                      + Add Client Doc
-                    </button>
+                    {selectedCase.documents && selectedCase.documents.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {selectedCase.documents.map((doc, i) => (
+                          <a key={i} href={fixCloudinaryPdfUrl(doc.url)} target="_blank" rel="noreferrer"
+                            className="flex items-center gap-1.5 px-3 py-2 bg-white text-teal-700 rounded-xl text-xs font-bold hover:bg-teal-50 border border-teal-200 shadow-sm transition-all">
+                            <FileText size={12} />
+                            <div>
+                              <p>{doc.name || `Client Doc ${i + 1}`}</p>
+                              {doc.uploadedAt && <p className="text-[10px] text-gray-400 font-normal">{new Date(doc.uploadedAt).toLocaleDateString()}</p>}
+                            </div>
+                          </a>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-400 italic">No client documents uploaded yet</p>
+                    )}
                   </div>
 
-                  {selectedCase.documents && selectedCase.documents.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {selectedCase.documents.map((doc, i) => (
-                        <a key={i} href={fixCloudinaryPdfUrl(doc.url)} target="_blank" rel="noreferrer"
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-50 text-teal-700 rounded-xl text-xs font-bold hover:bg-teal-100 border border-teal-200">
-                          <FileText size={12} />
-                          <span>{doc.name || `Client Doc ${i + 1}`}</span>
-                        </a>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-gray-400 italic">No client documents uploaded yet</p>
-                  )}
-                </div>
-
-                {/* ⚖️ Advocate Documents */}
-                <div className="pt-3 border-t border-gray-100">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
-                      <Shield size={13} className="text-indigo-600" /> Documents / Drafts Uploaded by Advocate ({selectedCase.advocateDocuments?.length || 0})
+                  {/* Advocate Documents */}
+                  <div className="bg-indigo-50/60 border border-indigo-100 rounded-2xl p-4">
+                    <p className="text-xs font-bold text-indigo-800 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                      <Shield size={13} className="text-indigo-600" />
+                      Advocate Documents / Drafts ({selectedCase.advocateDocuments?.length || 0})
                     </p>
-                    <button
-                      onClick={() => { setUploadModalCase(selectedCase); setUploadSide('advocate'); setSelectedCase(null); }}
-                      className="text-[11px] font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-200 hover:bg-indigo-100"
-                    >
-                      + Add Advocate Doc
-                    </button>
+                    {selectedCase.advocateDocuments && selectedCase.advocateDocuments.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {selectedCase.advocateDocuments.map((doc, i) => (
+                          <a key={i} href={fixCloudinaryPdfUrl(doc.url)} target="_blank" rel="noreferrer"
+                            className="flex items-center gap-1.5 px-3 py-2 bg-white text-indigo-700 rounded-xl text-xs font-bold hover:bg-indigo-50 border border-indigo-200 shadow-sm transition-all">
+                            <FileText size={12} />
+                            <div>
+                              <p>{doc.name || `Advocate Draft ${i + 1}`}</p>
+                              {doc.uploadedAt && <p className="text-[10px] text-gray-400 font-normal">{new Date(doc.uploadedAt).toLocaleDateString()}</p>}
+                            </div>
+                          </a>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-400 italic">No advocate documents uploaded yet</p>
+                    )}
                   </div>
-
-                  {selectedCase.advocateDocuments && selectedCase.advocateDocuments.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {selectedCase.advocateDocuments.map((doc, i) => (
-                        <a key={i} href={fixCloudinaryPdfUrl(doc.url)} target="_blank" rel="noreferrer"
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-bold hover:bg-indigo-100 border border-indigo-200">
-                          <FileText size={12} />
-                          <span>{doc.name || `Advocate Draft ${i + 1}`}</span>
-                        </a>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-gray-400 italic">No advocate documents uploaded yet</p>
-                  )}
                 </div>
               </div>
 

@@ -33,9 +33,15 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.
   suspended:    { label: 'Suspended',     color: 'text-gray-700 bg-gray-100 border-gray-200',         icon: <EyeOff className="w-3 h-3" /> },
 };
 
+const SPECIALIZATION_OPTIONS = [
+  'Criminal Law', 'Civil Law', 'Family Law', 'Property Law', 'Corporate Law',
+  'Labour Law', 'Constitutional Law', 'Tax Law', 'Consumer Law', 'Cyber Law',
+  'Intellectual Property', 'Banking Law', 'Environmental Law', 'Human Rights', 'Immigration Law',
+];
+
 const EMPTY_FORM = {
   name: '', email: '', phone: '', password: '',
-  barCouncilId: '', specializations: '', city: '', state: '',
+  barCouncilNumber: '', specializations: [] as string[], city: '', state: '',
   consultationFee: '', experience: '',
 };
 
@@ -85,16 +91,21 @@ export default function Advocates() {
     setSaving(true);
     try {
       await api.post('/admin/advocates', {
-        name: form.name, email: form.email, phone: form.phone, password: form.password,
-        barCouncilId: form.barCouncilId,
-        specializations: form.specializations.split(',').map((s: string) => s.trim()).filter(Boolean),
-        location: { address: { city: form.city, state: form.state } },
-        consultationFee: Number(form.consultationFee) || 0,
+        name: form.name,
+        email: form.email,
+        phone: form.phone,
+        password: form.password,
+        barCouncilNumber: form.barCouncilNumber,
+        specializations: form.specializations,
+        city: form.city,
+        state: form.state,
+        consultationFee: Number(form.consultationFee) || 500,
         experience: Number(form.experience) || 0,
       });
       setShowForm(false);
       setForm(EMPTY_FORM);
       fetchAdvocates();
+      alert('✅ Advocate created successfully!');
     } catch (e: any) { alert(e?.response?.data?.message || 'Failed to create.'); }
     finally { setSaving(false); }
   };
@@ -517,29 +528,87 @@ export default function Advocates() {
             <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
               <div className="flex items-center justify-between p-5 border-b border-gray-100">
                 <h2 className="text-lg font-bold text-gray-900">Add New Advocate</h2>
-                <button onClick={() => setShowForm(false)}><X className="w-5 h-5 text-gray-400" /></button>
+                <button onClick={() => { setShowForm(false); setForm(EMPTY_FORM); }}><X className="w-5 h-5 text-gray-400" /></button>
               </div>
-              <div className="p-5 grid grid-cols-2 gap-4">
-                {[
-                  { label: 'Full Name *', key: 'name', placeholder: 'Advocate Name' },
-                  { label: 'Email *', key: 'email', placeholder: 'adv@example.com' },
-                  { label: 'Phone', key: 'phone', placeholder: '9876543210' },
-                  { label: 'Password *', key: 'password', placeholder: 'Min 8 chars' },
-                  { label: 'Bar Council ID', key: 'barCouncilId', placeholder: 'BAR/MP/123' },
-                  { label: 'Specializations (comma-sep)', key: 'specializations', placeholder: 'Civil, Criminal' },
-                  { label: 'City', key: 'city', placeholder: 'Bhopal' },
-                  { label: 'State', key: 'state', placeholder: 'Madhya Pradesh' },
-                  { label: 'Consultation Fee (₹)', key: 'consultationFee', placeholder: '999' },
-                  { label: 'Experience (years)', key: 'experience', placeholder: '5' },
-                ].map(f => (
-                  <div key={f.key} className={f.key === 'specializations' ? 'col-span-2' : ''}>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">{f.label}</label>
-                    <input value={form[f.key] || ''} onChange={e => setForm((p: any) => ({ ...p, [f.key]: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder={f.placeholder} />
+              <div className="p-5 space-y-4">
+                {/* Personal Info */}
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { label: 'Full Name *', key: 'name', placeholder: 'Advocate Name' },
+                    { label: 'Email *', key: 'email', placeholder: 'adv@example.com' },
+                    { label: 'Phone', key: 'phone', placeholder: '9876543210' },
+                    { label: 'Password *', key: 'password', placeholder: 'Min 8 chars' },
+                  ].map(f => (
+                    <div key={f.key}>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">{f.label}</label>
+                      <input value={form[f.key] || ''} onChange={e => setForm((p: any) => ({ ...p, [f.key]: e.target.value }))}
+                        type={f.key === 'password' ? 'password' : 'text'}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder={f.placeholder} />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Professional */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Bar Council Number *</label>
+                  <input value={form.barCouncilNumber || ''} onChange={e => setForm((p: any) => ({ ...p, barCouncilNumber: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder="BAR/MP/2024/1234" />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Consultation Fee (Rs.) *</label>
+                    <input type="number" value={form.consultationFee || ''} onChange={e => setForm((p: any) => ({ ...p, consultationFee: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder="500" />
                   </div>
-                ))}
-                <div className="col-span-2 flex gap-3 pt-1">
-                  <button onClick={() => setShowForm(false)} className="flex-1 py-2.5 border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-50">Cancel</button>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Experience (years) *</label>
+                    <input type="number" value={form.experience || ''} onChange={e => setForm((p: any) => ({ ...p, experience: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder="3" />
+                  </div>
+                </div>
+
+                {/* Specializations */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-2">Specializations * <span className="text-gray-400 font-normal">(select all that apply)</span></label>
+                  <div className="grid grid-cols-2 gap-1.5 max-h-40 overflow-y-auto pr-1">
+                    {SPECIALIZATION_OPTIONS.map(spec => (
+                      <label key={spec} className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border cursor-pointer text-xs font-medium transition-all ${
+                        form.specializations?.includes(spec)
+                          ? 'bg-teal-50 border-teal-400 text-teal-800'
+                          : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+                      }`}>
+                        <input type="checkbox" checked={form.specializations?.includes(spec) || false}
+                          onChange={e => {
+                            const cur: string[] = form.specializations || [];
+                            setForm((p: any) => ({
+                              ...p,
+                              specializations: e.target.checked ? [...cur, spec] : cur.filter((s: string) => s !== spec),
+                            }));
+                          }}
+                          className="w-3 h-3 accent-teal-600" />
+                        {spec}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Location */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">City</label>
+                    <input value={form.city || ''} onChange={e => setForm((p: any) => ({ ...p, city: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder="Bhopal" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">State</label>
+                    <input value={form.state || ''} onChange={e => setForm((p: any) => ({ ...p, state: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder="Madhya Pradesh" />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-1">
+                  <button onClick={() => { setShowForm(false); setForm(EMPTY_FORM); }} className="flex-1 py-2.5 border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-50">Cancel</button>
                   <button onClick={handleCreate} disabled={saving} className="flex-1 py-2.5 bg-teal-600 text-white text-sm font-semibold rounded-xl hover:bg-teal-700 disabled:opacity-50">
                     {saving ? 'Creating...' : 'Create Advocate'}
                   </button>
@@ -549,6 +618,7 @@ export default function Advocates() {
           </motion.div>
         )}
       </AnimatePresence>
+
 
       {/* Delete Confirm */}
       <AnimatePresence>

@@ -824,16 +824,69 @@ exports.resetUserPassword = async (req, res, next) => {
 // ─── Enhanced Advocate Management ────────────────────────────────────────────
 exports.createAdvocate = async (req, res, next) => {
   try {
-    const { name, email, phone, password, barCouncilId, specializations, location } = req.body;
-    if (!name || !email || !password) return next(new (require('../middlewares/errorHandler').AppError)('Name, email, password required.', 400));
+    const {
+      name, email, phone, password,
+      barCouncilId, barCouncilNumber,
+      specializations, city, state, street,
+      consultationFee, experience, lat, lng,
+    } = req.body;
+
+    if (!name || !email || !password)
+      return next(new (require('../middlewares/errorHandler').AppError)('Name, email, password required.', 400));
+
     const exists = await User.findOne({ email: email.toLowerCase() });
-    if (exists) return next(new (require('../middlewares/errorHandler').AppError)('Email already registered.', 409));
-    const user = await User.create({ name, email: email.toLowerCase(), phone, password, role: 'advocate', isVerified: true });
-    const Advocate = require('../models/Advocate');
-    const advocate = await Advocate.create({
-      user: user._id, barCouncilId, specializations: specializations || [],
-      location: location || {}, verificationStatus: 'approved', isVerified: true,
+    if (exists)
+      return next(new (require('../middlewares/errorHandler').AppError)('Email already registered.', 409));
+
+    const user = await User.create({
+      name, email: email.toLowerCase(), phone, password,
+      role: 'advocate', isVerified: true,
     });
+
+    const AdvocateModel = require('../models/Advocate');
+
+    // Normalise specializations: accept array or comma-separated string
+    let specs = [];
+    if (specializations) {
+      const raw = Array.isArray(specializations)
+        ? specializations
+        : specializations.split(',').map(s => s.trim()).filter(Boolean);
+      // Map short forms to full enum values if needed
+      const SPEC_MAP = {
+        'civil': 'Civil Law', 'criminal': 'Criminal Law', 'family': 'Family Law',
+        'property': 'Property Law', 'corporate': 'Corporate Law', 'labour': 'Labour Law',
+        'constitutional': 'Constitutional Law', 'tax': 'Tax Law', 'consumer': 'Consumer Law',
+        'cyber': 'Cyber Law', 'ip': 'Intellectual Property', 'banking': 'Banking Law',
+        'environmental': 'Environmental Law', 'human rights': 'Human Rights',
+        'immigration': 'Immigration Law',
+      };
+      const VALID_SPECS = [
+        'Criminal Law', 'Civil Law', 'Family Law', 'Property Law', 'Corporate Law',
+        'Labour Law', 'Constitutional Law', 'Tax Law', 'Consumer Law', 'Cyber Law',
+        'Intellectual Property', 'Banking Law', 'Environmental Law', 'Human Rights', 'Immigration Law',
+      ];
+      specs = raw.map(s => {
+        if (VALID_SPECS.includes(s)) return s;
+        const mapped = SPEC_MAP[s.toLowerCase()];
+        return mapped || 'Civil Law'; // Default fallback
+      });
+    }
+
+    const advocate = await AdvocateModel.create({
+      user: user._id,
+      barCouncilNumber: barCouncilNumber || barCouncilId || `ADM-${Date.now()}`,
+      specializations: specs.length > 0 ? specs : ['Civil Law'],
+      location: {
+        type: 'Point',
+        coordinates: [parseFloat(lng) || 0, parseFloat(lat) || 0],
+        address: { city: city || '', state: state || '', street: street || '' },
+      },
+      consultationFee: Number(consultationFee) || 500,
+      experience: Number(experience) || 0,
+      verificationStatus: 'approved',
+      isVerified: true,
+    });
+
     res.status(201).json({ success: true, data: { user: user._id, advocate: advocate._id } });
   } catch (err) { next(err); }
 };
