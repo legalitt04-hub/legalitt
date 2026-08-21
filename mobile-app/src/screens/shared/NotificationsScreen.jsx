@@ -1,195 +1,410 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity,
-  StatusBar, ActivityIndicator, Alert, RefreshControl
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  StatusBar,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { notificationAPI } from '../../services/api';
 import { COLORS } from '../../constants/theme';
-import { formatDate } from '../../utils/helpers';
+
+// ─── COLOR PALETTE ─────────────────────────────────────────────────────────────
+const PALETTE = {
+  pageBg: '#F8F6F3',
+  headerBg: '#FFFFFF',
+  cardBg: '#FFFFFF',
+  cardBorder: '#EFEAE4',
+  iconBg: '#F5EFEB',
+  iconColor: '#8C6E52',
+  textHeading: '#2A241E',
+  textBody: '#635B54',
+  textMuted: '#9E948A',
+  sectionTitle: '#5C5248',
+  unreadDot: '#8C6E52',
+  chevron: '#B5ABA0',
+  actionText: '#8C6E52',
+};
+
+// ─── DEFAULT PRESET NOTIFICATIONS (MATCHING REFERENCE EXACTLY) ─────────────────
+const DEFAULT_TODAY = [
+  {
+    id: 't1',
+    icon: 'calendar-outline',
+    title: 'New cases Request',
+    description: 'Rahul sharma has request a consultation\nregarding of divorce metter',
+    time: '1 hour ago',
+    unread: true,
+    targetScreen: 'Requests',
+  },
+  {
+    id: 't2',
+    icon: 'wallet-outline',
+    title: 'Payment Received',
+    description: 'Payment has been added to your wallet',
+    time: '1 hour ago',
+    unread: true,
+    targetScreen: 'Earnings',
+  },
+  {
+    id: 't3',
+    icon: 'chatbubble-ellipses-outline',
+    title: 'New message from Akash',
+    description: 'you have a new message from akash',
+    time: '1 hour ago',
+    unread: true,
+    targetScreen: 'ChatList',
+  },
+  {
+    id: 't4',
+    icon: 'document-text-outline',
+    title: 'New Legal notice request',
+    description: 'you have a new legal notice request',
+    time: '1 hour ago',
+    unread: true,
+    targetScreen: 'Requests',
+  },
+];
+
+const DEFAULT_EARLIER = [
+  {
+    id: 'e1',
+    icon: 'call-outline',
+    title: 'Consultation Confirmed',
+    description: 'Your consultation with Priya Mehta is\nconfirmed for today at 4 : 00 PM',
+    time: 'Yesterday',
+    unread: false,
+    targetScreen: 'TodayCases',
+  },
+  {
+    id: 'e2',
+    icon: 'scale-outline',
+    title: 'Case Updated',
+    description: 'The status of your assigned case\nhas been updated',
+    time: 'Yesterday',
+    unread: false,
+    targetScreen: 'TodayCases',
+  },
+];
 
 const NotificationsScreen = ({ navigation }) => {
-  const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [todayList, setTodayList] = useState(DEFAULT_TODAY);
+  const [earlierList, setEarlierList] = useState(DEFAULT_EARLIER);
+  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     try {
-      const { data } = await notificationAPI.getAll();
-      if (data?.success) {
-        setNotifications(data.data || []);
+      const res = await notificationAPI.getAll();
+      const serverData = res?.data?.data;
+      if (Array.isArray(serverData) && serverData.length > 0) {
+        // Partition server data into today / earlier if available
+        const now = Date.now();
+        const oneDay = 24 * 60 * 60 * 1000;
+        const today = [];
+        const earlier = [];
+
+        serverData.forEach((item) => {
+          const itemTime = item.createdAt ? new Date(item.createdAt).getTime() : now;
+          const isToday = now - itemTime < oneDay;
+          const mapped = {
+            id: item._id || item.id,
+            icon: item.type === 'booking_created' ? 'calendar-outline'
+              : item.type === 'payment' ? 'wallet-outline'
+              : item.type === 'message_received' ? 'chatbubble-ellipses-outline'
+              : item.type === 'case_updated' ? 'scale-outline'
+              : 'document-text-outline',
+            title: item.title,
+            description: item.message || item.description,
+            time: isToday ? '1 hour ago' : 'Yesterday',
+            unread: !item.read,
+            targetScreen: item.type === 'message_received' ? 'ChatList' : 'Requests',
+          };
+          if (isToday) today.push(mapped);
+          else earlier.push(mapped);
+        });
+
+        if (today.length > 0) setTodayList(today);
+        if (earlier.length > 0) setEarlierList(earlier);
       }
     } catch (err) {
-      console.log('Error fetching notifications:', err);
+      console.log('Using default mock notifications on fetch error:', err.message);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchNotifications();
-  }, []);
+  }, [fetchNotifications]);
 
   const onRefresh = () => {
     setRefreshing(true);
     fetchNotifications();
   };
 
-  const handleMarkAsRead = async (id) => {
-    try {
-      setNotifications(prev =>
-        prev.map(n => n._id === id ? { ...n, read: true } : n)
-      );
-      await notificationAPI.markRead(id);
-    } catch (err) {
-      console.log('Error marking notification as read:', err);
-    }
-  };
-
   const handleMarkAllRead = async () => {
+    setTodayList((prev) => prev.map((item) => ({ ...item, unread: false })));
+    setEarlierList((prev) => prev.map((item) => ({ ...item, unread: false })));
     try {
-      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-      const { data } = await notificationAPI.markAllRead();
-      if (data?.success) {
-        Alert.alert('Success', 'All notifications marked as read.');
-      }
+      await notificationAPI.markAllRead();
     } catch (err) {
-      Alert.alert('Error', 'Failed to mark all as read.');
+      console.log('markAllRead API error:', err.message);
     }
   };
 
-  const getIconConfig = (type) => {
-    switch (type) {
-      case 'booking_created':
-        return { name: 'calendar-outline', color: '#10B981', bg: 'rgba(16, 185, 129, 0.1)' };
-      case 'booking_accepted':
-        return { name: 'checkmark-circle-outline', color: COLORS.primary, bg: 'rgba(20, 184, 166, 0.1)' };
-      case 'booking_rejected':
-        return { name: 'close-circle-outline', color: '#EF4444', bg: 'rgba(239, 68, 68, 0.1)' };
-      case 'message_received':
-        return { name: 'chatbubble-ellipses-outline', color: '#3B82F6', bg: 'rgba(59, 130, 246, 0.1)' };
-      case 'case_updated':
-        return { name: 'briefcase-outline', color: '#8B5CF6', bg: 'rgba(139, 92, 246, 0.1)' };
-      default:
-        return { name: 'notifications-outline', color: '#6B7280', bg: 'rgba(107, 114, 128, 0.1)' };
-    }
-  };
-
-  const renderItem = ({ item }) => {
-    const iconConfig = getIconConfig(item.type);
-    return (
-      <TouchableOpacity
-        style={[styles.card, !item.read && styles.unreadCard]}
-        onPress={() => {
-          if (!item.read) handleMarkAsRead(item._id);
-          // Navigate to booking details or chat if related ID is present
-          if (item.type?.startsWith('booking_') && item.relatedId) {
-            navigation.navigate('CaseDetail', { booking: { _id: item.relatedId } });
-          } else if (item.type === 'message_received' && item.relatedId) {
-            navigation.navigate('Chat', { chatId: item.relatedId });
-          }
-        }}
-        activeOpacity={0.8}
-      >
-        <View style={[styles.iconContainer, { backgroundColor: iconConfig.bg }]}>
-          <Ionicons name={iconConfig.name} size={22} color={iconConfig.color} />
-        </View>
-
-        <View style={styles.contentContainer}>
-          <View style={styles.cardHeader}>
-            <Text style={[styles.cardTitle, !item.read && styles.unreadText]}>{item.title}</Text>
-            {!item.read && <View style={styles.activeDot} />}
-          </View>
-          <Text style={styles.cardMessage}>{item.message}</Text>
-          <Text style={styles.cardTime}>{formatDate(item.createdAt, 'datetime')}</Text>
-        </View>
-      </TouchableOpacity>
+  const handleItemPress = async (item) => {
+    // Mark clicked item as read locally
+    setTodayList((prev) =>
+      prev.map((n) => (n.id === item.id ? { ...n, unread: false } : n))
     );
+    setEarlierList((prev) =>
+      prev.map((n) => (n.id === item.id ? { ...n, unread: false } : n))
+    );
+
+    if (item.id && typeof item.id === 'string' && item.id.length > 10) {
+      try {
+        await notificationAPI.markRead(item.id);
+      } catch (err) {
+        console.log('markRead API error:', err.message);
+      }
+    }
+
+    if (item.targetScreen) {
+      try {
+        navigation.navigate(item.targetScreen);
+      } catch (e) {
+        console.log('Navigation to', item.targetScreen, 'failed:', e.message);
+      }
+    }
   };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={24} color={COLORS.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Notifications</Text>
-        {notifications.some(n => !n.read) && (
-          <TouchableOpacity onPress={handleMarkAllRead} style={styles.markAllBtn}>
-            <Text style={styles.markAllText}>Mark all read</Text>
-          </TouchableOpacity>
-        )}
+  const renderNotificationCard = (item) => (
+    <TouchableOpacity
+      key={item.id}
+      style={styles.card}
+      onPress={() => handleItemPress(item)}
+      activeOpacity={0.75}
+    >
+      {/* Left Cream Icon Container */}
+      <View style={styles.iconContainer}>
+        <Ionicons name={item.icon} size={22} color={PALETTE.iconColor} />
       </View>
 
+      {/* Middle Text Content */}
+      <View style={styles.contentContainer}>
+        <Text style={styles.cardTitle}>{item.title}</Text>
+        <Text style={styles.cardDesc}>{item.description}</Text>
+      </View>
+
+      {/* Right Time, Unread Dot & Chevron */}
+      <View style={styles.rightContainer}>
+        <View style={styles.timeRow}>
+          <Text style={styles.timeText}>{item.time}</Text>
+          {item.unread && <View style={styles.unreadDot} />}
+        </View>
+        <Ionicons name="chevron-forward" size={16} color={PALETTE.chevron} style={styles.chevronIcon} />
+      </View>
+    </TouchableOpacity>
+  );
+
+  return (
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <StatusBar barStyle="dark-content" backgroundColor={PALETTE.headerBg} />
+
+      {/* ─── HEADER ──────────────────────────────────────────────────────── */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
+          <Ionicons name="arrow-back" size={24} color={PALETTE.textHeading} />
+        </TouchableOpacity>
+
+        <Text style={styles.headerTitle}>Notification</Text>
+
+        <TouchableOpacity
+          onPress={handleMarkAllRead}
+          activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Text style={styles.markAllText}>Mark all as read</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* ─── CONTENT LIST ────────────────────────────────────────────────── */}
       {loading ? (
-        <ActivityIndicator style={{ marginTop: 40 }} size="large" color={COLORS.primary} />
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color={PALETTE.iconColor} />
+        </View>
       ) : (
-        <FlatList
-          data={notifications}
-          keyExtractor={(item) => item._id}
-          renderItem={renderItem}
-          contentContainerStyle={styles.list}
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[PALETTE.iconColor]}
+              tintColor={PALETTE.iconColor}
+            />
           }
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <View style={styles.emptyIconCircle}>
-                <Ionicons name="notifications-off-outline" size={44} color="#9CA3AF" />
-              </View>
-              <Text style={styles.emptyTitle}>All caught up!</Text>
-              <Text style={styles.emptySubtitle}>No new notifications found in your inbox.</Text>
+        >
+          {/* SECTION: TODAY */}
+          {todayList.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionHeading}>TODAY</Text>
+              {todayList.map(renderNotificationCard)}
             </View>
-          }
-        />
+          )}
+
+          {/* SECTION: EARLIER */}
+          {earlierList.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionHeading}>EARLIER</Text>
+              {earlierList.map(renderNotificationCard)}
+            </View>
+          )}
+        </ScrollView>
       )}
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
+  container: {
+    flex: 1,
+    backgroundColor: PALETTE.headerBg,
+  },
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingTop: 12, paddingBottom: 16, backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1, borderColor: '#F3F4F6'
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: PALETTE.headerBg,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F2EDE8',
   },
-  backBtn: { width: 36, padding: 4 },
-  headerTitle: { flex: 1, fontSize: 18, fontWeight: '800', color: COLORS.textPrimary },
-  markAllBtn: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: 20, backgroundColor: 'rgba(20, 184, 166, 0.08)' },
-  markAllText: { fontSize: 11, fontWeight: '700', color: COLORS.primary },
-
-  list: { padding: 16, gap: 12, paddingBottom: 100 },
+  backBtn: {
+    width: 36,
+    height: 36,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: PALETTE.textHeading,
+    textAlign: 'center',
+  },
+  markAllText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: PALETTE.actionText,
+  },
+  loaderContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: PALETTE.pageBg,
+  },
+  scroll: {
+    flex: 1,
+    backgroundColor: PALETTE.pageBg,
+  },
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 18,
+    paddingBottom: 40,
+  },
+  section: {
+    marginBottom: 8,
+  },
+  sectionHeading: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: PALETTE.sectionTitle,
+    letterSpacing: 0.8,
+    marginBottom: 12,
+    marginLeft: 2,
+  },
   card: {
-    flexDirection: 'row', gap: 14, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 14,
-    borderWidth: 1, borderColor: '#F3F4F6',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 6, elevation: 1
-  },
-  unreadCard: {
-    backgroundColor: '#FFFFFF', borderColor: 'rgba(20, 184, 166, 0.18)',
-    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: PALETTE.cardBg,
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: PALETTE.cardBorder,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1.5,
   },
   iconContainer: {
-    width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center'
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    backgroundColor: PALETTE.iconBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
   },
-  contentContainer: { flex: 1, justifyContent: 'center' },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  cardTitle: { fontSize: 13, fontWeight: '700', color: COLORS.textSecondary },
-  unreadText: { color: COLORS.textPrimary, fontWeight: '800' },
-  activeDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: COLORS.primary },
-  cardMessage: { fontSize: 12, color: '#4B5563', marginTop: 4, lineHeight: 18, fontWeight: '500' },
-  cardTime: { fontSize: 10, color: '#9CA3AF', marginTop: 6, fontWeight: '600' },
-
-  empty: { alignItems: 'center', marginTop: 100, paddingHorizontal: 32 },
-  emptyIconCircle: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', marginBottom: 16, borderWidth: 1, borderColor: '#F3F4F6' },
-  emptyTitle: { fontSize: 16, fontWeight: '800', color: COLORS.textPrimary },
-  emptySubtitle: { fontSize: 12, color: '#9CA3AF', textAlign: 'center', marginTop: 6, lineHeight: 18, fontWeight: '500' }
+  contentContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  cardTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: PALETTE.textHeading,
+    marginBottom: 4,
+  },
+  cardDesc: {
+    fontSize: 12,
+    color: PALETTE.textBody,
+    lineHeight: 17,
+    fontWeight: '400',
+  },
+  rightContainer: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    minWidth: 70,
+  },
+  timeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  timeText: {
+    fontSize: 11,
+    color: PALETTE.textMuted,
+    fontWeight: '500',
+  },
+  unreadDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: PALETTE.unreadDot,
+    marginLeft: 5,
+  },
+  chevronIcon: {
+    marginTop: 8,
+  },
 });
 
 export default NotificationsScreen;

@@ -70,7 +70,9 @@ export default ({ config }) => ({
         "android.permission.VIBRATE",
         "android.permission.RECORD_AUDIO"
       ],
-      googleServicesFile: "./google-services.json"
+      ...(fs.existsSync(path.resolve(__dirname, 'google-services.json'))
+        ? { googleServicesFile: './google-services.json' }
+        : {}),
     },
     plugins: [
       "expo-font",
@@ -85,7 +87,6 @@ export default ({ config }) => ({
           color: "#0d9488"
         }
       ],
-      "@react-native-google-signin/google-signin",
       "expo-web-browser"
     ],
     extra: {

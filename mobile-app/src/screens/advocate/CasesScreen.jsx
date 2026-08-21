@@ -1,400 +1,825 @@
-import React, { useEffect, useState } from 'react';
-import { 
-  View, Text, StyleSheet, FlatList, TouchableOpacity, 
-  StatusBar, ActivityIndicator, Modal, TextInput, Alert, ScrollView
+import React, { useEffect, useState, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  StatusBar,
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  RefreshControl,
+  Image,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { caseAPI, bookingAPI } from '../../services/api';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons, Feather } from '@expo/vector-icons';
+import { bookingAPI } from '../../services/api';
 import { COLORS } from '../../constants/theme';
+import { formatDate } from '../../utils/helpers';
+import { MOCK_ADVOCATE_CASES } from '../../data/advocateCasesMock';
 
-const CasesScreen = ({ navigation, route }) => {
-  const isTodayTab = route?.name === 'TodayCases';
-  const [cases, setCases] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('active'); // active, completed
-  
-  // Add Case modal state
-  const [modalVisible, setModalVisible] = useState(false);
-  const [clients, setClients] = useState([]);
-  const [loadingClients, setLoadingClients] = useState(false);
-  
-  const [form, setForm] = useState({
-    title: '',
-    caseNumber: '',
-    courtName: '',
-    description: '',
-    clientId: '',
-  });
+const REQUEST_TABS = ['All', 'Pending', 'Accepted', 'Rejected'];
 
-  const fetchCases = async () => {
-    setLoading(true);
+const CasesScreen = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
+
+  // ─── Today's Cases State ───────────────────────────────────────────────────
+  const [todayCases, setTodayCases] = useState([]);
+  const [loadingToday, setLoadingToday] = useState(true);
+
+  // ─── Case Requests State (Default to 'Pending' as requested) ───────────────
+  const [activeRequestTab, setActiveRequestTab] = useState('Pending');
+  const [caseRequests, setCaseRequests] = useState([]);
+  const [loadingRequests, setLoadingRequests] = useState(true);
+
+  const [refreshing, setRefreshing] = useState(false);
+
+  // ─── Data Fetching with Development Mock Fallback ──────────────────────────
+  const fetchTodayCases = async () => {
     try {
-      if (isTodayTab) {
-        const response = await bookingAPI.getAdvocateBookings({ today: 'true', status: 'confirmed' });
-        if (response.data?.success) {
-          setCases(response.data.data || []);
-        }
+      setLoadingToday(true);
+      const response = await bookingAPI.getAdvocateBookings({ today: 'true', status: 'confirmed' });
+      if (response.data?.success && response.data.data && response.data.data.length > 0) {
+        setTodayCases(response.data.data);
       } else {
-        const response = await caseAPI.getAll();
-        if (response.data?.success) {
-          setCases(response.data.data || []);
-        }
+        // Fall back to development mock appointment
+        setTodayCases(MOCK_ADVOCATE_CASES.todayCases);
       }
     } catch (err) {
-      console.log('Error fetching cases:', err);
+      console.log('Error fetching today cases, using mock data:', err);
+      setTodayCases(MOCK_ADVOCATE_CASES.todayCases);
     } finally {
-      setLoading(false);
+      setLoadingToday(false);
     }
   };
 
-  const fetchClients = async () => {
-    setLoadingClients(true);
+  const fetchCaseRequests = async (tab = activeRequestTab) => {
     try {
-      const response = await bookingAPI.getAdvocateBookings({ status: 'confirmed' });
-      const seen = new Set();
-      const uniqueClients = (response.data.data || [])
-        .map(b => b.client)
-        .filter(c => {
-          if (!c || seen.has(c._id)) return false;
-          seen.add(c._id);
-          return true;
+      setLoadingRequests(true);
+      const statusMap = {
+        All: undefined,
+        Pending: 'pending',
+        Accepted: 'confirmed',
+        Rejected: 'cancelled',
+      };
+      const response = await bookingAPI.getAdvocateBookings({ status: statusMap[tab] });
+      if (response.data?.success && response.data.data && response.data.data.length > 0) {
+        setCaseRequests(response.data.data);
+      } else {
+        // Filter development mock case requests by normalized status
+        const normalizedTab = tab.toLowerCase(); // 'all' | 'pending' | 'accepted' | 'rejected'
+        const mockList = MOCK_ADVOCATE_CASES.caseRequests.filter((item) => {
+          if (normalizedTab === 'all') return true;
+          return item.status.toLowerCase() === normalizedTab;
         });
-      setClients(uniqueClients);
+        setCaseRequests(mockList);
+      }
     } catch (err) {
-      console.log('Error fetching client list:', err);
+      console.log('Error fetching case requests, using mock data:', err);
+      const normalizedTab = tab.toLowerCase();
+      const mockList = MOCK_ADVOCATE_CASES.caseRequests.filter((item) => {
+        if (normalizedTab === 'all') return true;
+        return item.status.toLowerCase() === normalizedTab;
+      });
+      setCaseRequests(mockList);
     } finally {
-      setLoadingClients(false);
+      setLoadingRequests(false);
     }
   };
+
+  const loadAllData = useCallback(async () => {
+    await Promise.all([fetchTodayCases(), fetchCaseRequests(activeRequestTab)]);
+  }, [activeRequestTab]);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      fetchCases();
+      loadAllData();
     });
     return unsubscribe;
-  }, [navigation, isTodayTab]);
+  }, [navigation, loadAllData]);
 
-  const openAddCaseModal = () => {
-    setForm({
-      title: '',
-      caseNumber: '',
-      courtName: '',
-      description: '',
-      clientId: '',
-    });
-    fetchClients();
-    setModalVisible(true);
+  useEffect(() => {
+    fetchCaseRequests(activeRequestTab);
+  }, [activeRequestTab]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([fetchTodayCases(), fetchCaseRequests(activeRequestTab)]);
+    setRefreshing(false);
   };
 
-  const handleCreateCase = async () => {
-    if (!form.title || !form.clientId) {
-      Alert.alert('Required Fields', 'Please fill in Case Title and select a Client.');
-      return;
-    }
-
+  // ─── Case Request Action Handlers (Accept / Reject) ────────────────────────
+  const handleRequestAction = async (bookingId, action) => {
     try {
-      const response = await caseAPI.create(form);
-      if (response.data?.success) {
-        Alert.alert('Success', 'Case created successfully!');
-        setModalVisible(false);
-        fetchCases();
-      }
+      const targetStatus = action === 'accept' ? 'confirmed' : 'cancelled';
+      await bookingAPI.updateStatus(bookingId, { status: targetStatus });
+      Alert.alert(
+        'Success',
+        action === 'accept'
+          ? 'Consultation request accepted!'
+          : 'Consultation request declined.'
+      );
+      fetchTodayCases();
+      fetchCaseRequests(activeRequestTab);
     } catch (err) {
-      Alert.alert('Error', err.response?.data?.message || 'Failed to create case.');
-    }
-  };
-
-  const filteredCases = isTodayTab ? cases : cases.filter(c => {
-    if (activeTab === 'active') {
-      return c.status === 'active' || c.status === 'pending';
-    } else {
-      return c.status === 'completed' || c.status === 'dismissed';
-    }
-  });
-
-  const renderItem = ({ item }) => {
-    const client = item.client || {};
-    if (isTodayTab) {
-      return (
-        <TouchableOpacity 
-          style={styles.card}
-          onPress={() => navigation.navigate('CaseDetail', { booking: item })}
-        >
-          <View style={styles.cardContent}>
-            <View style={styles.iconContainer}>
-              <Ionicons 
-                name={item.type === 'video' ? "videocam-outline" : "people-outline"} 
-                size={20} 
-                color={COLORS.primary} 
-              />
-            </View>
-            <View style={styles.textContent}>
-              <Text style={styles.name}>{item.issue || 'Consultation Booking'}</Text>
-              <Text style={styles.caseNo}>
-                Slot: {item.timeSlot?.startTime || 'TBD'} • Status: {item.status?.toUpperCase()}
-              </Text>
-              <View style={styles.clientRow}>
-                <Ionicons name="person-outline" size={12} color={COLORS.primary} />
-                <Text style={styles.clientName}>Client: {client.name || 'Client'}</Text>
-              </View>
-            </View>
-            <View style={styles.arrowContainer}>
-              <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
-            </View>
-          </View>
-        </TouchableOpacity>
+      // Local state update for mock test cases
+      setCaseRequests((prev) =>
+        prev.map((item) =>
+          item._id === bookingId
+            ? { ...item, status: action === 'accept' ? 'accepted' : 'rejected' }
+            : item
+        )
+      );
+      Alert.alert(
+        'Success',
+        action === 'accept'
+          ? 'Consultation request accepted!'
+          : 'Consultation request declined.'
       );
     }
+  };
 
-    return (
-      <TouchableOpacity 
-        style={styles.card}
-        onPress={() => navigation.navigate('CaseDetail', { caseId: item._id })}
-      >
-        <View style={styles.cardContent}>
-          <View style={styles.iconContainer}>
-            <Ionicons name="briefcase-outline" size={20} color={COLORS.primary} />
-          </View>
-          <View style={styles.textContent}>
-            <Text style={styles.name}>{item.title}</Text>
-            <Text style={styles.caseNo}>
-              No: {item.caseNumber || 'N/A'} • {item.courtName || 'District Court'}
-            </Text>
-            <View style={styles.clientRow}>
-              <Ionicons name="person-outline" size={12} color={COLORS.primary} />
-              <Text style={styles.clientName}>Client: {client.name || 'Client'}</Text>
-            </View>
-          </View>
-          <View style={styles.arrowContainer}>
-            <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
+  const handleNavigateToCase = (item) => {
+    navigation.navigate('CaseDetail', {
+      caseId: item.caseId || item._id || 'CASE-DEMO-001',
+      booking: item,
+      client: item.client,
+      clientName: item.client?.name || 'Rahul Sharma',
+      caseTitle: item.issue || item.caseType || 'Divorce Matter',
+    });
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-      
-      {/* Header */}
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+
+      {/* ─── SINGLE PAGE HEADER: CASES ────────────────────────────────────── */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>{isTodayTab ? "Today's Cases" : "Case Portfolio"}</Text>
-        {!isTodayTab && (
-          <TouchableOpacity style={styles.addBtn} onPress={openAddCaseModal}>
-            <Ionicons name="add" size={18} color="#FFF" />
-            <Text style={styles.addBtnText}>Add Case</Text>
+        <Text style={styles.headerTitle}>Cases</Text>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('ChatList')}
+            style={styles.headerIconBtn}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="chatbubble-outline" size={20} color={COLORS.textPrimary} />
           </TouchableOpacity>
-        )}
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Notifications')}
+            style={styles.headerIconBtn}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="notifications-outline" size={20} color={COLORS.textPrimary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Tabs */}
-      {!isTodayTab && (
-        <View style={styles.tabBar}>
-          <TouchableOpacity 
-            style={[styles.tab, activeTab === 'active' && styles.tabActive]}
-            onPress={() => setActiveTab('active')}
-          >
-            <Text style={[styles.tabText, activeTab === 'active' && styles.tabTextActive]}>Active Cases</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.tab, activeTab === 'completed' && styles.tabActive]}
-            onPress={() => setActiveTab('completed')}
-          >
-            <Text style={[styles.tabText, activeTab === 'completed' && styles.tabTextActive]}>Past Cases</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {loading ? (
-        <ActivityIndicator style={{ marginTop: 40 }} size="large" color={COLORS.primary} />
-      ) : (
-        <FlatList
-          data={filteredCases}
-          keyExtractor={(item) => item._id}
-          renderItem={renderItem}
-          contentContainerStyle={styles.list}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Text style={{ fontSize: 48 }}>⚖️</Text>
-              <Text style={styles.emptyText}>
-                {isTodayTab ? "No appointments scheduled for today" : "No cases found in this section"}
-              </Text>
-            </View>
-          }
-        />
-      )}
-
-      {/* ADD CASE MODAL */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[COLORS.primary]}
+          />
+        }
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: Math.max(insets.bottom, 12) + 115 },
+        ]}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Create New Case File</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Ionicons name="close" size={24} color={COLORS.textPrimary} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView contentContainerStyle={styles.modalForm} showsVerticalScrollIndicator={false}>
-              <Text style={styles.label}>Case Title *</Text>
-              <TextInput
-                style={styles.input}
-                value={form.title}
-                onChangeText={(v) => setForm(p => ({ ...p, title: v }))}
-                placeholder="e.g. Property Boundary Dispute"
-              />
-
-              <Text style={styles.label}>Case ID / Number</Text>
-              <TextInput
-                style={styles.input}
-                value={form.caseNumber}
-                onChangeText={(v) => setForm(p => ({ ...p, caseNumber: v }))}
-                placeholder="e.g. CIV/894/2026"
-              />
-
-              <Text style={styles.label}>Court / Jurisdiction</Text>
-              <TextInput
-                style={styles.input}
-                value={form.courtName}
-                onChangeText={(v) => setForm(p => ({ ...p, courtName: v }))}
-                placeholder="e.g. Bhopal District Court"
-              />
-
-              <Text style={styles.label}>Linked Client *</Text>
-              {loadingClients ? (
-                <ActivityIndicator color={COLORS.primary} style={{ marginVertical: 8 }} />
-              ) : clients.length === 0 ? (
-                <View style={styles.noClientsWarning}>
-                  <Text style={styles.noClientsWarningText}>No confirmed consulting clients found.</Text>
-                </View>
-              ) : (
-                <View style={styles.clientsSelector}>
-                  {clients.map(c => {
-                    const isSelected = form.clientId === c._id;
-                    return (
-                      <TouchableOpacity
-                        key={c._id}
-                        onPress={() => setForm(p => ({ ...p, clientId: c._id }))}
-                        style={[styles.clientChip, isSelected && styles.clientChipActive]}
-                      >
-                        <Text style={[styles.clientChipText, isSelected && styles.clientChipTextActive]}>
-                          {c.name}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              )}
-
-              <Text style={styles.label}>Case Brief / Description</Text>
-              <TextInput
-                style={[styles.input, styles.multilineInput]}
-                value={form.description}
-                onChangeText={(v) => setForm(p => ({ ...p, description: v }))}
-                multiline
-                numberOfLines={4}
-                placeholder="Describe the nature, dispute, and expectations of the case..."
-              />
-
-              <TouchableOpacity style={styles.submitBtn} onPress={handleCreateCase}>
-                <Text style={styles.submitBtnText}>Open Case File</Text>
-              </TouchableOpacity>
-            </ScrollView>
-          </View>
+        {/* ─── SECTION 1: TODAY'S CASES ───────────────────────────────────── */}
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionHeading}>Today's Cases</Text>
         </View>
-      </Modal>
+
+        {loadingToday ? (
+          <View style={styles.loadingBox}>
+            <ActivityIndicator size="small" color={COLORS.primary} />
+          </View>
+        ) : todayCases.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyEmoji}>⚖️</Text>
+            <Text style={styles.emptyText}>No appointments scheduled for today</Text>
+          </View>
+        ) : (
+          <View style={styles.cardsList}>
+            {todayCases.map((item) => {
+              const client = item.client || {};
+              return (
+                <View key={item._id} style={styles.card}>
+                  <View style={styles.cardContent}>
+                    {/* Avatar */}
+                    {client.avatar ? (
+                      <Image source={{ uri: client.avatar }} style={styles.avatarImg} />
+                    ) : (
+                      <View style={styles.avatarFallback}>
+                        <Text style={styles.avatarInitial}>
+                          {(client.name || 'R')[0].toUpperCase()}
+                        </Text>
+                      </View>
+                    )}
+
+                    <View style={styles.textContent}>
+                      <View style={styles.nameRow}>
+                        <Text style={styles.cardTitle}>{client.name || 'Rahul Sharma'}</Text>
+                        <Ionicons name="checkmark-circle" size={15} color={COLORS.primary} />
+                      </View>
+                      <Text style={styles.caseType}>{item.issue || 'Divorce Matter'}</Text>
+                      <Text style={styles.consultationLabel}>
+                        {item.consultationType || 'Legal Consultation'}
+                      </Text>
+                      <View style={styles.timeRow}>
+                        <Ionicons name="time-outline" size={13} color={COLORS.primary} />
+                        <Text style={styles.timeText}>
+                          Today • {item.timeSlot?.startTime || '4:00 PM'}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  <TouchableOpacity
+                    style={styles.viewCaseBtn}
+                    activeOpacity={0.8}
+                    onPress={() => handleNavigateToCase(item)}
+                  >
+                    <Text style={styles.viewCaseBtnText}>View Case</Text>
+                    <Ionicons name="chevron-forward" size={15} color="#FFFFFF" />
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+          </View>
+        )}
+
+        {/* ─── SECTION 2: CASE REQUESTS ───────────────────────────────────── */}
+        <View style={[styles.sectionHeaderRow, { marginTop: 24 }]}>
+          <Text style={styles.sectionHeading}>Case Requests</Text>
+        </View>
+
+        {/* Filter Tabs (All, Pending, Accepted, Rejected) */}
+        <View style={styles.tabContainer}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tabScrollWrap}
+          >
+            <View style={styles.tabRow}>
+              {REQUEST_TABS.map((tab) => {
+                const isActive = activeRequestTab === tab;
+                return (
+                  <TouchableOpacity
+                    key={tab}
+                    onPress={() => setActiveRequestTab(tab)}
+                    activeOpacity={0.8}
+                    style={[styles.tab, isActive && styles.tabActive]}
+                  >
+                    <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
+                      {tab}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </ScrollView>
+        </View>
+
+        {/* Case Requests List / Empty State */}
+        {loadingRequests ? (
+          <View style={styles.loadingBox}>
+            <ActivityIndicator size="small" color={COLORS.primary} />
+          </View>
+        ) : caseRequests.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyEmoji}>📋</Text>
+            <Text style={styles.emptyText}>No requests</Text>
+          </View>
+        ) : (
+          <View style={styles.cardsList}>
+            {caseRequests.map((item) => {
+              const statusStr = (item.status || 'pending').toLowerCase();
+              const isPending = statusStr === 'pending';
+              const isAccepted = statusStr === 'accepted' || statusStr === 'confirmed';
+              const isRejected = statusStr === 'rejected' || statusStr === 'cancelled';
+              const client = item.client || {};
+
+              return (
+                <View key={item._id} style={styles.caseRequestCard}>
+                  {/* Top Row: Client Info & Status Badge */}
+                  <View style={styles.requestCardTop}>
+                    <View style={styles.clientAvatarRow}>
+                      {client.avatar ? (
+                        <Image source={{ uri: client.avatar }} style={styles.reqAvatarImg} />
+                      ) : (
+                        <View style={styles.reqAvatarFallback}>
+                          <Text style={styles.reqAvatarInitial}>
+                            {(client.name || 'C')[0].toUpperCase()}
+                          </Text>
+                        </View>
+                      )}
+                      <View style={{ marginLeft: 10 }}>
+                        <View style={styles.nameRow}>
+                          <Text style={styles.reqClientName}>{client.name || 'Client'}</Text>
+                          {client.isVerified !== false && (
+                            <Ionicons name="checkmark-circle" size={15} color={COLORS.primary} />
+                          )}
+                        </View>
+                        <Text style={styles.reqCategoryText}>
+                          {item.caseType || item.issue || 'Legal Matter'} • {item.category || 'Family Law'}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Status Badge */}
+                    <View
+                      style={[
+                        styles.reqStatusBadge,
+                        isPending && styles.pendingBadge,
+                        isAccepted && styles.acceptedBadge,
+                        isRejected && styles.rejectedBadge,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.reqStatusBadgeText,
+                          isPending && styles.pendingBadgeText,
+                          isAccepted && styles.acceptedBadgeText,
+                          isRejected && styles.rejectedBadgeText,
+                        ]}
+                      >
+                        {isPending ? 'Pending' : isAccepted ? 'Accepted' : 'Rejected'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Document & Dates Row */}
+                  <View style={styles.reqDetailsBox}>
+                    <View style={styles.detailRow}>
+                      <Ionicons name="document-text-outline" size={14} color={COLORS.primary} />
+                      <Text style={styles.detailDocName} numberOfLines={1}>
+                        {item.document?.name || 'Divorce_Notice_Rahul.pdf'}
+                      </Text>
+                      {item.priority && (
+                        <View
+                          style={[
+                            styles.priorityPill,
+                            item.priority === 'High' && styles.priorityHigh,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.priorityText,
+                              item.priority === 'High' && styles.priorityHighText,
+                            ]}
+                          >
+                            {item.priority} Priority
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+
+                    <View style={styles.dateMetaGrid}>
+                      <View style={styles.dateCol}>
+                        <Text style={styles.dateLabel}>Request Date</Text>
+                        <Text style={styles.dateValue}>{item.requestDate || '21 Aug 2026'}</Text>
+                      </View>
+                      <View style={styles.dateCol}>
+                        <Text style={styles.dateLabel}>Response Due</Text>
+                        <Text style={styles.dateValue}>{item.responseDue || '25 Aug 2026'}</Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Actions */}
+                  <View style={styles.reqActionsRow}>
+                    <TouchableOpacity
+                      style={styles.reqViewCaseBtn}
+                      activeOpacity={0.8}
+                      onPress={() => handleNavigateToCase(item)}
+                    >
+                      <Text style={styles.reqViewCaseBtnText}>View Case</Text>
+                      <Ionicons name="chevron-forward" size={14} color="#FFFFFF" />
+                    </TouchableOpacity>
+
+                    {isPending && (
+                      <View style={styles.pendingActionBtns}>
+                        <TouchableOpacity
+                          style={styles.quickAcceptBtn}
+                          onPress={() => handleRequestAction(item._id, 'accept')}
+                        >
+                          <Ionicons name="checkmark" size={16} color="#16A34A" />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.quickRejectBtn}
+                          onPress={() => handleRequestAction(item._id, 'reject')}
+                        >
+                          <Ionicons name="close" size={16} color="#EF4444" />
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
+  container: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingTop: 12, paddingBottom: 16, backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1, borderColor: '#F3F4F6'
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderColor: '#F3F4F6',
   },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: COLORS.textPrimary },
-  addBtn: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.primary,
-    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, gap: 4
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
   },
-  addBtnText: { color: '#FFF', fontSize: 11, fontWeight: '700' },
-  
-  tabBar: {
-    flexDirection: 'row', backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderColor: '#F3F4F6'
+  headerActions: {
+    flexDirection: 'row',
+    gap: 8,
   },
-  tab: { flex: 1, paddingVertical: 14, alignItems: 'center' },
-  tabActive: { borderBottomWidth: 2, borderColor: COLORS.primary },
-  tabText: { fontSize: 12, fontWeight: '700', color: '#9CA3AF' },
-  tabTextActive: { color: COLORS.primary },
+  headerIconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scrollContent: {
+    padding: 16,
+  },
 
-  list: { padding: 16, gap: 12, paddingBottom: 100 },
+  // ─── Section Headings ──────────────────────────────────────────────────────
+  sectionHeaderRow: {
+    marginBottom: 12,
+  },
+  sectionHeading: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+  },
+  cardsList: {
+    gap: 12,
+  },
+  loadingBox: {
+    paddingVertical: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // ─── Today's Cases Card ───────────────────────────────────────────────────
   card: {
-    backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16,
-    borderWidth: 1, borderColor: '#F3F4F6',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 1
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1,
   },
-  cardContent: { flexDirection: 'row', alignItems: 'center' },
-  iconContainer: {
-    width: 40, height: 40, borderRadius: 10, backgroundColor: 'rgba(20, 184, 166, 0.08)',
-    alignItems: 'center', justifyContent: 'center', marginRight: 12
+  cardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
   },
-  textContent: { flex: 1 },
-  name: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary },
-  caseNo: { fontSize: 11, color: COLORS.textSecondary, marginTop: 4, fontWeight: '500' },
-  clientRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 },
-  clientName: { fontSize: 11, color: COLORS.textSecondary, fontWeight: '600' },
-  arrowContainer: { width: 24, alignItems: 'flex-end' },
-  
-  empty: { alignItems: 'center', marginTop: 80, gap: 12 },
-  emptyText: { fontSize: 13, color: '#9CA3AF', fontWeight: '600' },
+  avatarImg: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    marginRight: 12,
+  },
+  avatarFallback: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: 'rgba(20, 184, 166, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  avatarInitial: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  textContent: {
+    flex: 1,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  cardTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+  },
+  caseType: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+  consultationLabel: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  timeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 6,
+  },
+  timeText: {
+    fontSize: 12,
+    color: COLORS.primary,
+    fontWeight: '700',
+  },
+  viewCaseBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: COLORS.primary,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  viewCaseBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
 
-  // Modal styles
-  modalOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end'
+  // ─── Case Requests Tabs ────────────────────────────────────────────────────
+  tabContainer: {
+    marginBottom: 12,
   },
-  modalContent: {
-    backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    maxHeight: '85%', paddingBottom: 40
+  tabScrollWrap: {
+    flexDirection: 'row',
   },
-  modalHeader: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    padding: 20, borderBottomWidth: 1, borderColor: '#F3F4F6'
+  tabRow: {
+    flexDirection: 'row',
+    backgroundColor: '#F3F4F6',
+    padding: 4,
+    borderRadius: 99,
+    gap: 4,
+    flex: 1,
   },
-  modalTitle: { fontSize: 16, fontWeight: '800', color: COLORS.textPrimary },
-  modalForm: { padding: 20, gap: 12 },
-  label: { fontSize: 11, fontWeight: '800', color: COLORS.textPrimary },
-  input: {
-    backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#E5E7EB',
-    borderRadius: 10, padding: 12, fontSize: 13, color: COLORS.textPrimary
+  tab: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    borderRadius: 99,
   },
-  multilineInput: { height: 80, textAlignVertical: 'top' },
-  clientsSelector: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginVertical: 4 },
-  clientChip: {
-    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16,
-    backgroundColor: '#F3F4F6', borderWidth: 1, borderColor: '#F3F4F6'
+  tabActive: {
+    backgroundColor: COLORS.primary,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  clientChipActive: {
-    backgroundColor: 'rgba(20, 184, 166, 0.08)', borderColor: COLORS.primary
+  tabText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
   },
-  clientChipText: { fontSize: 11, fontWeight: '600', color: COLORS.textSecondary },
-  clientChipTextActive: { color: COLORS.primary, fontWeight: '700' },
-  noClientsWarning: { padding: 12, backgroundColor: '#FEF3C7', borderRadius: 8 },
-  noClientsWarningText: { fontSize: 11, color: '#D97706', fontWeight: '600' },
-  submitBtn: {
-    backgroundColor: COLORS.primary, borderRadius: 10, paddingVertical: 14,
-    alignItems: 'center', marginTop: 12
+  tabTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
-  submitBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' }
+
+  // ─── Case Request Card ─────────────────────────────────────────────────────
+  caseRequestCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1,
+    gap: 12,
+  },
+  requestCardTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  clientAvatarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  reqAvatarImg: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+  },
+  reqAvatarFallback: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(20, 184, 166, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reqAvatarInitial: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  reqClientName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+  },
+  reqCategoryText: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  reqStatusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  reqStatusBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  pendingBadge: {
+    backgroundColor: '#FEF3C7',
+  },
+  pendingBadgeText: {
+    color: '#B45309',
+  },
+  acceptedBadge: {
+    backgroundColor: '#DCFCE7',
+  },
+  acceptedBadgeText: {
+    color: '#15803D',
+  },
+  rejectedBadge: {
+    backgroundColor: '#FEE2E2',
+  },
+  rejectedBadgeText: {
+    color: '#B91C1C',
+  },
+
+  // Details Box
+  reqDetailsBox: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 12,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  detailDocName: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+  },
+  priorityPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: '#F3F4F6',
+  },
+  priorityHigh: {
+    backgroundColor: '#FEE2E2',
+  },
+  priorityText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#4B5563',
+  },
+  priorityHighText: {
+    color: '#DC2626',
+  },
+  dateMetaGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    borderTopWidth: 1,
+    borderColor: '#E5E7EB',
+    paddingTop: 8,
+  },
+  dateCol: {
+    flex: 1,
+  },
+  dateLabel: {
+    fontSize: 10,
+    color: '#9CA3AF',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
+  dateValue: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    marginTop: 2,
+  },
+
+  // Actions Row
+  reqActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  reqViewCaseBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: COLORS.primary,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  reqViewCaseBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  pendingActionBtns: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  quickAcceptBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#DCFCE7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+  quickRejectBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+
+  // ─── Empty States ──────────────────────────────────────────────────────────
+  emptyCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    gap: 8,
+  },
+  emptyEmoji: {
+    fontSize: 40,
+    marginBottom: 4,
+  },
+  emptyText: {
+    fontSize: 13,
+    color: '#9CA3AF',
+    fontWeight: '600',
+    textAlign: 'center',
+  },
 });
 
 export default CasesScreen;

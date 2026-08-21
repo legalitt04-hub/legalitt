@@ -75,14 +75,38 @@ if (typeof global !== 'undefined') {
 }
 
 // ─── NativeModules stubs (must run before Zego imports) ──────────────────────
-var RN = require('react-native');
-if (RN.NativeModules) {
-  if (!RN.NativeModules.ZegoExpressNativeModule) {
-    RN.NativeModules.ZegoExpressNativeModule = { prefix: 'zego' };
-  }
-  if (!RN.NativeModules.ZIMNativeModule) {
-    RN.NativeModules.ZIMNativeModule = { prefix: 'zim' };
-  }
+try {
+  var RN = require('react-native');
+  var originalNativeModules = RN.NativeModules || {};
+  var customStubs = {
+    ZegoExpressNativeModule: { prefix: 'zego' },
+    ZIMNativeModule: { prefix: 'zim' },
+  };
+
+  var nativeModulesProxy = new Proxy(originalNativeModules, {
+    get: function(target, prop, receiver) {
+      if (prop in customStubs) {
+        return customStubs[prop];
+      }
+      try {
+        return Reflect.get(target, prop, receiver);
+      } catch (e) {
+        return undefined;
+      }
+    },
+    set: function(target, prop, value) {
+      customStubs[prop] = value;
+      return true;
+    }
+  });
+
+  Object.defineProperty(RN, 'NativeModules', {
+    get: function() { return nativeModulesProxy; },
+    configurable: true,
+    enumerable: true,
+  });
+} catch (err) {
+  // Silent fallback
 }
 
 // ─── Register App ────────────────────────────────────────────────────────────

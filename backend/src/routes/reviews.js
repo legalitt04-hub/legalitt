@@ -11,6 +11,7 @@ router.get('/', async (req, res, next) => {
     const filter = advocateId ? { advocate: advocateId } : {};
     const reviews = await Review.find(filter)
       .populate('client', 'name avatar')
+      .populate('booking', 'type issue')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit).limit(Number(limit)).lean();
     res.json({ success: true, data: reviews });

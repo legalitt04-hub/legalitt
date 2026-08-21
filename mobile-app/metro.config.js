@@ -3,41 +3,45 @@ const path = require('path');
 
 const config = getDefaultConfig(__dirname);
 
-// ─── Web-safe polyfill paths ─────────────────────────────────────────────────
+// ─── Web & Expo Go Polyfill paths ─────────────────────────────────────────────
 const NOOP = path.resolve(__dirname, 'src/utils/polyfills/noopPolyfill.js');
 const RAZORPAY = path.resolve(__dirname, 'src/utils/polyfills/razorpayPolyfill.js');
 const SOUND = path.resolve(__dirname, 'src/utils/polyfills/soundPolyfill.js');
 const KEEP_AWAKE = path.resolve(__dirname, 'src/utils/keepAwakePolyfill.js');
+const GOOGLE_SIGNIN = path.resolve(__dirname, 'src/utils/GoogleSigninMock.js');
 
 // ─── Platform-aware module resolver ──────────────────────────────────────────
-// For web builds, redirect native-only packages to safe stubs.
 config.resolver.resolveRequest = (context, moduleName, platform) => {
-  if (platform === 'web') {
-    // Zego video call SDK — native-only
-    if (
-      moduleName.includes('zego-express-engine') ||
-      moduleName.includes('zego-zim') ||
-      moduleName.includes('@zegocloud') ||
-      moduleName.includes('zego-express') ||
-      moduleName.startsWith('zego')
-    ) {
-      return { type: 'sourceFile', filePath: NOOP };
-    }
+  // Always safely stub Google Sign-In native TurboModule in Expo Go & Web
+  if (moduleName.includes('@react-native-google-signin/google-signin')) {
+    return { type: 'sourceFile', filePath: GOOGLE_SIGNIN };
+  }
 
-    // Payment — native-only
-    if (moduleName === 'react-native-razorpay') {
-      return { type: 'sourceFile', filePath: RAZORPAY };
-    }
+  // Always stub KeepAwake — TurboModule 'ReactNativeKCKeepAwake' is not
+  // present in Expo Go on any platform (android, ios, or web).
+  if (moduleName === '@sayem314/react-native-keep-awake') {
+    return { type: 'sourceFile', filePath: KEEP_AWAKE };
+  }
 
-    // Audio — native-only
-    if (moduleName === 'react-native-sound') {
-      return { type: 'sourceFile', filePath: SOUND };
-    }
+  // Always stub react-native-sound — not linked in Expo Go
+  if (moduleName === 'react-native-sound') {
+    return { type: 'sourceFile', filePath: SOUND };
+  }
 
-    // Keep Awake
-    if (moduleName === '@sayem314/react-native-keep-awake') {
-      return { type: 'sourceFile', filePath: KEEP_AWAKE };
-    }
+  // Always stub Razorpay — not linked in Expo Go
+  if (moduleName === 'react-native-razorpay') {
+    return { type: 'sourceFile', filePath: RAZORPAY };
+  }
+
+  // Always stub Zego — native-only SDK, not in Expo Go
+  if (
+    moduleName.includes('zego-express-engine') ||
+    moduleName.includes('zego-zim') ||
+    moduleName.includes('@zegocloud') ||
+    moduleName.includes('zego-express') ||
+    moduleName.startsWith('zego')
+  ) {
+    return { type: 'sourceFile', filePath: NOOP };
   }
 
   // Default resolver for everything else
