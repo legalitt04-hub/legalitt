@@ -19,8 +19,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../constants/theme';
 import { advocateAPI, chatAPI } from '../../services/api';
 import profileAPI from '../../services/profileAPI';
+import { useAuth } from '../../context/AuthContext';
 
-const AdvocateProfileScreen = ({ navigation, route }) => {
+const AdvocateProfileScreen = ({
+  const { isAuthenticated } = useAuth(); navigation, route }) => {
   const advocateId = route?.params?.id || route?.params?.advocateId;
   const prefetchedData = route?.params?.prefetchedData;
   const isSavedInitial = route?.params?.isSavedInitial ?? false;

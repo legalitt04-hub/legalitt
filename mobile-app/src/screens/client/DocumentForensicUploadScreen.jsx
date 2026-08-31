@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
+import { useAuth } from '../../context/AuthContext';
 
 // ─── COLOR PALETTE ─────────────────────────────────────────────────────────────
 const PALETTE = {
@@ -55,7 +56,8 @@ const DOCUMENT_TYPES = [
 
 const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024; // 50MB
 
-export default function DocumentForensicUploadScreen({ navigation }) {
+export default function DocumentForensicUploadScreen({
+  const { isAuthenticated } = useAuth(); navigation }) {
   const insets = useSafeAreaInsets();
 
   // Form State

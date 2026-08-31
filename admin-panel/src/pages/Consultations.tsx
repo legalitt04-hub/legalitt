@@ -68,11 +68,12 @@ const MODE_CONFIG: Record<string, { icon: React.ReactNode; label: string; color:
 };
 
 const SERVICE_LABELS: Record<string, string> = {
-  legal_advice:      'Legal Advice',
-  legal_notice:      'Legal Notice',
-  property_research: 'Property Research',
-  fir_draft:         'FIR Draft',
-  consultation:      'Consultation',
+  legal_advice:       'Legal Advice',
+  legal_notice:       'Legal Notice',
+  property_research:  'Property Research',
+  fir_draft:          'FIR Draft',
+  document_forensic:  'Document Forensic',
+  consultation:       'Consultation',
 };
 
 // ─── Countdown Component ──────────────────────────────────────────────────────
@@ -233,6 +234,27 @@ export default function Consultations() {
 
   // ─── Fetch Bookings ──────────────────────────────────────────────────────
   const fetchBookings = useCallback(async () => {
+    // Also fetch FIR Drafts and merge them as bookings
+    const fetchFIRDrafts = async () => {
+      try {
+        const res = await api.get('/admin/fir-drafts');
+        const drafts = (res.data?.data || []).map((d: any) => ({
+          _id: d._id,
+          client: d.user || d.userId,
+          issue: d.incident?.description || d.aiDraft?.substring(0, 100) || 'FIR Draft',
+          serviceType: 'fir_draft',
+          status: d.status === 'finalized' ? 'completed' : d.status === 'submitted' ? 'confirmed' : 'pending_assignment',
+          payment: { amount: 0, status: 'not_required' },
+          documents: d.evidence || [],
+          createdAt: d.createdAt,
+          assignmentDeadline: d.createdAt,
+          consultationMode: 'chat',
+          _isFIRDraft: true,
+        }));
+        return drafts;
+      } catch { return []; }
+    };
+
     setLoading(true);
     try {
       let statusParam: string | undefined;
@@ -240,13 +262,20 @@ export default function Consultations() {
       else if (activeTab === 'active_cases') statusParam = 'confirmed,in_progress';
       else if (activeTab === 'completed') statusParam = 'completed';
 
-      const res = await api.get('/admin/bookings', { params: { status: statusParam, limit: 100 } });
-      if (res.data?.success) {
-        setBookings(res.data.data || []);
-        if (res.data.summary) {
-          setSummary(res.data.summary);
-        }
-      }
+      const [res, firDrafts] = await Promise.all([
+        api.get('/admin/bookings', { params: { status: statusParam, limit: 100 } }),
+        fetchFIRDrafts(),
+      ]);
+      const allBookings = [...(res.data?.data?.bookings || res.data?.data || []), ...firDrafts];
+      allBookings.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setBookings(allBookings);
+      setSummary({
+        pending:   allBookings.filter((b: any) => b.status === 'pending_assignment').length,
+        active:    allBookings.filter((b: any) => ['confirmed','in_progress'].includes(b.status)).length,
+        completed: allBookings.filter((b: any) => b.status === 'completed').length,
+        revenue:   allBookings.filter((b: any) => b.payment?.status === 'paid').reduce((sum: number, b: any) => sum + (b.payment?.amount || 0), 0),
+        total:     allBookings.length,
+      });
     } catch (err) {
       console.error('Failed to load bookings', err);
     } finally {
@@ -489,8 +518,9 @@ export default function Consultations() {
             { value: '', label: '🗂 All Services' },
             { value: 'legal_advice', label: '⚖️ Legal Advice' },
             { value: 'legal_notice', label: '📄 Legal Notice' },
-            { value: 'property_research', label: '🏠 Property Research' },
+            { value: 'property_research', label: '🏠 Property' },
             { value: 'fir_draft', label: '📋 FIR Draft' },
+            { value: 'document_forensic', label: '🔬 Forensic' },
           ].map(f => (
             <button
               key={f.value}

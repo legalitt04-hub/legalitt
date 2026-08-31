@@ -5,8 +5,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { firAPI } from '../../services/api';
 import { COLORS } from '../../constants/theme';
+import { useAuth } from '../../context/AuthContext';
 
-const FIRFormScreen = ({ route, navigation }) => {
+const FIRFormScreen = ({
+  const { isAuthenticated } = useAuth(); route, navigation }) => {
   const { type, title } = route.params;
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
