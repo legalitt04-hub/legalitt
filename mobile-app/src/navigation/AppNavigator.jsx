@@ -18,7 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // AUTH SCREENS
 import SplashScreen from '../screens/auth/SplashScreen';
 import LegalittIntroScreen from '../screens/auth/LegalittIntroScreen';
-import RoleSelectScreen from '../screens/auth/RoleSelectScreen';
+// RoleSelectScreen removed — guest mode: app opens directly, login shown when needed
 import OnboardingScreen from '../screens/auth/OnboardingScreen';
 import LoginRegisterScreen from '../screens/auth/LoginRegisterScreen';
 import OTPScreen from '../screens/auth/OTPScreen';
@@ -340,10 +340,11 @@ const AppNavigator = () => {
               <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
               <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
             </>
-          ) : !isAuthenticated ? (
-            // ─── AUTHENTICATION FLOW (UNAUTHENTICATED) ───────────────────
+          ) : (
+            // ─── GUEST + AUTHENTICATED CLIENT FLOW ────────────────────────
+            // Guests see the full client app. Profile tab handles sign-in internally.
+            // Auth screens accessible via navigation for login/register flows.
             <>
-              <Stack.Screen name="RoleSelect" component={RoleSelectScreen} />
               <Stack.Screen name="Onboarding" component={OnboardingScreen} />
               <Stack.Screen name="LoginRegister" component={LoginRegisterScreen} />
               <Stack.Screen name="OTP" component={OTPScreen} />
