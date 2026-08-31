@@ -95,7 +95,8 @@ const ProfileScreen = ({ navigation }) => {
           style: 'destructive',
           onPress: async () => {
             setLoading(true);
-            await AsyncStorage.removeItem('legalitt_onboarded'); // Reset so onboarding shows again
+            await AsyncStorage.removeItem('legalitt_onboarded');
+            await AsyncStorage.removeItem('legalitt_role'); // Reset role so RoleSelect shows
             await logout();
             setLoading(false);
           },

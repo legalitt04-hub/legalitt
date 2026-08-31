@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, StatusBar, Dimensions, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -25,13 +26,15 @@ export default function RoleSelectScreen({ navigation }) {
     },
   ];
 
-  const handleNext = () => {
-    if (role) {
-      if (role === 'advocate') {
-        navigation.replace('AdvocateFlow');
-      } else {
-        navigation.replace('Onboarding', { userRole: role });
-      }
+  const handleNext = async () => {
+    if (!role) return;
+    if (role === 'advocate') {
+      // Advocate → go to login/register with advocate role
+      navigation.replace('LoginRegister', { role: 'advocate' });
+    } else {
+      // Client → save role, go to client home as guest
+      await AsyncStorage.setItem('legalitt_role', 'client');
+      navigation.replace('ClientMain');
     }
   };
 

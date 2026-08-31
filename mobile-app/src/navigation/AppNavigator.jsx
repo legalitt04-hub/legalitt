@@ -314,27 +314,27 @@ const AppNavigator = () => {
   const { isAuthenticated, user, isRestoring, consentAccepted } = useAuth();
   const [splashFinished, setSplashFinished] = useState(false);
   const [hasOnboarded, setHasOnboarded] = useState(null); // null = loading
+  const [hasRole, setHasRole] = useState(null); // null = loading
 
-  // Check if user has seen onboarding before
-  useEffect(() => {
-    AsyncStorage.getItem('legalitt_onboarded').then(val => {
-      setHasOnboarded(!!val);
-    });
-  }, []);
+  const refreshGuestState = async () => {
+    const [onboarded, role] = await Promise.all([
+      AsyncStorage.getItem('legalitt_onboarded'),
+      AsyncStorage.getItem('legalitt_role'),
+    ]);
+    setHasOnboarded(!!onboarded);
+    setHasRole(role || null); // 'client' | null
+  };
 
-  // Re-check after auth state changes (e.g. after logout clears the flag)
-  useEffect(() => {
-    if (!isAuthenticated) {
-      AsyncStorage.getItem('legalitt_onboarded').then(val => {
-        setHasOnboarded(!!val);
-      });
-    }
-  }, [isAuthenticated]);
+  // On mount
+  useEffect(() => { refreshGuestState(); }, []);
+
+  // After every auth change (e.g. logout)
+  useEffect(() => { if (!isAuthenticated) refreshGuestState(); }, [isAuthenticated]);
 
   // ─── SYNCHRONIZED SPLASH ANIMATION GATE ─────────────────────────────────
   // Render LegalittIntroScreen until the logo reveal animation completion event fires.
   // Prevents Home screen or Auth screens from appearing while animation is running.
-  if (!splashFinished || hasOnboarded === null) {
+  if (!splashFinished || hasOnboarded === null || hasRole === undefined) {
     return (
       <View style={{ flex: 1, minHeight: Platform.OS === 'web' ? '100vh' : '100%', backgroundColor: '#000000' }}>
         <LegalittIntroScreen
@@ -359,11 +359,16 @@ const AppNavigator = () => {
               <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
             </>
           ) : !isAuthenticated ? (
-            // ─── UNAUTHENTICATED: Onboarding first, then full client app ─────────
+            // ─── UNAUTHENTICATED: Onboarding → RoleSelect → ClientMain (guest) ──
             <>
-              {!hasOnboarded && (
-                <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-              )}
+              {!hasOnboarded
+                ? <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+                : !hasRole
+                  ? <Stack.Screen name="RoleSelect" component={RoleSelectScreen} />
+                  : <Stack.Screen name="ClientMain" component={ClientTabs} />
+              }
+              <Stack.Screen name="RoleSelect" component={RoleSelectScreen} />
+              <Stack.Screen name="Onboarding" component={OnboardingScreen} />
               <Stack.Screen name="ClientMain" component={ClientTabs} />
               <Stack.Screen name="AdvocateProfile" component={AdvocateProfileScreen} />
               <Stack.Screen name="Filter" component={FilterScreen} />

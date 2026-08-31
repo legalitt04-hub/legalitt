@@ -234,13 +234,13 @@ const OnboardingScreen = ({ navigation, route }) => {
       setCurrentIndex(next);
     } else {
       await AsyncStorage.setItem('legalitt_onboarded', 'true');
-      navigation.replace('ClientMain');
+      navigation.replace('RoleSelect');
     }
   };
 
   const handleSkip = async () => {
     await AsyncStorage.setItem('legalitt_onboarded', 'true');
-    navigation.replace('ClientMain');
+    navigation.replace('RoleSelect');
   };
 
   const renderSlide = ({ item, index }) => (
