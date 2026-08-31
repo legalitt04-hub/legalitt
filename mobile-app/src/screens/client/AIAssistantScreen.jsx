@@ -21,6 +21,13 @@ import { FormattedAIResponse } from '../../components/ai/FormattedAIResponse';
 const DISCLAIMER = '⚠️ AI responses are for informational purposes only and do not constitute legal advice.';
 
 const AIAssistantScreen = ({ navigation }) => {
+  const { isAuthenticated } = useAuth();
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigation.replace('LoginRegister', { role: 'client' });
+    }
+  }, [isAuthenticated]);
+
   const [messages, setMessages] = useState([
     { 
       id: '1', 

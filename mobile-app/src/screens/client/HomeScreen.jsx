@@ -1,7 +1,7 @@
 // screens/client/HomeScreen.jsx - Production Ready Layout
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, Image,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView,
   Dimensions, RefreshControl
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -70,10 +70,6 @@ export default function HomeScreen({ navigation }) {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.userInfo} onPress={() => navigation.navigate('Profile')} activeOpacity={0.7}>
-            <Image
-              source={{ uri: user?.avatar || user?.user?.avatar || 'https://i.pravatar.cc/150?img=1' }}
-              style={styles.avatar}
-            />
             <View>
               <Text style={styles.greeting}>{getGreeting()},</Text>
               <Text style={styles.userName}>{firstName}</Text>
@@ -179,7 +175,6 @@ const styles = StyleSheet.create({
   scrollContent: { paddingBottom: 120 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 16 },
   userInfo: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.primary },
   greeting: { fontSize: 12, color: '#6B7280' },
   userName: { fontSize: 16, fontWeight: '700', color: '#0F172A' },
   headerIcons: { flexDirection: 'row', gap: 8 },

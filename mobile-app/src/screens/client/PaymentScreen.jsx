@@ -51,14 +51,7 @@ const PaymentScreen = ({ navigation, route }) => {
 
   const handlePayment = async () => {
     if (!isAuthenticated) {
-      Alert.alert(
-        'Sign in Required',
-        'Please sign in to complete payment.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Sign in', onPress: () => navigation.navigate('LoginRegister', { role: 'client' }) },
-        ]
-      );
+      navigation.navigate('LoginRegister', { role: 'client' });
       return;
     }
     if (!selectedMethod) {

@@ -43,12 +43,19 @@ const MODE_ICON = { chat: 'chatbubbles-outline', voice: 'call-outline', video: '
 const MODE_LABEL = { chat: 'Chat Consultation', voice: 'Voice Call', video: 'Video Call' };
 
 export default function MyBookingsScreen({ navigation }) {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const userData = user?.user || user || {};
 
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Guest guard — redirect to login
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigation.replace('LoginRegister', { role: 'client' });
+    }
+  }, [isAuthenticated]);
 
   const fetchBookings = useCallback(async (showRefresh = false) => {
     if (showRefresh) setRefreshing(true);

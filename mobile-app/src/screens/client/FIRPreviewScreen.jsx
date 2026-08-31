@@ -24,14 +24,7 @@ const FIRPreviewScreen = ({ route, navigation }) => {
 
   const handleSaveToDevice = async () => {
     if (!isAuthenticated) {
-      Alert.alert(
-        'Sign in Required',
-        'Please sign in to save your FIR draft.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Sign in', onPress: () => navigation.navigate('LoginRegister', { role: 'client' }) },
-        ]
-      );
+      navigation.navigate('LoginRegister', { role: 'client' });
       return;
     }
     try {

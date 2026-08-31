@@ -64,14 +64,7 @@ const BookingScreen = ({ route, navigation }) => {
 
   const handleBook = async () => {
     if (!isAuthenticated) {
-      Alert.alert(
-        'Sign in Required',
-        'Please sign in to proceed with consultation booking & payment.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Sign in', onPress: () => navigation.navigate('LoginRegister', { role: 'client' }) },
-        ]
-      );
+      navigation.navigate('LoginRegister', { role: 'client' });
       return;
     }
     if (!issue.trim()) {
