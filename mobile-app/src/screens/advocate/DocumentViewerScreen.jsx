@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { COLORS } from '../../constants/theme';
 import {
   View,
   Text,
@@ -19,7 +18,7 @@ const THEME = {
   background: '#FAF9F8',       // Light cream / off-white page bg
   cardBg: '#FFFFFF',           // Pure white
   primary: '#8C6E52',          // Muted warm beige / brown
-  primaryLight: COLORS.accent,     // Soft secondary beige
+  primaryLight: '#B09C85',     // Soft secondary beige
   viewerBg: '#FAF8F5',         // Very light cream document viewer bg
   viewerBorder: '#EDE7DF',     // Subtle viewer border
   cardBorder: '#F0ECE7',       // Card border

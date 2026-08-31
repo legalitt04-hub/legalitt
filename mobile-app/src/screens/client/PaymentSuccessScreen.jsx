@@ -99,7 +99,7 @@ const PaymentSuccessScreen = ({ navigation, route }) => {
             activeOpacity={0.9}
           >
             <LinearGradient
-              colors={[COLORS.primary, COLORS.primaryDark || COLORS.primaryLight]}
+              colors={[COLORS.primary, COLORS.primaryDark || '#0D9488']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.primaryButton}

@@ -9,7 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../constants/theme';
 
 const LAST_UPDATED = 'May 24, 2026';
-const PRIMARY_COLOR = COLORS.primary || COLORS.accent;
+const PRIMARY_COLOR = COLORS.primary || '#B09C85';
 const PRIMARY_DARK = COLORS.primaryDark || '#8D7865';
 
 const Section = ({ icon, number, title, children }) => (

@@ -141,36 +141,23 @@ const ProfileScreen = ({ navigation }) => {
     </View>
   );
 
-  // ── Guest login overlay (shown on top of blurred profile screen) ─────────
+
   const GuestOverlay = () => (
     <Modal transparent animationType="fade" visible={!isAuthenticated}>
-      <View style={styles.overlayBg}>
-        <View style={styles.overlayCard}>
-          {/* Placeholder avatar */}
-          <View style={styles.overlayAvatar}>
+      <View style={overlayStyles.bg}>
+        <View style={overlayStyles.card}>
+          <View style={overlayStyles.avatar}>
             <Ionicons name="person" size={40} color={COLORS.primary} />
           </View>
-          <Text style={styles.overlayTitle}>Welcome to Legalitt</Text>
-          <Text style={styles.overlaySubtitle}>Sign in to access your profile, bookings, and more</Text>
-
-          {/* Client login */}
-          <TouchableOpacity
-            style={styles.overlayClientBtn}
-            onPress={() => navigation.navigate('LoginRegister', { role: 'client' })}
-            activeOpacity={0.85}
-          >
-            <Ionicons name="person-circle-outline" size={20} color="#fff" />
-            <Text style={styles.overlayClientBtnText}>Sign in as Client</Text>
+          <Text style={overlayStyles.title}>Welcome to Legalitt</Text>
+          <Text style={overlayStyles.sub}>Sign in to access your profile and bookings</Text>
+          <TouchableOpacity style={overlayStyles.clientBtn}
+            onPress={() => navigation.navigate('LoginRegister', { role: 'client' })} activeOpacity={0.85}>
+            <Text style={overlayStyles.clientBtnTxt}>Sign in as Client</Text>
           </TouchableOpacity>
-
-          {/* Advocate login */}
-          <TouchableOpacity
-            style={styles.overlayAdvBtn}
-            onPress={() => navigation.navigate('LoginRegister', { role: 'advocate' })}
-            activeOpacity={0.85}
-          >
-            <Ionicons name="briefcase-outline" size={20} color={COLORS.accent} />
-            <Text style={styles.overlayAdvBtnText}>Are you an Advocate?</Text>
+          <TouchableOpacity style={overlayStyles.advBtn}
+            onPress={() => navigation.navigate('LoginRegister', { role: 'advocate' })} activeOpacity={0.85}>
+            <Text style={overlayStyles.advBtnTxt}>Are you an Advocate?</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -179,9 +166,7 @@ const ProfileScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Guest Login Overlay — appears on top when not authenticated */}
       <GuestOverlay />
-
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>My Profile</Text>
@@ -457,59 +442,18 @@ const styles = StyleSheet.create({
     height: 24,
     backgroundColor: '#E2E8F0',
   },
-  // ── Guest overlay styles ──────────────────────────────────────
-  overlayBg: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 37, 64, 0.82)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  overlayCard: {
-    backgroundColor: '#fff',
-    borderRadius: 24,
-    padding: 28,
-    width: '100%',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  overlayAvatar: {
-    width: 80, height: 80, borderRadius: 40,
-    backgroundColor: COLORS.primarySurface || '#EEF4FA',
-    alignItems: 'center', justifyContent: 'center',
-    marginBottom: 16,
-    borderWidth: 2, borderColor: COLORS.primary,
-  },
-  overlayTitle: {
-    fontSize: 20, fontWeight: '800',
-    color: COLORS.primary, marginBottom: 8, textAlign: 'center',
-  },
-  overlaySubtitle: {
-    fontSize: 13, color: '#6B7280',
-    textAlign: 'center', marginBottom: 24, lineHeight: 20,
-  },
-  overlayClientBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: COLORS.primary,
-    borderRadius: 14, paddingVertical: 14, paddingHorizontal: 24,
-    width: '100%', justifyContent: 'center', marginBottom: 12,
-  },
-  overlayClientBtnText: {
-    color: '#fff', fontSize: 15, fontWeight: '700',
-  },
-  overlayAdvBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    borderRadius: 14, paddingVertical: 13, paddingHorizontal: 24,
-    width: '100%', justifyContent: 'center',
-    borderWidth: 2, borderColor: COLORS.accent || '#C9A84C',
-    backgroundColor: '#FFFCF0',
-  },
-  overlayAdvBtnText: {
-    color: COLORS.accent || '#C9A84C', fontSize: 15, fontWeight: '700',
-  },
+});
+
+const overlayStyles = StyleSheet.create({
+  bg: { flex:1, backgroundColor:'rgba(15,37,64,0.85)', justifyContent:'center', alignItems:'center', padding:24 },
+  card: { backgroundColor:'#fff', borderRadius:24, padding:28, width:'100%', alignItems:'center', elevation:10 },
+  avatar: { width:80, height:80, borderRadius:40, backgroundColor:'#EEF4FA', alignItems:'center', justifyContent:'center', marginBottom:16, borderWidth:2, borderColor:COLORS.primary },
+  title: { fontSize:20, fontWeight:'800', color:COLORS.primary, marginBottom:8, textAlign:'center' },
+  sub: { fontSize:13, color:'#6B7280', textAlign:'center', marginBottom:24, lineHeight:20 },
+  clientBtn: { backgroundColor:COLORS.primary, borderRadius:14, paddingVertical:14, width:'100%', alignItems:'center', marginBottom:12 },
+  clientBtnTxt: { color:'#fff', fontSize:15, fontWeight:'700' },
+  advBtn: { borderRadius:14, paddingVertical:13, width:'100%', alignItems:'center', borderWidth:2, borderColor:COLORS.accent, backgroundColor:'#FFFCF0' },
+  advBtnTxt: { color:COLORS.accent, fontSize:15, fontWeight:'700' },
 });
 
 export default ProfileScreen;

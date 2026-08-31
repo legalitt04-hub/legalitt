@@ -3,7 +3,7 @@ import { StyleSheet, Animated, StatusBar } from 'react-native';
 import Svg, { Path, G, Defs, ClipPath, Rect } from 'react-native-svg';
 import { COLORS } from '../../constants/theme';
 
-const TEAL = COLORS.primary || COLORS.primary;
+const TEAL = COLORS.primary || '#14B8A6';
 
 const GavelStatic = () => (
   <Svg width="155" height="155" viewBox="0 0 155 155" fill="none">

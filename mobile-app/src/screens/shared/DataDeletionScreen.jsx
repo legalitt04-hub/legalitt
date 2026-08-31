@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { COLORS } from '../../constants/theme';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   StatusBar, TextInput, Alert, ActivityIndicator,
@@ -13,7 +12,7 @@ import * as SecureStore from '../../utils/secureStorage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const NAVY = '#012464';
-const TEAL = COLORS.primaryLight;
+const TEAL = '#0D9488';
 const DANGER = '#DC2626';
 
 const DELETION_REASONS = [

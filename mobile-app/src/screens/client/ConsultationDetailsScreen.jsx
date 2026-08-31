@@ -1,5 +1,4 @@
 import React, { useState, useCallback } from 'react';
-import { COLORS } from '../../constants/theme';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Alert, ActivityIndicator, Platform
@@ -155,7 +154,7 @@ export default function ConsultationDetailsScreen({ navigation, route }) {
             contact: phone.replace(/\D/g, '').slice(-10),
             name: fullName.trim(),
           },
-          theme: { color: COLORS.primary },
+          theme: { color: '#14B8A6' },
         };
 
         try {

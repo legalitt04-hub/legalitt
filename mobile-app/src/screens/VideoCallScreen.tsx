@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { View, StyleSheet, StatusBar, Alert, Text, ActivityIndicator } from 'react-native';
 import Constants from 'expo-constants';
-import { COLORS } from '../constants/theme';
 import ZegoUIKitPrebuiltCall, {
   ONE_ON_ONE_VIDEO_CALL_CONFIG,
   ONE_ON_ONE_VOICE_CALL_CONFIG,
@@ -32,7 +31,7 @@ export default function VideoCallScreen({ navigation, route }: any) {
   if (!zegoRoomId || !zegoToken || !ZEGO_APP_ID) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <ActivityIndicator size="large" color="#14B8A6" />
         <Text style={styles.waitText}>Setting up call room...</Text>
       </View>
     );

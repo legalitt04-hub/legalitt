@@ -289,7 +289,7 @@ const FilterModal = ({ visible, onClose, onApplyFilters, onShowOnMap, initialFil
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.applyButton} onPress={handleApply}>
-              <LinearGradient colors={[COLORS.primary, COLORS.primaryLight]} style={styles.applyGradient}>
+              <LinearGradient colors={['#14B8A6', '#0D9488']} style={styles.applyGradient}>
                 <Text style={styles.applyButtonText}>Apply</Text>
               </LinearGradient>
             </TouchableOpacity>

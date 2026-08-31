@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from 'react';
-import { COLORS } from '../../constants/theme';
 import {
   View,
   Text,
@@ -20,7 +19,7 @@ const THEME = {
   background: '#FAF9F8',       // Light cream / off-white page bg
   cardBg: '#FFFFFF',           // Pure white
   primary: '#8C6E52',          // Warm beige / tan primary
-  primaryLight: COLORS.accent,     // Soft secondary beige
+  primaryLight: '#B09C85',     // Soft secondary beige
   cardBorder: '#F0ECE7',       // Subtle card border
   badgeBg: '#F5EFEB',          // Neutral badge bg
   textDark: '#2D2824',         // Dark charcoal

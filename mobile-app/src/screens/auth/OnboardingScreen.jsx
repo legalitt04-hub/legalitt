@@ -1,5 +1,4 @@
 import React, { useState, useRef } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View, Text, StyleSheet, FlatList, Animated,
   Dimensions, TouchableOpacity, StatusBar,
@@ -222,7 +221,7 @@ const OnboardingScreen = ({ navigation, route }) => {
   const scrollX      = useRef(new Animated.Value(0)).current;
   const btnScale     = useRef(new Animated.Value(1)).current;
 
-  const handleNext = async () => {
+  const handleNext = () => {
     Animated.sequence([
       Animated.timing(btnScale, { toValue: 0.94, duration: 80, useNativeDriver: true }),
       Animated.timing(btnScale, { toValue: 1,    duration: 80, useNativeDriver: true }),
@@ -233,15 +232,11 @@ const OnboardingScreen = ({ navigation, route }) => {
       flatListRef.current?.scrollToIndex({ index: next, animated: true });
       setCurrentIndex(next);
     } else {
-      await AsyncStorage.setItem('legalitt_onboarded', 'true');
       navigation.replace('ClientMain');
     }
   };
 
-  const handleSkip = async () => {
-    await AsyncStorage.setItem('legalitt_onboarded', 'true');
-    navigation.replace('ClientMain');
-  };
+  const handleSkip = () => navigation.replace('ClientMain');
 
   const renderSlide = ({ item, index }) => (
     <View style={styles.slide}>

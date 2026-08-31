@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { COLORS } from '../../constants/theme';
 import {
   View,
   Text,
@@ -26,7 +25,7 @@ const THEME = {
   selfBorder: 'rgba(255, 255, 255, 0.4)',
   // Brand & Controls
   primary: '#8C6E52',          // Warm beige/brown
-  primaryLight: COLORS.accent,
+  primaryLight: '#B09C85',
   controlBg: '#F3EFEB',        // Light cream for circular control buttons
   controlBgActive: '#8C6E52',   // Primary color when active
   controlIconColor: '#8C6E52', // Icon color

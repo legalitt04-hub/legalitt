@@ -241,6 +241,8 @@ const LoginRegisterScreen = ({ navigation, route }) => {
               onPress={() => {
                 if (navigation.canGoBack()) {
                   navigation.goBack();
+                } else {
+                  navigation.replace('RoleSelect');
                 }
               }}
               disabled={loading}
@@ -405,27 +407,8 @@ const LoginRegisterScreen = ({ navigation, route }) => {
             <Text style={styles.googleButtonText}>Continue with Google</Text>
           </TouchableOpacity>
 
-          {/* ── Sign in as Advocate (shown only when role=client) ── */}
-          {selectedRole !== 'advocate' && (
-            <TouchableOpacity
-              style={styles.advocateBar}
-              onPress={() => navigation.replace('LoginRegister', { role: 'advocate' })}
-              disabled={loading}
-              activeOpacity={0.85}
-            >
-              <View style={styles.advocateBarIcon}>
-                <Ionicons name="briefcase" size={18} color={COLORS.accent || '#C9A84C'} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.advocateBarTitle}>Are you an Advocate?</Text>
-                <Text style={styles.advocateBarSub}>Sign in to your practice portal →</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={COLORS.accent || '#C9A84C'} />
-            </TouchableOpacity>
-          )}
-
           {/* Spacer */}
-          <View style={{ flex: 1, minHeight: 24 }} />
+          <View style={{ flex: 1, minHeight: 40 }} />
 
           {/* Terms & Privacy — required for both Login and Register */}
           <TouchableOpacity
@@ -701,30 +684,6 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontSize: 15,
     fontWeight: '600',
-  },
-  // Advocate sign-in banner
-  advocateBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: '#FFFCF0',
-    borderRadius: 16,
-    padding: 14,
-    marginTop: 12,
-    borderWidth: 1.5,
-    borderColor: COLORS.accent || '#C9A84C',
-  },
-  advocateBarIcon: {
-    width: 40, height: 40, borderRadius: 12,
-    backgroundColor: 'rgba(201,168,76,0.12)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  advocateBarTitle: {
-    fontSize: 14, fontWeight: '800',
-    color: '#7A5C1E',
-  },
-  advocateBarSub: {
-    fontSize: 11, color: '#92742D', marginTop: 1,
   },
   socialButton: {
     width: 56,

@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
   infoText: { 
     flex: 1, 
     fontSize: 13, 
-    color: COLORS.primaryLight, 
+    color: '#0D9488', 
     marginLeft: 12, 
     lineHeight: 18 
   },

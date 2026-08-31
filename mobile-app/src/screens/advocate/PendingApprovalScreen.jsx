@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
   iconWrapper: { alignItems: 'center', justifyContent: 'center', marginBottom: 40, marginTop: -40 },
   iconPulse1: { position: 'absolute', width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(20, 184, 166, 0.05)' },
   iconPulse2: { position: 'absolute', width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(20, 184, 166, 0.1)' },
-  iconContainer: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', shadowColor: COLORS.primaryLight, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 4 },
+  iconContainer: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', shadowColor: '#0D9488', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 4 },
 
   title: { fontSize: 26, fontWeight: '800', color: '#1F2937', marginBottom: 16, textAlign: 'center' },
   subtitle: { fontSize: 16, color: '#6B7280', textAlign: 'center', lineHeight: 24, paddingHorizontal: 10, marginBottom: 40 },

@@ -1,5 +1,4 @@
 import { Platform, View, ActivityIndicator, Text, StatusBar, TouchableOpacity, StyleSheet as RNStyleSheet, Dimensions } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import AuthLoadingScreen from './AuthLoadingScreen';
 import React, { useState, useEffect } from 'react';
@@ -313,14 +312,6 @@ const AdvocateTabs = () => {
 const AppNavigator = () => {
   const { isAuthenticated, user, isRestoring, consentAccepted } = useAuth();
   const [splashFinished, setSplashFinished] = useState(false);
-  const [hasOnboarded, setHasOnboarded] = useState(null); // null = loading
-
-  // Check if user has seen onboarding before
-  useEffect(() => {
-    AsyncStorage.getItem('legalitt_onboarded').then(val => {
-      setHasOnboarded(val === 'true');
-    });
-  }, []);
 
   // ─── SYNCHRONIZED SPLASH ANIMATION GATE ─────────────────────────────────
   // Render LegalittIntroScreen until the logo reveal animation completion event fires.
@@ -350,31 +341,15 @@ const AppNavigator = () => {
               <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
             </>
           ) : !isAuthenticated ? (
-            // ─── GUEST FLOW — Client app opens directly, login deferred ───
-            // First launch: Onboarding → ClientMain
-            // Returning:    ClientMain directly
+            // ─── AUTHENTICATION FLOW (UNAUTHENTICATED) ───────────────────
             <>
-              {hasOnboarded === false ? (
-                // First time — show onboarding first
-                <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-              ) : null}
               <Stack.Screen name="ClientMain" component={ClientTabs} />
-              {hasOnboarded !== false && (
-                <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-              )}
+              <Stack.Screen name="Onboarding" component={OnboardingScreen} />
               <Stack.Screen name="LoginRegister" component={LoginRegisterScreen} />
               <Stack.Screen name="OTP" component={OTPScreen} />
               <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-              <Stack.Screen name="AdvocateProfile" component={AdvocateProfileScreen} />
-              <Stack.Screen name="Filter" component={FilterScreen} />
-              <Stack.Screen name="Booking" component={BookingScreen} />
-              <Stack.Screen name="ChatList" component={ChatListScreen} />
-              <Stack.Screen name="Chat" component={ChatScreen} />
-              <Stack.Screen name="AIAssistant" component={AIAssistantScreen} />
-              <Stack.Screen name="Notifications" component={NotificationsScreen} />
-              <Stack.Screen name="FIRDraft" component={FIRDraftScreen} />
-              <Stack.Screen name="MyDrafts" component={MyDraftsScreen} />
               <Stack.Screen name="AdvocateFlow" component={AdvocateStack} />
+              {/* Policy screens reachable from the login/register checkbox links */}
               <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
               <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
             </>
