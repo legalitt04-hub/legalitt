@@ -340,22 +340,11 @@ const AppNavigator = () => {
               <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
               <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
             </>
-          ) : (
-            // ─── GUEST + AUTHENTICATED CLIENT FLOW ────────────────────────
-            // Guests see the full client app. Profile tab handles sign-in internally.
-            // Auth screens accessible via navigation for login/register flows.
-            <>
-              <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-              <Stack.Screen name="LoginRegister" component={LoginRegisterScreen} />
-              <Stack.Screen name="OTP" component={OTPScreen} />
-              <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-              <Stack.Screen name="AdvocateFlow" component={AdvocateStack} />
-              {/* Policy screens reachable from the login/register checkbox links */}
-              <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
-              <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
-            </>
+          ) : isRestoring ? (
+            // Loading while restoring session
+            <></>
           ) : user?.role === 'advocate' ? (
-            // ─── ADVOCATE PRACTICE MANAGEMENT FLOW (AUTHENTICATED) ────────
+            // ─── ADVOCATE PRACTICE MANAGEMENT FLOW ────────────────────────
             <>
               <Stack.Screen name="AdvocateMain" component={AdvocateTabs} />
               <Stack.Screen name="DocumentUpload" component={DocumentUploadScreen} />
@@ -379,7 +368,7 @@ const AppNavigator = () => {
               <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
               <Stack.Screen name="DataDeletion" component={DataDeletionScreen} />
             </>
-          ) : (
+          ) : isAuthenticated ? (
             // ─── CLIENT EXPERIENCE FLOW (AUTHENTICATED) ───────────────────
             <>
               <Stack.Screen name="ClientMain" component={ClientTabs} />
@@ -393,48 +382,34 @@ const AppNavigator = () => {
               <Stack.Screen name="MyBookings" component={MyBookingsScreen} />
               <Stack.Screen name="FIRDraft" component={FIRDraftScreen} />
               <Stack.Screen name="FIRTypeSelector" component={FIRDraftScreen} />
-              <Stack.Screen name="DocumentForensic" component={DocumentForensicScreen} />
-              <Stack.Screen name="DocumentForensicUpload" component={DocumentForensicUploadScreen} />
-              <Stack.Screen name="DocumentForensicReview" component={DocumentForensicReviewScreen} />
-              <Stack.Screen name="DocumentForensicPayment" component={DocumentForensicPaymentScreen} />
-              <Stack.Screen name="DocumentForensicSuccess" component={DocumentForensicSuccessScreen} />
-              <Stack.Screen name="DocumentForensicTrack" component={DocumentForensicTrackScreen} />
-              <Stack.Screen name="DocumentForensicAnalysis" component={DocumentForensicAnalysisScreen} />
-              <Stack.Screen name="DocumentForensicExpertReview" component={DocumentForensicExpertReviewScreen} />
-              <Stack.Screen name="DocumentForensicReportReady" component={DocumentForensicReportReadyScreen} />
-              <Stack.Screen name="DocumentForensicComplete" component={DocumentForensicCompleteScreen} />
-              <Stack.Screen name="FIRForm" component={FIRFormScreen} />
-              <Stack.Screen name="FIRPreview" component={FIRPreviewScreen} />
-              <Stack.Screen name="AILegalNotice" component={AILegalNoticeScreen} />
               <Stack.Screen name="MyDrafts" component={MyDraftsScreen} />
-              <Stack.Screen name="ProfileEdit" component={ProfileEditScreen} />
-              <Stack.Screen name="PropertyResearchLanding" component={PropertyResearchLandingScreen} />
-              <Stack.Screen name="PropertyResearchForm" component={PropertyResearchFormScreen} />
-              <Stack.Screen name="PropertyResearchConfirm" component={PropertyResearchReviewScreen} />
-              <Stack.Screen name="PropertyResearchPayment" component={PropertyResearchPaymentScreen} />
-              <Stack.Screen name="PropertyResearchSuccess" component={PropertyResearchSuccessScreen} />
-              <Stack.Screen name="PropertyResearchTrack" component={PropertyResearchTrackScreen} />
-              <Stack.Screen name="PropertyResearchChecklist" component={PropertyResearchChecklistScreen} />
-              <Stack.Screen name="PropertyResearchLock" component={PropertyResearchLockScreen} />
-
-              {/* LEGAL ADVICE CONSULTATION FLOW */}
-              <Stack.Screen name="LegalAdviceLanding" component={LegalAdviceLandingScreen} />
-              <Stack.Screen name="LegalMatter" component={LegalMatterScreen} />
-              <Stack.Screen name="ConsultationDetails" component={ConsultationDetailsScreen} />
-              <Stack.Screen name="ReviewPayment" component={ReviewPaymentScreen} />
-              <Stack.Screen name="ConsultationScheduled" component={ConsultationScheduledScreen} />
-              <Stack.Screen name="TrackConsultation" component={TrackConsultationScreen} />
-              <Stack.Screen name="ConsultationCompleted" component={ConsultationCompletedScreen} />
-
-              {/* VIDEO & VOICE CALL */}
-              <Stack.Screen name="VideoCall" component={VideoCallScreen}
-                options={{ animation: 'slide_from_bottom', gestureEnabled: false }} />
-
-              <Stack.Screen name="Settings" component={SettingsScreen} />
+              <Stack.Screen name="AIAssistant" component={AIAssistantScreen} />
               <Stack.Screen name="Notifications" component={NotificationsScreen} />
+              <Stack.Screen name="ProfileEdit" component={ProfileEditScreen} />
+              <Stack.Screen name="SavedAdvocates" component={SavedAdvocatesScreen} />
+              <Stack.Screen name="Settings" component={SettingsScreen} />
+              <Stack.Screen name="DocumentViewer" component={DocumentViewerScreen} />
               <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
               <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
               <Stack.Screen name="DataDeletion" component={DataDeletionScreen} />
+              <Stack.Screen name="VideoCall" component={VideoCallScreen}
+                options={{ animation: 'slide_from_bottom', gestureEnabled: false, headerShown: false }} />
+            </>
+          ) : (
+            // ─── GUEST FLOW (NOT AUTHENTICATED) — App opens directly to client tabs
+            // LoginRegister accessible for profile tab and auth-required actions
+            <>
+              <Stack.Screen name="ClientMain" component={ClientTabs} />
+              <Stack.Screen name="LoginRegister" component={LoginRegisterScreen} />
+              <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+              <Stack.Screen name="OTP" component={OTPScreen} />
+              <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+              <Stack.Screen name="AdvocateProfile" component={AdvocateProfileScreen} />
+              <Stack.Screen name="Filter" component={FilterScreen} />
+              <Stack.Screen name="AIAssistant" component={AIAssistantScreen} />
+              <Stack.Screen name="Notifications" component={NotificationsScreen} />
+              <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
+              <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
             </>
           )}
         </Stack.Navigator>
