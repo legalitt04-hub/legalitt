@@ -388,7 +388,7 @@ const AppNavigator = () => {
                 options={{ animation: 'slide_from_bottom', gestureEnabled: false }} />
               <Stack.Screen name="Settings" component={SettingsScreen} />
               <Stack.Screen name="Notifications" component={NotificationsScreen} />
-              <Stack.Screen name="SavedAdvocates" component={SavedAdvocatesScreen} />
+              
               <Stack.Screen name="AIAssistant" component={AIAssistantScreen} />
               <Stack.Screen name="Onboarding" component={OnboardingScreen} />
               <Stack.Screen name="LoginRegister" component={LoginRegisterScreen} />
