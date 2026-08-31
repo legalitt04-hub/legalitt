@@ -117,6 +117,16 @@ const ProfileScreen = ({ navigation }) => {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>My Profile</Text>
+        {!isAuthenticated && (
+          <TouchableOpacity
+            style={styles.signInHeaderBtn}
+            onPress={() => navigation.navigate('LoginRegister', { role: 'client' })}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="log-in-outline" size={16} color="#fff" />
+            <Text style={styles.signInHeaderBtnTxt}>Sign In</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <ScrollView
@@ -254,7 +264,7 @@ const ProfileScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
-  header: { paddingHorizontal: 20, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
+  header: { paddingHorizontal: 20, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#E5E7EB', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: 18, fontWeight: '600', color: '#1F2937', textAlign: 'center' },
   scrollView: { flex: 1 },
   scrollContent: { paddingBottom: 20 },
@@ -290,6 +300,13 @@ const styles = StyleSheet.create({
   statLabelText: { fontSize: 11, fontWeight: '600', color: '#6B7280', marginTop: 2 },
   statVLine: { width: 1, height: 24, backgroundColor: '#E2E8F0' },
   // Sign-in CTA box
+  signInHeaderBtn: {
+    position: 'absolute', right: 16,
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: COLORS.primary, borderRadius: 20,
+    paddingHorizontal: 12, paddingVertical: 6,
+  },
+  signInHeaderBtnTxt: { color: '#fff', fontSize: 13, fontWeight: '700' },
   signInBox: { margin: 20, marginTop: 24, backgroundColor: '#F0F4FF', borderRadius: 20, padding: 24, alignItems: 'center', borderWidth: 1, borderColor: '#D1D9F0' },
   signInTitle: { fontSize: 16, fontWeight: '800', color: COLORS.primary, marginBottom: 6, textAlign: 'center' },
   signInSub: { fontSize: 12, color: '#6B7280', textAlign: 'center', marginBottom: 20 },

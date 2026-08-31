@@ -341,32 +341,63 @@ const AppNavigator = () => {
               <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
             </>
           ) : !isAuthenticated ? (
-            // ─── GUEST FLOW — all screens accessible, login only when needed ───
+            // ─── UNAUTHENTICATED: Same client screens — login deferred to when needed ─
             <>
               <Stack.Screen name="ClientMain" component={ClientTabs} />
-              <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-              <Stack.Screen name="LoginRegister" component={LoginRegisterScreen} />
-              <Stack.Screen name="OTP" component={OTPScreen} />
-              <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
               <Stack.Screen name="AdvocateProfile" component={AdvocateProfileScreen} />
               <Stack.Screen name="Filter" component={FilterScreen} />
               <Stack.Screen name="Booking" component={BookingScreen} />
+              <Stack.Screen name="Payment" component={PaymentScreen} />
+              <Stack.Screen name="PaymentSuccess" component={PaymentSuccessScreen} />
               <Stack.Screen name="ChatList" component={ChatListScreen} />
               <Stack.Screen name="Chat" component={ChatScreen} />
+              <Stack.Screen name="MyBookings" component={MyBookingsScreen} />
               <Stack.Screen name="FIRDraft" component={FIRDraftScreen} />
               <Stack.Screen name="FIRTypeSelector" component={FIRDraftScreen} />
+              <Stack.Screen name="DocumentForensic" component={DocumentForensicScreen} />
+              <Stack.Screen name="DocumentForensicUpload" component={DocumentForensicUploadScreen} />
+              <Stack.Screen name="DocumentForensicReview" component={DocumentForensicReviewScreen} />
+              <Stack.Screen name="DocumentForensicPayment" component={DocumentForensicPaymentScreen} />
+              <Stack.Screen name="DocumentForensicSuccess" component={DocumentForensicSuccessScreen} />
+              <Stack.Screen name="DocumentForensicTrack" component={DocumentForensicTrackScreen} />
+              <Stack.Screen name="DocumentForensicAnalysis" component={DocumentForensicAnalysisScreen} />
+              <Stack.Screen name="DocumentForensicExpertReview" component={DocumentForensicExpertReviewScreen} />
+              <Stack.Screen name="DocumentForensicReportReady" component={DocumentForensicReportReadyScreen} />
+              <Stack.Screen name="DocumentForensicComplete" component={DocumentForensicCompleteScreen} />
               <Stack.Screen name="FIRForm" component={FIRFormScreen} />
               <Stack.Screen name="FIRPreview" component={FIRPreviewScreen} />
               <Stack.Screen name="AILegalNotice" component={AILegalNoticeScreen} />
               <Stack.Screen name="MyDrafts" component={MyDraftsScreen} />
-              <Stack.Screen name="AIAssistant" component={AIAssistantScreen} />
+              <Stack.Screen name="ProfileEdit" component={ProfileEditScreen} />
+              <Stack.Screen name="PropertyResearchLanding" component={PropertyResearchLandingScreen} />
+              <Stack.Screen name="PropertyResearchForm" component={PropertyResearchFormScreen} />
+              <Stack.Screen name="PropertyResearchConfirm" component={PropertyResearchReviewScreen} />
+              <Stack.Screen name="PropertyResearchPayment" component={PropertyResearchPaymentScreen} />
+              <Stack.Screen name="PropertyResearchSuccess" component={PropertyResearchSuccessScreen} />
+              <Stack.Screen name="PropertyResearchTrack" component={PropertyResearchTrackScreen} />
+              <Stack.Screen name="PropertyResearchChecklist" component={PropertyResearchChecklistScreen} />
+              <Stack.Screen name="PropertyResearchLock" component={PropertyResearchLockScreen} />
               <Stack.Screen name="LegalAdviceLanding" component={LegalAdviceLandingScreen} />
               <Stack.Screen name="LegalMatter" component={LegalMatterScreen} />
               <Stack.Screen name="ConsultationDetails" component={ConsultationDetailsScreen} />
+              <Stack.Screen name="ReviewPayment" component={ReviewPaymentScreen} />
+              <Stack.Screen name="ConsultationScheduled" component={ConsultationScheduledScreen} />
+              <Stack.Screen name="TrackConsultation" component={TrackConsultationScreen} />
+              <Stack.Screen name="ConsultationCompleted" component={ConsultationCompletedScreen} />
+              <Stack.Screen name="VideoCall" component={VideoCallScreen}
+                options={{ animation: 'slide_from_bottom', gestureEnabled: false }} />
+              <Stack.Screen name="Settings" component={SettingsScreen} />
               <Stack.Screen name="Notifications" component={NotificationsScreen} />
+              <Stack.Screen name="SavedAdvocates" component={SavedAdvocatesScreen} />
+              <Stack.Screen name="AIAssistant" component={AIAssistantScreen} />
+              <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+              <Stack.Screen name="LoginRegister" component={LoginRegisterScreen} />
+              <Stack.Screen name="OTP" component={OTPScreen} />
+              <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
               <Stack.Screen name="AdvocateFlow" component={AdvocateStack} />
               <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
               <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
+              <Stack.Screen name="DataDeletion" component={DataDeletionScreen} />
             </>
           ) : user?.role === 'advocate' ? (
             // ─── ADVOCATE PRACTICE MANAGEMENT FLOW (AUTHENTICATED) ────────
