@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useState, useRef } from 'react';
 import {
   View, Text, StyleSheet, FlatList, Animated,
@@ -232,11 +233,15 @@ const OnboardingScreen = ({ navigation, route }) => {
       flatListRef.current?.scrollToIndex({ index: next, animated: true });
       setCurrentIndex(next);
     } else {
+      await AsyncStorage.setItem('legalitt_onboarded', 'true');
       navigation.replace('ClientMain');
     }
   };
 
-  const handleSkip = () => navigation.replace('ClientMain');
+  const handleSkip = async () => {
+    await AsyncStorage.setItem('legalitt_onboarded', 'true');
+    navigation.replace('ClientMain');
+  };
 
   const renderSlide = ({ item, index }) => (
     <View style={styles.slide}>

@@ -9,6 +9,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../constants/theme';
 import * as SecureStore from '../utils/secureStorage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import Constants from 'expo-constants';
 import { useAuth } from '../context/AuthContext';
@@ -312,11 +313,28 @@ const AdvocateTabs = () => {
 const AppNavigator = () => {
   const { isAuthenticated, user, isRestoring, consentAccepted } = useAuth();
   const [splashFinished, setSplashFinished] = useState(false);
+  const [hasOnboarded, setHasOnboarded] = useState(null); // null = loading
+
+  // Check if user has seen onboarding before
+  useEffect(() => {
+    AsyncStorage.getItem('legalitt_onboarded').then(val => {
+      setHasOnboarded(!!val);
+    });
+  }, []);
+
+  // Re-check after auth state changes (e.g. after logout clears the flag)
+  useEffect(() => {
+    if (!isAuthenticated) {
+      AsyncStorage.getItem('legalitt_onboarded').then(val => {
+        setHasOnboarded(!!val);
+      });
+    }
+  }, [isAuthenticated]);
 
   // ─── SYNCHRONIZED SPLASH ANIMATION GATE ─────────────────────────────────
   // Render LegalittIntroScreen until the logo reveal animation completion event fires.
   // Prevents Home screen or Auth screens from appearing while animation is running.
-  if (!splashFinished) {
+  if (!splashFinished || hasOnboarded === null) {
     return (
       <View style={{ flex: 1, minHeight: Platform.OS === 'web' ? '100vh' : '100%', backgroundColor: '#000000' }}>
         <LegalittIntroScreen
@@ -341,8 +359,11 @@ const AppNavigator = () => {
               <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
             </>
           ) : !isAuthenticated ? (
-            // ─── UNAUTHENTICATED: Same client screens — login deferred to when needed ─
+            // ─── UNAUTHENTICATED: Onboarding first, then full client app ─────────
             <>
+              {!hasOnboarded && (
+                <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+              )}
               <Stack.Screen name="ClientMain" component={ClientTabs} />
               <Stack.Screen name="AdvocateProfile" component={AdvocateProfileScreen} />
               <Stack.Screen name="Filter" component={FilterScreen} />
