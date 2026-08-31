@@ -31,7 +31,7 @@ export default function VideoCallScreen({ navigation, route }: any) {
   if (!zegoRoomId || !zegoToken || !ZEGO_APP_ID) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator size="large" color="#14B8A6" />
+        <ActivityIndicator size="large" color=COLORS.primary />
         <Text style={styles.waitText}>Setting up call room...</Text>
       </View>
     );

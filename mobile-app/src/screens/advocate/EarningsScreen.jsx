@@ -270,7 +270,7 @@ const EarningsScreen = ({ navigation }) => {
             <Text style={s.withdrawBtnText}>{withdrawing ? 'Processing...' : 'Withdraw Funds'}</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[s.withdrawBtn, { flex: 1, backgroundColor: '#0D9488' }]}
+            style={[s.withdrawBtn, { flex: 1, backgroundColor: COLORS.primaryLight }]}
             onPress={() => navigation.navigate('AdvocateWallet')}
           >
             <Text style={s.withdrawBtnText}>💼 My Wallet</Text>

@@ -24,7 +24,7 @@ const THEME = {
   background: '#F9FAFB',
   cardBg: '#FFFFFF',
   primary: '#8C6E52',          // Warm beige/tan primary
-  primaryLight: '#B09C85',
+  primaryLight: COLORS.accent,
   cardBorder: '#F0ECE7',
   textDark: '#2D2824',         // Dark charcoal
   textMuted: '#7D756E',        // Muted secondary label

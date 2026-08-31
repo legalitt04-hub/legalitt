@@ -26,7 +26,7 @@ const Button = ({
         style={[{ width: fullWidth ? '100%' : undefined }, style]}
       >
         <LinearGradient
-          colors={disabled ? ['#9ca3af', '#9ca3af'] : [COLORS.primaryGradientStart || '#14B8A6', COLORS.primaryGradientEnd || '#0D9488']}
+          colors={disabled ? ['#9ca3af', '#9ca3af'] : [COLORS.primaryGradientStart || COLORS.primary, COLORS.primaryGradientEnd || COLORS.primaryLight]}
           start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
           style={[styles.btn, { height: h, borderRadius: br }]}
         >

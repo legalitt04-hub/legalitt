@@ -54,7 +54,7 @@ export default function PropertyResearchLockScreen({ navigation }) {
             </View>
 
             <View style={styles.iconBoxSubTopRight}>
-              <Ionicons name="document-text" size={24} color="#0D9488" />
+              <Ionicons name="document-text" size={24} color=COLORS.primaryLight />
             </View>
 
             <View style={styles.iconBoxSubBottomLeft}>

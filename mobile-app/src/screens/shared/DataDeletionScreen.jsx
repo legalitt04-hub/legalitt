@@ -12,7 +12,7 @@ import * as SecureStore from '../../utils/secureStorage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const NAVY = '#012464';
-const TEAL = '#0D9488';
+const TEAL = COLORS.primaryLight;
 const DANGER = '#DC2626';
 
 const DELETION_REASONS = [

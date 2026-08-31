@@ -318,7 +318,7 @@ const styles = StyleSheet.create({
   balanceLabel: { color: 'rgba(255,255,255,0.8)', fontSize: 13, fontWeight: '600', letterSpacing: 0.5 },
   balanceAmount: { color: '#fff', fontSize: 42, fontWeight: '800', marginVertical: 4 },
   balanceSub: { color: 'rgba(255,255,255,0.7)', fontSize: 12 },
-  statsRow: { flexDirection: 'row', backgroundColor: '#0D9488', paddingVertical: 16 },
+  statsRow: { flexDirection: 'row', backgroundColor: COLORS.primaryLight, paddingVertical: 16 },
   statItem: { flex: 1, alignItems: 'center' },
   statIcon: { fontSize: 18, marginBottom: 4 },
   statValue: { color: '#fff', fontSize: 15, fontWeight: '700' },

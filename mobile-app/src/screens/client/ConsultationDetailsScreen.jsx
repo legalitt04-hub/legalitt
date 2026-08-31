@@ -154,7 +154,7 @@ export default function ConsultationDetailsScreen({ navigation, route }) {
             contact: phone.replace(/\D/g, '').slice(-10),
             name: fullName.trim(),
           },
-          theme: { color: '#14B8A6' },
+          theme: { color: COLORS.primary },
         };
 
         try {

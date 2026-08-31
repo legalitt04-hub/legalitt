@@ -244,7 +244,7 @@ export default function AILegalNoticeScreen({ navigation }) {
               contact: senderPhone.replace(/\D/g, '').slice(-10),
               name: senderName,
             },
-            theme: { color: '#B09C85' },
+            theme: { color: COLORS.accent },
           });
         } catch (rzpErr) {
           if (rzpErr?.code === 'PAYMENT_CANCELLED' || rzpErr?.description?.includes('cancel')) {

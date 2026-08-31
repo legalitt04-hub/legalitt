@@ -288,7 +288,7 @@ const ProfileEditScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      <LinearGradient colors={['#14B8A6', '#0D9488']} style={[styles.header, { paddingTop: insets.top + 10 }]}>
+      <LinearGradient colors={[COLORS.primary, COLORS.primaryLight]} style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <View style={styles.headerInner}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Ionicons name="close" size={24} color="#fff" />
@@ -623,7 +623,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: '#0D9488',
+    backgroundColor: COLORS.primaryLight,
     width: 32,
     height: 32,
     borderRadius: 16,

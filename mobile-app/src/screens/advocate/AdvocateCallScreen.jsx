@@ -25,7 +25,7 @@ const THEME = {
   selfBorder: 'rgba(255, 255, 255, 0.4)',
   // Brand & Controls
   primary: '#8C6E52',          // Warm beige/brown
-  primaryLight: '#B09C85',
+  primaryLight: COLORS.accent,
   controlBg: '#F3EFEB',        // Light cream for circular control buttons
   controlBgActive: '#8C6E52',   // Primary color when active
   controlIconColor: '#8C6E52', // Icon color

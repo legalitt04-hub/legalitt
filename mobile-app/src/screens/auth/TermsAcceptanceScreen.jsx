@@ -183,7 +183,7 @@ export default function TermsAcceptanceScreen({ navigation }) {
               style={styles.outlineBtn}
               onPress={() => navigation.navigate('TermsConditions')}
             >
-              <Ionicons name="document-text-outline" size={16} color={COLORS.primary || '#14B8A6'} />
+              <Ionicons name="document-text-outline" size={16} color={COLORS.primary || COLORS.primary} />
               <Text style={styles.outlineBtnText}>Terms & Conditions</Text>
             </TouchableOpacity>
 
@@ -191,7 +191,7 @@ export default function TermsAcceptanceScreen({ navigation }) {
               style={styles.outlineBtn}
               onPress={() => navigation.navigate('PrivacyPolicy')}
             >
-              <Ionicons name="shield-outline" size={16} color={COLORS.primary || '#14B8A6'} />
+              <Ionicons name="shield-outline" size={16} color={COLORS.primary || COLORS.primary} />
               <Text style={styles.outlineBtnText}>Privacy Policy</Text>
             </TouchableOpacity>
           </View>
@@ -213,7 +213,7 @@ export default function TermsAcceptanceScreen({ navigation }) {
             <ActivityIndicator color="#FFFFFF" />
           ) : (
             <LinearGradient
-              colors={[COLORS.primary || '#14B8A6', COLORS.primaryDark || '#0D9488']}
+              colors={[COLORS.primary || COLORS.primary, COLORS.primaryDark || COLORS.primaryLight]}
               style={styles.gradientBtn}
             >
               <Text style={styles.continueBtnText}>Accept & Continue</Text>
@@ -327,8 +327,8 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   checkboxChecked: {
-    backgroundColor: COLORS.primary || '#14B8A6',
-    borderColor: COLORS.primary || '#14B8A6',
+    backgroundColor: COLORS.primary || COLORS.primary,
+    borderColor: COLORS.primary || COLORS.primary,
   },
   labelContainer: {
     flex: 1,
@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   linkText: {
-    color: COLORS.primary || '#14B8A6',
+    color: COLORS.primary || COLORS.primary,
     fontWeight: '700',
     textDecorationLine: 'underline',
   },
@@ -363,14 +363,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     borderWidth: 1,
-    borderColor: COLORS.primary || '#14B8A6',
+    borderColor: COLORS.primary || COLORS.primary,
     borderRadius: 12,
     paddingVertical: 12,
     backgroundColor: '#FFFFFF',
   },
   outlineBtnText: {
     fontSize: 12,
-    color: COLORS.primary || '#14B8A6',
+    color: COLORS.primary || COLORS.primary,
     fontWeight: '600',
   },
   bottomBar: {

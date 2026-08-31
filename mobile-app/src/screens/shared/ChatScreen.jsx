@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
   },
   backBtn: { width: 36, padding: 4 },
   participantAvatar: {
-    width: 36, height: 36, borderRadius: 18, backgroundColor: '#B09C85',
+    width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.accent,
     alignItems: 'center', justifyContent: 'center', marginRight: 10
   },
   avatarImg: { width: '100%', height: '100%', borderRadius: 18 },
@@ -446,7 +446,7 @@ const styles = StyleSheet.create({
     maxWidth: '82%', borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10,
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 2, elevation: 1
   },
-  bubbleMe: { backgroundColor: '#B09C85', borderBottomRightRadius: 4 },
+  bubbleMe: { backgroundColor: COLORS.accent, borderBottomRightRadius: 4 },
   bubbleThem: { backgroundColor: '#FFFFFF', borderBottomLeftRadius: 4, borderWidth: 1, borderColor: '#E8E2D8' },
   bubblePending: { opacity: 0.7 },
 
@@ -459,7 +459,7 @@ const styles = StyleSheet.create({
   messageAvatarContainer: { marginRight: 8, justifyContent: 'flex-end', paddingBottom: 4 },
   messageAvatar: { width: 28, height: 28, borderRadius: 14 },
   messageAvatarPlaceholder: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#FAF2E8', alignItems: 'center', justifyContent: 'center' },
-  messageAvatarInitial: { fontSize: 14, fontWeight: '700', color: '#B09C85' },
+  messageAvatarInitial: { fontSize: 14, fontWeight: '700', color: COLORS.accent },
 
   bubbleMeta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 4 },
   msgTime: { fontSize: 9, fontWeight: '500' },
@@ -484,7 +484,7 @@ const styles = StyleSheet.create({
   },
   sendBtn: {
     width: 38, height: 38, borderRadius: 19,
-    backgroundColor: '#B09C85', alignItems: 'center', justifyContent: 'center'
+    backgroundColor: COLORS.accent, alignItems: 'center', justifyContent: 'center'
   },
   sendBtnDisabled: { backgroundColor: '#D6CFCE' },
   readOnlyInputContainer: {

@@ -124,7 +124,7 @@ export default function ForgotPasswordScreen({ navigation }) {
               <Ionicons
                 name={step === STEPS.SUCCESS ? 'checkmark-circle' : 'lock-open-outline'}
                 size={36}
-                color={step === STEPS.SUCCESS ? '#10B981' : '#14B8A6'}
+                color={step === STEPS.SUCCESS ? '#10B981' : COLORS.primary}
               />
             </View>
             <Text style={styles.title}>
@@ -293,9 +293,9 @@ const styles = StyleSheet.create({
   inputIcon: { marginRight: 10 },
   input: { flex: 1, fontSize: 15, color: '#1F2937' },
   btn: {
-    height: 54, backgroundColor: '#14B8A6', borderRadius: 14,
+    height: 54, backgroundColor: COLORS.primary, borderRadius: 14,
     alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#14B8A6', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
+    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
   },
   btnDisabled: { opacity: 0.6 },
   btnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
@@ -305,9 +305,9 @@ const styles = StyleSheet.create({
     borderRadius: 14, fontSize: 22, fontWeight: '700', color: '#1F2937',
     backgroundColor: '#F9FAFB', textAlign: 'center',
   },
-  otpCellFilled: { borderColor: '#14B8A6', backgroundColor: '#ECFDF5' },
+  otpCellFilled: { borderColor: COLORS.primary, backgroundColor: '#ECFDF5' },
   resendBtn: { marginTop: 16, alignItems: 'center' },
-  resendText: { fontSize: 14, fontWeight: '600', color: '#14B8A6' },
+  resendText: { fontSize: 14, fontWeight: '600', color: COLORS.primary },
   resendDisabled: { color: '#9CA3AF' },
   hints: { marginBottom: 20, gap: 6 },
   hintRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },

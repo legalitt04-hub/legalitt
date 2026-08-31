@@ -21,7 +21,7 @@ const THEME = {
   background: '#FAF9F8',       // Light off-white page background
   cardBg: '#FFFFFF',           // Pure white cards
   primary: '#8C6E52',          // Warm muted beige/brown
-  primaryLight: '#B09C85',     // Soft secondary beige
+  primaryLight: COLORS.accent,     // Soft secondary beige
   trackBg: '#F5EFEB',          // Very light beige track
   trackBorder: '#EFE6DC',      // Subtle border for tracks
   textDark: '#2D2824',         // Dark charcoal/brown

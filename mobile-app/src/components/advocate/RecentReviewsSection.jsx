@@ -12,7 +12,7 @@ import { formatDate } from '../../utils/helpers';
 // Design Theme Colors matching "Review and Rating" specification
 const THEME = {
   primary: '#8C6E52',          // Muted warm beige / brown
-  primaryLight: '#B09C85',     // Soft secondary beige
+  primaryLight: COLORS.accent,     // Soft secondary beige
   trackBg: '#F5EFEB',          // Very light beige background track
   trackBorder: '#EFE6DC',      // Subtle track border
   textDark: '#2D2824',         // Dark charcoal / brown
