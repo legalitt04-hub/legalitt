@@ -160,6 +160,10 @@ export default function DocumentForensicUploadScreen({ navigation }) {
 
   // ── 4. Continue Handler ────────────────────────────────────────────────────
   const handleContinue = () => {
+    if (!isAuthenticated) {
+      navigation.navigate('LoginRegister', { role: 'client' });
+      return;
+    }
     if (!selectedFile) {
       Alert.alert('Document Required', 'Please select or upload a document to proceed with forensic analysis.');
       return;

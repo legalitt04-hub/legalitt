@@ -50,7 +50,7 @@ const INITIAL_DOC_TYPES = [
 ];
 
 export default function AILegalNoticeScreen({ navigation }) {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const userData = user?.user || user || {};
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 5;

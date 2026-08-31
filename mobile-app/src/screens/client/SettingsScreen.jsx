@@ -20,7 +20,7 @@ const SettingsScreen = ({ navigation }) => {
   const [darkMode, setDarkMode] = useState(false);
   const [bioLoading, setBioLoading] = useState(false);
 
-  const { biometricsEnabled, enableBiometrics, disableBiometrics, user } = useAuth();
+  const { biometricsEnabled, enableBiometrics, disableBiometrics, user, isAuthenticated } = useAuth();
 
   const handleBiometricToggle = useCallback(async (value) => {
     if (bioLoading) return;

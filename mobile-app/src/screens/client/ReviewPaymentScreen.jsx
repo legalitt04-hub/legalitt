@@ -29,6 +29,10 @@ export default function ReviewPaymentScreen({ navigation, route }) {
   const totalAmount = basePrice + convenienceFee + gst;
 
   const handlePay = () => {
+    if (!isAuthenticated) {
+      navigation.navigate('LoginRegister', { role: 'client' });
+      return;
+    }
     // Generate request ID
     const requestId = `LEG-2026-${Math.floor(1000 + Math.random() * 9000)}`;
 

@@ -58,6 +58,10 @@ const FIRFormScreen = ({ route, navigation }) => {
   };
 
   const handleNext = () => {
+    if (!isAuthenticated) {
+      navigation.navigate('LoginRegister', { role: 'client' });
+      return;
+    }
     if (validateStep()) {
       if (step < 3) setStep(s => s + 1);
       else handleSubmit();
@@ -96,6 +100,10 @@ const FIRFormScreen = ({ route, navigation }) => {
   };
 
   const handleSubmit = async () => {
+    if (!isAuthenticated) {
+      navigation.navigate('LoginRegister', { role: 'client' });
+      return;
+    }
     setLoading(true);
     try {
       const response = await firAPI.generate(formData);

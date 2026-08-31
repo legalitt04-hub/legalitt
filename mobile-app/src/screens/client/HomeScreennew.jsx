@@ -30,7 +30,7 @@ const ServiceCard = ({ icon, title, desc, btnText, onPress, accent = false }) =>
 );
 
 const HomeScreen = ({ navigation }) => {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [advocates, setAdvocates] = useState([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);

@@ -69,6 +69,10 @@ export default function LegalMatterScreen({ navigation, route }) {
   );
 
   const handleContinue = () => {
+    if (!isAuthenticated) {
+      navigation.navigate('LoginRegister', { role: 'client' });
+      return;
+    }
     if (!selectedCategory) {
       Alert.alert('Selection Required', 'Please select a legal matter to proceed with your consultation.');
       return;

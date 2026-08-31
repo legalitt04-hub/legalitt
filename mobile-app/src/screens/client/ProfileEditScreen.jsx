@@ -16,7 +16,7 @@ import { normalize, widthPct, SCREEN_WIDTH } from '../../utils/responsive';
 const ProfileEditScreen = ({ navigation }) => {
   // ✅ ALL HOOKS BEFORE ANY EARLY RETURNS
   const insets = useSafeAreaInsets();
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, isAuthenticated } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -60,6 +60,10 @@ const ProfileEditScreen = ({ navigation }) => {
   };
 
   const handleSave = async () => {
+    if (!isAuthenticated) {
+      navigation.navigate('LoginRegister', { role: 'client' });
+      return;
+    }
     setSaving(true);
     try {
       const response = await profileAPI.updateProfile(formData);

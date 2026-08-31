@@ -54,7 +54,7 @@ const CALL_TIME_OPTIONS = [
 
 export default function FIRDraftScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
 
   // Form State
   const [fullName, setFullName] = useState('');
@@ -78,6 +78,10 @@ export default function FIRDraftScreen({ navigation }) {
 
   // Validation & Submission
   const handleSubmit = async () => {
+    if (!isAuthenticated) {
+      navigation.navigate('LoginRegister', { role: 'client' });
+      return;
+    }
     if (!fullName.trim()) {
       Alert.alert('Required Field', 'Please enter your full name.');
       return;

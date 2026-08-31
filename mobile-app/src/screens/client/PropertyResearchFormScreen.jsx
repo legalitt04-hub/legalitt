@@ -25,7 +25,7 @@ const REPORT_PURPOSES = ['Buying', 'Selling', 'Investment', 'Loan', 'Legal Verif
 
 export default function PropertyResearchFormScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
 
   const [formData, setFormData] = useState({
     fullName: user?.name || user?.user?.name || '',
@@ -47,6 +47,10 @@ export default function PropertyResearchFormScreen({ navigation }) {
   };
 
   const handleContinue = () => {
+    if (!isAuthenticated) {
+      navigation.navigate('LoginRegister', { role: 'client' });
+      return;
+    }
     if (!formData.fullName.trim()) {
       Alert.alert('Required Field', 'Please enter your full name.');
       return;

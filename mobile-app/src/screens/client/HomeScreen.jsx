@@ -14,7 +14,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const isSmallDevice = SCREEN_WIDTH < 375;
 
 export default function HomeScreen({ navigation }) {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { chats, refetch } = useChatList();
   const unreadCount = chats.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
   const [refreshing, setRefreshing] = useState(false);

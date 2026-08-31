@@ -20,7 +20,7 @@ const MAX_FILES = 5;
 const MAX_FILE_SIZE_MB = 10;
 
 export default function ConsultationDetailsScreen({ navigation, route }) {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const selectedType = route?.params?.selectedType || { id: 'chat', title: 'Chat Consultation', price: '499' };
   const selectedMatter = route?.params?.selectedMatter || { id: 'property', title: 'Property Law' };
   const serviceType = route?.params?.serviceType || 'legal_advice'; // 'legal_advice' or 'legal_notice'
@@ -99,6 +99,10 @@ export default function ConsultationDetailsScreen({ navigation, route }) {
 
   // ─── Submit → Backend → Razorpay ────────────────────────────────────────────
   const handleContinue = async () => {
+    if (!isAuthenticated) {
+      navigation.navigate('LoginRegister', { role: 'client' });
+      return;
+    }
     if (!fullName.trim()) return Alert.alert('Required', 'Please enter your full name.');
     if (!phone.trim()) return Alert.alert('Required', 'Please enter your phone number.');
     if (!description.trim() || description.trim().length < 10) {

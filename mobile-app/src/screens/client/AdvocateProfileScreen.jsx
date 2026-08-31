@@ -539,6 +539,10 @@ const ReviewsTab = ({ advocate, advocateId }) => {
   }, [reviews]);
 
   const handleSubmit = async () => {
+    if (!isAuthenticated) {
+      navigation.navigate('LoginRegister', { role: 'client' });
+      return;
+    }
     const bId = selectedBookingId || 'mock';
     setSubmitting(true);
     try {
