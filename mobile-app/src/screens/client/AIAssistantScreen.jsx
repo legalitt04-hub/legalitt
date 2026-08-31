@@ -23,11 +23,6 @@ const DISCLAIMER = '⚠️ AI responses are for informational purposes only and 
 
 const AIAssistantScreen = ({ navigation }) => {
   const { isAuthenticated } = useAuth();
-  useEffect(() => {
-    if (!isAuthenticated) {
-      navigation.replace('LoginRegister', { role: 'client' });
-    }
-  }, [isAuthenticated]);
 
   const [messages, setMessages] = useState([
     { 
@@ -257,6 +252,28 @@ const AIAssistantScreen = ({ navigation }) => {
       </View>
     </View>
   );
+
+
+  // ─── Guest Gate: show login prompt without navigating (avoids Android addView crash)
+  if (isAuthenticated === false) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#FAF9F8', justifyContent: 'center', alignItems: 'center', padding: 32 }}>
+        <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: '#F8F4EC', alignItems: 'center', justifyContent: 'center', marginBottom: 20, borderWidth: 1, borderColor: '#E8E2D8' }}>
+          <Text style={{ fontSize: 32 }}>🤖</Text>
+        </View>
+        <Text style={{ fontSize: 20, fontWeight: '700', color: '#2E2A26', marginBottom: 10, textAlign: 'center' }}>AI Legal Assistant</Text>
+        <Text style={{ fontSize: 14, color: '#6D6A66', textAlign: 'center', lineHeight: 22, marginBottom: 28 }}>
+          Sign in to access your personal AI Legal Assistant with full conversation history.
+        </Text>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('LoginRegister', { role: 'client' })}
+          style={{ backgroundColor: '#B89A6A', paddingVertical: 14, paddingHorizontal: 32, borderRadius: 14 }}
+          activeOpacity={0.8}>
+          <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>Sign In</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   const insets = useSafeAreaInsets();
 

@@ -50,12 +50,7 @@ export default function MyBookingsScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Guest guard — redirect to login
-  useEffect(() => {
-    if (!isAuthenticated) {
-      navigation.navigate('LoginRegister', { role: 'client' });
-    }
-  }, [isAuthenticated]);
+  // Guest guard handled inline in render (avoids Android addView crash)
 
   const fetchBookings = useCallback(async (showRefresh = false) => {
     if (showRefresh) setRefreshing(true);
@@ -343,6 +338,35 @@ export default function MyBookingsScreen({ navigation }) {
       </TouchableOpacity>
     </View>
   );
+
+
+  // ─── Guest Gate: show login prompt inline (avoids Android addView crash on mount)
+  if (isAuthenticated === false) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('ClientMain')} style={styles.backButton}>
+            <Ionicons name="chevron-back" size={22} color="#2E2A26" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>My Requests</Text>
+          <View style={{ width: 38 }} />
+        </View>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 }}>
+          <View style={styles.emptyIconCircle}>
+            <Ionicons name="lock-closed-outline" size={36} color="#B89A6A" />
+          </View>
+          <Text style={styles.emptyTitle}>Sign In Required</Text>
+          <Text style={styles.emptyText}>Please sign in to view your legal requests, bookings and consultations.</Text>
+          <TouchableOpacity
+            style={styles.primaryBtn}
+            onPress={() => navigation.navigate('LoginRegister', { role: 'client' })}>
+            <Text style={styles.primaryBtnText}>Sign In</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
