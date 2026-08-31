@@ -53,7 +53,7 @@ export default function MyBookingsScreen({ navigation }) {
   // Guest guard — redirect to login
   useEffect(() => {
     if (!isAuthenticated) {
-      navigation.replace('LoginRegister', { role: 'client' });
+      navigation.navigate('LoginRegister', { role: 'client' });
     }
   }, [isAuthenticated]);
 

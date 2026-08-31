@@ -38,6 +38,9 @@ import RoleManagement from './pages/RoleManagement';
 // Phase 4 — Financial Reporting
 import PaymentHistory from './pages/PaymentHistory';
 import Transactions from './pages/Transactions';
+import FIRDrafts from './pages/FIRDrafts';
+import PropertyResearch from './pages/PropertyResearch';
+import DocumentForensic from './pages/DocumentForensic';
 import ErrorBoundary from './components/ErrorBoundary';
 
 function App() {
@@ -63,6 +66,9 @@ function App() {
             <Route path="/services" element={<Services />} />
             <Route path="/ai-drafts" element={<AIDrafts />} />
             <Route path="/documents" element={<Documents />} />
+            <Route path="/fir-drafts" element={<FIRDrafts />} />
+            <Route path="/property-research" element={<PropertyResearch />} />
+            <Route path="/document-forensic" element={<DocumentForensic />} />
             
             {/* Network & Team */}
             <Route path="/users" element={<Users />} />

@@ -487,3 +487,219 @@ exports.getAdmins = async (req, res, next) => {
     res.json({ success: true, data: admins });
   } catch (err) { next(err); }
 };
+
+// ─── FIR Drafts Admin ─────────────────────────────────────────────────────────
+exports.getFIRDrafts = async (req, res, next) => {
+  try {
+    const FIRDraft = require('../models/FIRDraft');
+    const drafts = await FIRDraft.find()
+      .populate('user', 'name email phone')
+      .sort({ createdAt: -1 });
+    res.json({ success: true, data: drafts });
+  } catch (err) { next(err); }
+};
+
+exports.getFIRDraft = async (req, res, next) => {
+  try {
+    const FIRDraft = require('../models/FIRDraft');
+    const draft = await FIRDraft.findById(req.params.id).populate('user', 'name email phone');
+    if (!draft) return res.status(404).json({ success: false, message: 'FIR Draft not found' });
+    res.json({ success: true, data: draft });
+  } catch (err) { next(err); }
+};
+
+exports.updateFIRDraftStatus = async (req, res, next) => {
+  try {
+    const FIRDraft = require('../models/FIRDraft');
+    const draft = await FIRDraft.findByIdAndUpdate(
+      req.params.id,
+      { status: req.body.status },
+      { new: true }
+    );
+    if (!draft) return res.status(404).json({ success: false, message: 'FIR Draft not found' });
+    res.json({ success: true, data: draft });
+  } catch (err) { next(err); }
+};
+
+exports.uploadFIRDraftDocument = async (req, res, next) => {
+  try {
+    const cloudinary = require('cloudinary').v2;
+    const fs = require('fs');
+    const FIRDraft = require('../models/FIRDraft');
+
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET,
+    });
+
+    if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded' });
+
+    const isImage = req.file.mimetype?.startsWith('image/');
+    const isPdf   = req.file.mimetype?.includes('pdf') || req.file.originalname?.toLowerCase().endsWith('.pdf');
+    const resourceType = isImage ? 'image' : isPdf ? 'raw' : 'auto';
+
+    let result;
+    if (req.file.path) {
+      result = await cloudinary.uploader.upload(req.file.path, { folder: 'legalitt/admin-fir-docs', resource_type: resourceType });
+      try { fs.unlinkSync(req.file.path); } catch (e) {}
+    } else {
+      result = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: 'legalitt/admin-fir-docs', resource_type: resourceType },
+          (err, res) => err ? reject(err) : resolve(res)
+        );
+        stream.end(req.file.buffer);
+      });
+    }
+
+    await FIRDraft.findByIdAndUpdate(req.params.id, {
+      $push: { adminDocuments: { url: result.secure_url, name: req.file.originalname, uploadedAt: new Date() } }
+    });
+
+    res.json({ success: true, data: { url: result.secure_url, name: req.file.originalname } });
+  } catch (err) {
+    if (req.file?.path) { try { require('fs').unlinkSync(req.file.path); } catch (e) {} }
+    next(err);
+  }
+};
+
+// ─── Property Research Admin ──────────────────────────────────────────────────
+exports.getPropertyResearch = async (req, res, next) => {
+  try {
+    const Booking = require('../models/Booking');
+    const requests = await Booking.find({ serviceType: 'property_research' })
+      .populate('client', 'name email phone')
+      .sort({ createdAt: -1 });
+    res.json({ success: true, data: requests });
+  } catch (err) { next(err); }
+};
+
+exports.updatePropertyResearchStatus = async (req, res, next) => {
+  try {
+    const Booking = require('../models/Booking');
+    const updated = await Booking.findByIdAndUpdate(
+      req.params.id,
+      { status: req.body.status },
+      { new: true }
+    ).populate('client', 'name email phone');
+    if (!updated) return res.status(404).json({ success: false, message: 'Request not found' });
+    res.json({ success: true, data: updated });
+  } catch (err) { next(err); }
+};
+
+exports.uploadPropertyResearchDocument = async (req, res, next) => {
+  try {
+    const cloudinary = require('cloudinary').v2;
+    const fs = require('fs');
+    const Booking = require('../models/Booking');
+
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET,
+    });
+
+    if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded' });
+
+    const isPdf   = req.file.mimetype?.includes('pdf') || req.file.originalname?.toLowerCase().endsWith('.pdf');
+    const isImage = req.file.mimetype?.startsWith('image/');
+    const resourceType = isImage ? 'image' : isPdf ? 'raw' : 'auto';
+
+    let result;
+    if (req.file.path) {
+      result = await cloudinary.uploader.upload(req.file.path, { folder: 'legalitt/admin-property-reports', resource_type: resourceType });
+      try { fs.unlinkSync(req.file.path); } catch (e) {}
+    } else {
+      result = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: 'legalitt/admin-property-reports', resource_type: resourceType },
+          (err, res) => err ? reject(err) : resolve(res)
+        );
+        stream.end(req.file.buffer);
+      });
+    }
+
+    await Booking.findByIdAndUpdate(req.params.id, {
+      $push: { advocateDocuments: { url: result.secure_url, name: req.file.originalname, type: isPdf ? 'pdf' : 'image', uploadedAt: new Date() } }
+    });
+
+    res.json({ success: true, data: { url: result.secure_url, name: req.file.originalname } });
+  } catch (err) {
+    if (req.file?.path) { try { require('fs').unlinkSync(req.file.path); } catch (e) {} }
+    next(err);
+  }
+};
+
+// ─── Document Forensic Admin ──────────────────────────────────────────────────
+exports.getDocumentForensic = async (req, res, next) => {
+  try {
+    const Booking = require('../models/Booking');
+    const requests = await Booking.find({
+      $or: [
+        { serviceType: 'document_forensic' },
+        { serviceType: 'forensic' },
+        { serviceType: 'legal_advice', issue: /forensic/i }
+      ]
+    })
+      .populate('client', 'name email phone')
+      .sort({ createdAt: -1 });
+    res.json({ success: true, data: requests });
+  } catch (err) { next(err); }
+};
+
+exports.updateDocumentForensicStatus = async (req, res, next) => {
+  try {
+    const Booking = require('../models/Booking');
+    const updated = await Booking.findByIdAndUpdate(
+      req.params.id,
+      { status: req.body.status },
+      { new: true }
+    ).populate('client', 'name email phone');
+    if (!updated) return res.status(404).json({ success: false, message: 'Request not found' });
+    res.json({ success: true, data: updated });
+  } catch (err) { next(err); }
+};
+
+exports.uploadDocumentForensicReport = async (req, res, next) => {
+  try {
+    const cloudinary = require('cloudinary').v2;
+    const fs = require('fs');
+    const Booking = require('../models/Booking');
+
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET,
+    });
+
+    if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded' });
+
+    const isPdf   = req.file.mimetype?.includes('pdf') || req.file.originalname?.toLowerCase().endsWith('.pdf');
+    const isImage = req.file.mimetype?.startsWith('image/');
+    const resourceType = isImage ? 'image' : isPdf ? 'raw' : 'auto';
+
+    let result;
+    if (req.file.path) {
+      result = await cloudinary.uploader.upload(req.file.path, { folder: 'legalitt/admin-forensic-reports', resource_type: resourceType });
+      try { fs.unlinkSync(req.file.path); } catch (e) {}
+    } else {
+      result = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: 'legalitt/admin-forensic-reports', resource_type: resourceType },
+          (err, res) => err ? reject(err) : resolve(res)
+        );
+        stream.end(req.file.buffer);
+      });
+    }
+
+    await Booking.findByIdAndUpdate(req.params.id, {
+      $push: { advocateDocuments: { url: result.secure_url, name: req.file.originalname, type: isPdf ? 'pdf' : 'image', uploadedAt: new Date() } }
+    });
+
+    res.json({ success: true, data: { url: result.secure_url, name: req.file.originalname } });
+  } catch (err) {
+    if (req.file?.path) { try { require('fs').unlinkSync(req.file.path); } catch (e) {} }
+    next(err);
+  }
+};

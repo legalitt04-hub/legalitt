@@ -150,5 +150,22 @@ router.get('/consultations',             bookingAssignController.getPendingBooki
 // /admin/logs → same as /admin/audit-logs (used by Settings page)
 router.get('/logs',                      adminModuleController.getAuditLogs);
 
+
+// ─── FIR Drafts (Admin) ───────────────────────────────────────────────────────
+router.get('/fir-drafts',                       adminModuleController.getFIRDrafts);
+router.get('/fir-drafts/:id',                   adminModuleController.getFIRDraft);
+router.put('/fir-drafts/:id/status',            adminModuleController.updateFIRDraftStatus);
+router.post('/fir-drafts/:id/upload',           upload.single('document'), adminModuleController.uploadFIRDraftDocument);
+
+// ─── Property Research (Admin) ────────────────────────────────────────────────
+router.get('/property-research',                adminModuleController.getPropertyResearch);
+router.put('/property-research/:id/status',     adminModuleController.updatePropertyResearchStatus);
+router.post('/property-research/:id/upload',    upload.single('document'), adminModuleController.uploadPropertyResearchDocument);
+
+// ─── Document Forensic (Admin) ────────────────────────────────────────────────
+router.get('/document-forensic',                adminModuleController.getDocumentForensic);
+router.put('/document-forensic/:id/status',     adminModuleController.updateDocumentForensicStatus);
+router.post('/document-forensic/:id/upload',    upload.single('document'), adminModuleController.uploadDocumentForensicReport);
+
 module.exports = router;
 

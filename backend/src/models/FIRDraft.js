@@ -61,9 +61,15 @@ const firDraftSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['draft', 'finalized'],
+    enum: ['draft', 'finalized', 'submitted', 'reviewed', 'completed'],
     default: 'draft'
-  }
+  },
+  // Documents uploaded by admin for this FIR draft
+  adminDocuments: [{
+    url: String,
+    name: String,
+    uploadedAt: { type: Date, default: Date.now }
+  }]
 }, { timestamps: true });
 
 module.exports = mongoose.model('FIRDraft', firDraftSchema);
