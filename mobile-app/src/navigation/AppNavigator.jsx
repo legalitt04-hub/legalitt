@@ -328,6 +328,16 @@ const AppNavigator = () => {
     );
   }
 
+  // ─── SESSION RESTORE LOADING ───────────────────────────────────────────
+  // Must be OUTSIDE NavigationContainer — empty screen set crashes the navigator.
+  if (isRestoring) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#0D1B2A', alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator size="large" color="#C9A84C" />
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1, minHeight: Platform.OS === 'web' ? '100vh' : '100%', backgroundColor: '#000000' }}>
       <OfflineBanner />
@@ -340,9 +350,6 @@ const AppNavigator = () => {
               <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
               <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
             </>
-          ) : isRestoring ? (
-            // Loading while restoring session
-            <></>
           ) : user?.role === 'advocate' ? (
             // ─── ADVOCATE PRACTICE MANAGEMENT FLOW ────────────────────────
             <>
