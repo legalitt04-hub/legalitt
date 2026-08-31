@@ -280,7 +280,7 @@ const AdvocateProfileScreen = ({ navigation, route }) => {
             style={styles.shareIconButton}
             onPress={handleShare}
           >
-            <Ionicons name="share-social-outline" size={24} color=COLORS.accent />
+            <Ionicons name="share-social-outline" size={24} color={COLORS.accent} />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.bookButton}

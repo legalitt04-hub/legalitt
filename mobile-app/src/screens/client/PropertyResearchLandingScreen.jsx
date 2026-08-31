@@ -65,7 +65,7 @@ export default function PropertyResearchLandingScreen({ navigation }) {
             </View>
 
             <View style={styles.iconBoxSubBottomLeft}>
-              <Ionicons name="search" size={24} color=COLORS.primaryLight />
+              <Ionicons name="search" size={24} color={COLORS.primaryLight} />
             </View>
 
             <View style={styles.iconBoxSubBottomRight}>
