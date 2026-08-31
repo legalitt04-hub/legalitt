@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View, Text, StyleSheet, FlatList, Animated,
   Dimensions, TouchableOpacity, StatusBar,
@@ -221,7 +222,7 @@ const OnboardingScreen = ({ navigation, route }) => {
   const scrollX      = useRef(new Animated.Value(0)).current;
   const btnScale     = useRef(new Animated.Value(1)).current;
 
-  const handleNext = () => {
+  const handleNext = async () => {
     Animated.sequence([
       Animated.timing(btnScale, { toValue: 0.94, duration: 80, useNativeDriver: true }),
       Animated.timing(btnScale, { toValue: 1,    duration: 80, useNativeDriver: true }),
@@ -232,11 +233,15 @@ const OnboardingScreen = ({ navigation, route }) => {
       flatListRef.current?.scrollToIndex({ index: next, animated: true });
       setCurrentIndex(next);
     } else {
-      navigation.replace('LoginRegister', { role: route?.params?.userRole });
+      await AsyncStorage.setItem('legalitt_onboarded', 'true');
+      navigation.replace('ClientMain');
     }
   };
 
-  const handleSkip = () => navigation.replace('LoginRegister', { role: route?.params?.userRole });
+  const handleSkip = async () => {
+    await AsyncStorage.setItem('legalitt_onboarded', 'true');
+    navigation.replace('ClientMain');
+  };
 
   const renderSlide = ({ item, index }) => (
     <View style={styles.slide}>
@@ -259,7 +264,7 @@ const OnboardingScreen = ({ navigation, route }) => {
       {/* Back button */}
       <TouchableOpacity 
         style={styles.backBtn} 
-        onPress={() => navigation.replace('RoleSelect')}
+        onPress={() => navigation.replace('ClientMain')}
       >
         <Ionicons name="chevron-back" size={24} color="#9ca3af" />
       </TouchableOpacity>

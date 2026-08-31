@@ -1,213 +1,515 @@
 // screens/client/ProfileScreen.jsx
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Image, Alert, ActivityIndicator, Dimensions,
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  StatusBar,
+  Alert,
+  ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
-import { bookingAPI, firAPI, chatAPI } from '../../services/api';
 
-const { width } = Dimensions.get('window');
+import { bookingAPI, firAPI, chatAPI } from '../../services/api';
 
 const ProfileScreen = ({ navigation }) => {
   const { user, isAuthenticated, refreshUser, logout } = useAuth();
-  const [loading, setLoading]       = useState(false);
-  const [completeness, setComplete] = useState(user?.completeness || 0);
-  const [stats, setStats]           = useState({ consultations: 0, drafts: 0, chats: 0 });
+  const [loading, setLoading] = useState(false);
+  const [completeness, setCompleteness] = useState(user?.completeness || 0);
+  const [stats, setStats] = useState({ consultations: 0, drafts: 0, chats: 0 });
 
-  // ── Guest: jab bhi Profile tab pe aao aur login nahi hai → LoginRegisterScreen pe bhejo
   useEffect(() => {
-    if (!isAuthenticated) {
-      // Navigate to client login. "Sign in as Advocate" is shown on that screen.
-      navigation.navigate('LoginRegister', { role: 'client' });
+    const unsubscribe = navigation.addListener('focus', () => {
+      handleRefresh();
+      fetchRealStats();
+    });
+    return unsubscribe;
+  }, [navigation]);
+
+  useEffect(() => {
+    if (user) {
+      setCompleteness(user.completeness || 0);
     }
-  }, [isAuthenticated]);
+  }, [user]);
 
-  // ── Also catch tabPress so clicking tab again navigates
-  useEffect(() => {
-    const unsub = navigation.addListener('tabPress', (e) => {
-      if (!isAuthenticated) {
-        e.preventDefault();
-        navigation.navigate('LoginRegister', { role: 'client' });
-      }
-    });
-    return unsub;
-  }, [navigation, isAuthenticated]);
-
-  // ── Focus listener to refresh data ──────────────────────────────────────────
-  useEffect(() => {
-    const unsub = navigation.addListener('focus', () => {
-      if (isAuthenticated) {
-        refreshUser();
-        fetchStats();
-      }
-    });
-    return unsub;
-  }, [navigation, isAuthenticated]);
-
-  useEffect(() => { if (user) setComplete(user.completeness || 0); }, [user]);
-
-  const fetchStats = async () => {
+  const fetchRealStats = async () => {
     try {
-      const [b, d, c] = await Promise.allSettled([
+      const [bookingsRes, draftsRes, chatsRes] = await Promise.allSettled([
         bookingAPI.getMy(),
         firAPI.getMyDrafts(),
         chatAPI.getChats(),
       ]);
-      setStats({
-        consultations: b.status === 'fulfilled' ? (b.value.data?.data?.length || 0) : 0,
-        drafts:        d.status === 'fulfilled' ? (d.value.data?.data?.length || 0) : 0,
-        chats:         c.status === 'fulfilled' ? (c.value.data?.data?.length || c.value.data?.length || 0) : 0,
-      });
-    } catch {}
+      const consultations = bookingsRes.status === 'fulfilled' ? (bookingsRes.value.data?.data?.length || 0) : 0;
+      const drafts = draftsRes.status === 'fulfilled' ? (draftsRes.value.data?.data?.length || 0) : 0;
+      const chats = chatsRes.status === 'fulfilled' ? (chatsRes.value.data?.data?.length || chatsRes.value.data?.length || 0) : 0;
+      setStats({ consultations, drafts, chats });
+    } catch (err) {
+      console.log('Error fetching profile stats:', err);
+    }
   };
 
-  const handleLogout = () => {
-    Alert.alert('Logout', 'Are you sure you want to logout?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Logout', style: 'destructive', onPress: async () => {
-          setLoading(true);
-          await logout();
-          setLoading(false);
-        }
-      },
-    ]);
+  const handleRefresh = async () => {
+    if (!user) setLoading(true);
+    await refreshUser();
+    setLoading(false);
   };
 
   const menuItems = [
-    { id: '0', icon: 'time-outline',          title: 'My FIR Drafts',    subtitle: 'View your saved legal drafts',        screen: 'MyDrafts' },
-    { id: '1', icon: 'chatbubble-outline',     title: 'My Chats',         subtitle: 'All conversations with advocates',    screen: 'ChatList' },
-    { id: '2', icon: 'document-text-outline',  title: 'My Requests',      subtitle: 'Booking status and reports',          screen: 'MyBookings' },
-    { id: '3', icon: 'bookmark-outline',       title: 'Saved Advocates',  subtitle: 'Your bookmarked lawyers',             screen: 'SavedAdvocates' },
-    { id: '4', icon: 'settings-outline',       title: 'Settings',         subtitle: 'Language, notifications & privacy',   screen: 'Settings' },
-    { id: '5', icon: 'card-outline',           title: 'Payments',         subtitle: 'Consultation payments & invoices',    screen: 'MyBookings' },
+    {
+      id: '0',
+      icon: 'time-outline',
+      title: 'My FIR Drafts',
+      subtitle: 'View your saved legal drafts',
+      screen: 'MyDrafts',
+      color: COLORS.primary,
+    },
+    {
+      id: '1',
+      icon: 'chatbubble-outline',
+      title: 'My Chats',
+      subtitle: 'All conversations with advocates',
+      screen: 'ChatList',
+      color: COLORS.primary,
+    },
+    {
+      id: '2',
+      icon: 'document-text-outline',
+      title: 'My Requests',
+      subtitle: 'Status and Report',
+      screen: 'MyBookings',
+      color: COLORS.primary,
+    },
+    {
+      id: '3',
+      icon: 'bookmark-outline',
+      title: 'Saved Advocates',
+      subtitle: 'Your bookmarked lawyers',
+      screen: 'SavedAdvocates',
+      color: COLORS.primary,
+    },
+    {
+      id: '4',
+      icon: 'settings-outline',
+      title: 'Settings',
+      subtitle: 'Language, notification & Privacy',
+      screen: 'Settings',
+      color: COLORS.primary,
+    },
+    {
+      id: '5',
+      icon: 'card-outline',
+      title: 'Payments',
+      subtitle: 'Consultation Payments & invoice',
+      screen: 'MyBookings',
+      color: COLORS.primary,
+    },
   ];
 
-  if (!isAuthenticated || loading) return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            setLoading(true);
+            await logout();
+            setLoading(false);
+          },
+        },
+      ],
+      { cancelable: true }
+    );
+  };
+
+  if (loading) return (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
       <ActivityIndicator size="large" color={COLORS.primary} />
     </View>
   );
 
-  return (
-    <SafeAreaView style={s.container}>
-      <View style={s.header}><Text style={s.headerTitle}>My Profile</Text></View>
-      <ScrollView style={s.scroll} contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
+  // ── Guest login overlay (shown on top of blurred profile screen) ─────────
+  const GuestOverlay = () => (
+    <Modal transparent animationType="fade" visible={!isAuthenticated}>
+      <View style={styles.overlayBg}>
+        <View style={styles.overlayCard}>
+          {/* Placeholder avatar */}
+          <View style={styles.overlayAvatar}>
+            <Ionicons name="person" size={40} color={COLORS.primary} />
+          </View>
+          <Text style={styles.overlayTitle}>Welcome to Legalitt</Text>
+          <Text style={styles.overlaySubtitle}>Sign in to access your profile, bookings, and more</Text>
 
-        {/* Avatar + name */}
-        <View style={s.userSection}>
-          <Image
-            source={{ uri: user?.avatar || user?.user?.avatar || 'https://i.pravatar.cc/200?img=1' }}
-            style={s.avatar}
+          {/* Client login */}
+          <TouchableOpacity
+            style={styles.overlayClientBtn}
+            onPress={() => navigation.navigate('LoginRegister', { role: 'client' })}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="person-circle-outline" size={20} color="#fff" />
+            <Text style={styles.overlayClientBtnText}>Sign in as Client</Text>
+          </TouchableOpacity>
+
+          {/* Advocate login */}
+          <TouchableOpacity
+            style={styles.overlayAdvBtn}
+            onPress={() => navigation.navigate('LoginRegister', { role: 'advocate' })}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="briefcase-outline" size={20} color={COLORS.accent} />
+            <Text style={styles.overlayAdvBtnText}>Are you an Advocate?</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  return (
+    <SafeAreaView style={styles.container}>
+      {/* Guest Login Overlay — appears on top when not authenticated */}
+      <GuestOverlay />
+
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>My Profile</Text>
+      </View>
+
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* User Info Section */}
+        <View style={styles.userSection}>
+          <Image 
+            source={{ uri: user?.avatar || user?.user?.avatar || 'https://i.pravatar.cc/200?img=1' }} 
+            style={styles.avatar} 
           />
-          <Text style={s.userName}>{user?.name || user?.user?.name || 'Legalitt User'}</Text>
-          <Text style={s.userEmail}>{user?.email || user?.user?.email}</Text>
-          <TouchableOpacity style={s.editBtn} onPress={() => navigation.navigate('ProfileEdit')}>
+          <Text style={styles.userName}>{user?.name || user?.user?.name || 'Legalitt User'}</Text>
+          <Text style={styles.userEmail}>{user?.email || user?.user?.email || 'user@legalitt.com'}</Text>
+
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() => navigation.navigate('ProfileEdit')}
+          >
             <Ionicons name="pencil-outline" size={14} color={COLORS.primary} />
-            <Text style={s.editBtnTxt}>Edit Profile</Text>
+            <Text style={styles.editButtonText}>Edit Profile</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Stats */}
-        <View style={s.statsCard}>
-          {[
-            { num: stats.consultations, label: 'Bookings',   screen: 'MyBookings' },
-            { num: stats.drafts,        label: 'FIR Drafts', screen: 'MyDrafts' },
-            { num: stats.chats,         label: 'Chats',      screen: 'ChatList' },
-          ].map((st, i) => (
-            <React.Fragment key={i}>
-              {i > 0 && <View style={s.statVLine} />}
-              <TouchableOpacity style={s.statBox} onPress={() => navigation.navigate(st.screen)}>
-                <Text style={s.statNum}>{st.num}</Text>
-                <Text style={s.statLabel}>{st.label}</Text>
-              </TouchableOpacity>
-            </React.Fragment>
-          ))}
+        {/* Real Live Stats Bar */}
+        <View style={styles.statsCardContainer}>
+          <TouchableOpacity style={styles.statBox} onPress={() => navigation.navigate('MyBookings')} activeOpacity={0.7}>
+            <Text style={styles.statNumText}>{stats.consultations}</Text>
+            <Text style={styles.statLabelText}>Bookings</Text>
+          </TouchableOpacity>
+          <View style={styles.statVLine} />
+          <TouchableOpacity style={styles.statBox} onPress={() => navigation.navigate('MyDrafts')} activeOpacity={0.7}>
+            <Text style={styles.statNumText}>{stats.drafts}</Text>
+            <Text style={styles.statLabelText}>FIR Drafts</Text>
+          </TouchableOpacity>
+          <View style={styles.statVLine} />
+          <TouchableOpacity style={styles.statBox} onPress={() => navigation.navigate('ChatList')} activeOpacity={0.7}>
+            <Text style={styles.statNumText}>{stats.chats}</Text>
+            <Text style={styles.statLabelText}>Chats</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Completeness */}
-        <View style={s.progressWrap}>
-          <View style={s.progressHeader}>
-            <Text style={s.progressTitle}>Profile Completeness</Text>
-            <Text style={s.progressPct}>{completeness}%</Text>
-          </View>
-          <View style={s.progressBg}>
-            <View style={[s.progressFill, { width: `${completeness}%` }]} />
-          </View>
-          {completeness < 100 && (
-            <Text style={s.progressHint}>Complete your profile for better legal recommendations.</Text>
-          )}
+        {/* Completeness Bar */}
+        <View style={styles.completenessContainer}>
+           <View style={styles.completenessHeader}>
+              <Text style={styles.completenessTitle}>Profile Completeness</Text>
+              <Text style={styles.completenessValue}>{completeness}%</Text>
+           </View>
+           <View style={styles.progressBarBg}>
+              <View style={[styles.progressBarFill, { width: `${completeness}%` }]} />
+           </View>
+           {completeness < 100 && (
+             <Text style={styles.completenessHint}>Complete your profile to get better legal recommendations.</Text>
+           )}
         </View>
 
-        {/* Menu */}
-        <View style={s.menuSection}>
-          {menuItems.map(item => (
-            <TouchableOpacity key={item.id} style={s.menuItem} onPress={() => navigation.navigate(item.screen)} activeOpacity={0.7}>
-              <View style={[s.menuIcon, { backgroundColor: COLORS.primary }]}>
-                <Ionicons name={item.icon} size={18} color="#fff" />
+        {/* Menu Items */}
+        <View style={styles.menuSection}>
+          {menuItems.map((item) => (
+            <TouchableOpacity
+              key={item.id}
+              style={styles.menuItem}
+              onPress={() => navigation.navigate(item.screen)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.menuIcon, { backgroundColor: item.color }]}>
+                <Ionicons name={item.icon} size={18} color="#FFFFFF" />
               </View>
-              <View style={s.menuContent}>
-                <Text style={s.menuTitle}>{item.title}</Text>
-                <Text style={s.menuSub}>{item.subtitle}</Text>
+
+              <View style={styles.menuContent}>
+                <Text style={styles.menuTitle}>{item.title}</Text>
+                <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
               </View>
+
               <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
             </TouchableOpacity>
           ))}
 
-          <TouchableOpacity style={s.menuItem} onPress={handleLogout} activeOpacity={0.7}>
-            <View style={[s.menuIcon, { backgroundColor: '#EF4444' }]}>
-              <Ionicons name="log-out-outline" size={18} color="#fff" />
+          {/* Logout Button */}
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={handleLogout}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.menuIcon, styles.logoutIcon]}>
+              <Ionicons name="log-out-outline" size={18} color="#FFFFFF" />
             </View>
-            <View style={s.menuContent}>
-              <Text style={[s.menuTitle, { color: '#EF4444' }]}>Logout</Text>
+
+            <View style={styles.menuContent}>
+              <Text style={[styles.menuTitle, styles.logoutText]}>Logout</Text>
             </View>
+
             <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
           </TouchableOpacity>
         </View>
 
+        {/* Bottom Padding for Tab Bar */}
         <View style={{ height: 100 }} />
       </ScrollView>
     </SafeAreaView>
   );
 };
 
-const s = StyleSheet.create({
-  container:    { flex: 1, backgroundColor: '#fff' },
-  header:       { paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#F0F2F7' },
-  headerTitle:  { fontSize: 18, fontWeight: '700', color: '#1A1F36', textAlign: 'center' },
-  scroll:       { flex: 1 },
-  scrollContent:{ paddingBottom: 20 },
-
-  userSection:  { alignItems: 'center', paddingVertical: 24, paddingHorizontal: 20 },
-  avatar:       { width: 96, height: 96, borderRadius: 48, marginBottom: 12, borderWidth: 3, borderColor: COLORS.primarySurface || '#EEF4FA' },
-  userName:     { fontSize: 18, fontWeight: '700', color: '#1A1F36', marginBottom: 4 },
-  userEmail:    { fontSize: 13, color: '#6B7280', marginBottom: 10 },
-  editBtn:      { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: COLORS.primarySurface || '#EEF4FA', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20 },
-  editBtnTxt:   { fontSize: 13, fontWeight: '700', color: COLORS.primary },
-
-  statsCard:    { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFF', marginHorizontal: 20, marginBottom: 20, paddingVertical: 14, paddingHorizontal: 12, borderRadius: 16, borderWidth: 1, borderColor: '#DDE3ED' },
-  statBox:      { alignItems: 'center', flex: 1 },
-  statNum:      { fontSize: 20, fontWeight: '800', color: COLORS.primary },
-  statLabel:    { fontSize: 11, fontWeight: '600', color: '#6B7280', marginTop: 2 },
-  statVLine:    { width: 1, height: 28, backgroundColor: '#DDE3ED' },
-
-  progressWrap: { paddingHorizontal: 20, marginBottom: 24 },
-  progressHeader:{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  progressTitle: { fontSize: 13, fontWeight: '700', color: '#1A1F36' },
-  progressPct:  { fontSize: 13, fontWeight: '700', color: COLORS.primary },
-  progressBg:   { height: 8, backgroundColor: '#E5E7EB', borderRadius: 4, overflow: 'hidden' },
-  progressFill: { height: '100%', backgroundColor: COLORS.primary, borderRadius: 4 },
-  progressHint: { fontSize: 11, color: '#6B7280', marginTop: 6, fontStyle: 'italic' },
-
-  menuSection:  { paddingHorizontal: 20, gap: 10 },
-  menuItem:     { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F9FAFB', borderRadius: 14, padding: 14, gap: 12 },
-  menuIcon:     { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  menuContent:  { flex: 1 },
-  menuTitle:    { fontSize: 14, fontWeight: '600', color: '#1A1F36', marginBottom: 2 },
-  menuSub:      { fontSize: 11, color: '#6B7280' },
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  header: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+    textAlign: 'center',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 20,
+  },
+  userSection: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+  },
+  avatar: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    marginBottom: 12,
+  },
+  userName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  userEmail: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginBottom: 8,
+  },
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(176, 156, 133, 0.12)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 16,
+    marginTop: 8,
+  },
+  editButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.primary,
+  },
+  completenessContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 25,
+  },
+  completenessHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  completenessTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1f2937',
+  },
+  completenessValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  progressBarBg: {
+    height: 8,
+    backgroundColor: '#e5e7eb',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: COLORS.primary,
+    borderRadius: 4,
+  },
+  completenessHint: {
+    fontSize: 11,
+    color: '#6b7280',
+    marginTop: 8,
+    fontStyle: 'italic',
+  },
+  menuSection: {
+    paddingHorizontal: 20,
+    gap: 12,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 16,
+    padding: 16,
+    gap: 12,
+  },
+  menuIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuContent: {
+    flex: 1,
+  },
+  menuTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 2,
+  },
+  menuSubtitle: {
+    fontSize: 11,
+    color: '#6B7280',
+  },
+  logoutIcon: {
+    backgroundColor: '#EF4444',
+  },
+  logoutText: {
+    color: '#EF4444',
+  },
+  statsCardContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    backgroundColor: '#F8FAF5',
+    marginHorizontal: 20,
+    marginBottom: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E8E2D8',
+  },
+  statBox: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  statNumText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: COLORS.primary,
+  },
+  statLabelText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  statVLine: {
+    width: 1,
+    height: 24,
+    backgroundColor: '#E2E8F0',
+  },
+  // ── Guest overlay styles ──────────────────────────────────────
+  overlayBg: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 37, 64, 0.82)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  overlayCard: {
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 28,
+    width: '100%',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  overlayAvatar: {
+    width: 80, height: 80, borderRadius: 40,
+    backgroundColor: COLORS.primarySurface || '#EEF4FA',
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: 16,
+    borderWidth: 2, borderColor: COLORS.primary,
+  },
+  overlayTitle: {
+    fontSize: 20, fontWeight: '800',
+    color: COLORS.primary, marginBottom: 8, textAlign: 'center',
+  },
+  overlaySubtitle: {
+    fontSize: 13, color: '#6B7280',
+    textAlign: 'center', marginBottom: 24, lineHeight: 20,
+  },
+  overlayClientBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: COLORS.primary,
+    borderRadius: 14, paddingVertical: 14, paddingHorizontal: 24,
+    width: '100%', justifyContent: 'center', marginBottom: 12,
+  },
+  overlayClientBtnText: {
+    color: '#fff', fontSize: 15, fontWeight: '700',
+  },
+  overlayAdvBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    borderRadius: 14, paddingVertical: 13, paddingHorizontal: 24,
+    width: '100%', justifyContent: 'center',
+    borderWidth: 2, borderColor: COLORS.accent || '#C9A84C',
+    backgroundColor: '#FFFCF0',
+  },
+  overlayAdvBtnText: {
+    color: COLORS.accent || '#C9A84C', fontSize: 15, fontWeight: '700',
+  },
 });
 
 export default ProfileScreen;
