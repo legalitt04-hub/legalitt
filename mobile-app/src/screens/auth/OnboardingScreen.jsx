@@ -222,7 +222,7 @@ const OnboardingScreen = ({ navigation, route }) => {
   const scrollX      = useRef(new Animated.Value(0)).current;
   const btnScale     = useRef(new Animated.Value(1)).current;
 
-  const handleNext = () => {
+  const handleNext = async () => {
     Animated.sequence([
       Animated.timing(btnScale, { toValue: 0.94, duration: 80, useNativeDriver: true }),
       Animated.timing(btnScale, { toValue: 1,    duration: 80, useNativeDriver: true }),
