@@ -1,5 +1,18 @@
 const mongoose = require('mongoose');
 
+// Normalize type string → valid enum value
+const VALID_TYPES = [
+  'theft', 'assault', 'fraud', 'cyber_crime', 'property_dispute',
+  'domestic_violence', 'missing_person', 'robbery', 'murder', 'kidnapping',
+  'harassment', 'cheating', 'extortion', 'trespass', 'accident', 'other'
+];
+
+const normalizeType = (val) => {
+  if (!val) return 'other';
+  const lower = val.toLowerCase().replace(/\s+/g, '_');
+  return VALID_TYPES.includes(lower) ? lower : 'other';
+};
+
 const firDraftSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
@@ -9,7 +22,9 @@ const firDraftSchema = new mongoose.Schema({
   type: {
     type: String,
     required: true,
-    enum: ['theft', 'assault', 'fraud', 'cyber_crime', 'property_dispute', 'domestic_violence', 'missing_person', 'other'],
+    enum: VALID_TYPES,
+    set: normalizeType,  // Auto-normalize on save (handles "Theft" → "theft", "Robbery" → "robbery")
+    default: 'other',
   },
   incident: {
     date: Date,
@@ -52,3 +67,4 @@ const firDraftSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 module.exports = mongoose.model('FIRDraft', firDraftSchema);
+
