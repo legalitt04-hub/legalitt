@@ -41,6 +41,12 @@ const advocateSchema = new mongoose.Schema({
     default: 7,
     comment: 'Days after first consultation for follow-up pricing',
   },
+  bio: {
+    type: String,
+    default: '',
+    maxlength: [500, 'Bio cannot exceed 500 characters'],
+    trim: true,
+  },
   location: {
     type: {
       type: String,
