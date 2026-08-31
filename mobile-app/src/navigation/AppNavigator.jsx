@@ -401,7 +401,6 @@ const AppNavigator = () => {
               <Stack.Screen name="Notifications" component={NotificationsScreen} />
               
               <Stack.Screen name="AIAssistant" component={AIAssistantScreen} />
-              <Stack.Screen name="Onboarding" component={OnboardingScreen} />
               <Stack.Screen name="LoginRegister" component={LoginRegisterScreen} />
               <Stack.Screen name="OTP" component={OTPScreen} />
               <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
