@@ -314,27 +314,19 @@ const AppNavigator = () => {
   const { isAuthenticated, user, isRestoring, consentAccepted } = useAuth();
   const [splashFinished, setSplashFinished] = useState(false);
   const [hasOnboarded, setHasOnboarded] = useState(null); // null = loading
-  const [hasRole, setHasRole] = useState(null); // null = loading
 
-  const refreshGuestState = async () => {
-    const [onboarded, role] = await Promise.all([
-      AsyncStorage.getItem('legalitt_onboarded'),
-      AsyncStorage.getItem('legalitt_role'),
-    ]);
-    setHasOnboarded(!!onboarded);
-    setHasRole(role || null); // 'client' | null
+  const refreshOnboardState = async () => {
+    const val = await AsyncStorage.getItem('legalitt_onboarded');
+    setHasOnboarded(!!val);
   };
 
-  // On mount
-  useEffect(() => { refreshGuestState(); }, []);
-
-  // After every auth change (e.g. logout)
-  useEffect(() => { if (!isAuthenticated) refreshGuestState(); }, [isAuthenticated]);
+  useEffect(() => { refreshOnboardState(); }, []);
+  useEffect(() => { if (!isAuthenticated) refreshOnboardState(); }, [isAuthenticated]);
 
   // ─── SYNCHRONIZED SPLASH ANIMATION GATE ─────────────────────────────────
   // Render LegalittIntroScreen until the logo reveal animation completion event fires.
   // Prevents Home screen or Auth screens from appearing while animation is running.
-  if (!splashFinished || hasOnboarded === null || hasRole === undefined) {
+  if (!splashFinished || hasOnboarded === null) {
     return (
       <View style={{ flex: 1, minHeight: Platform.OS === 'web' ? '100vh' : '100%', backgroundColor: '#000000' }}>
         <LegalittIntroScreen
@@ -359,16 +351,11 @@ const AppNavigator = () => {
               <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
             </>
           ) : !isAuthenticated ? (
-            // ─── UNAUTHENTICATED: Onboarding → RoleSelect → ClientMain (guest) ──
+            // ─── UNAUTHENTICATED: Onboarding first, then ClientMain as guest ────
             <>
-              {!hasOnboarded
-                ? <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-                : !hasRole
-                  ? <Stack.Screen name="RoleSelect" component={RoleSelectScreen} />
-                  : <Stack.Screen name="ClientMain" component={ClientTabs} />
-              }
-              <Stack.Screen name="RoleSelect" component={RoleSelectScreen} />
-              <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+              {!hasOnboarded && (
+                <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+              )}
               <Stack.Screen name="ClientMain" component={ClientTabs} />
               <Stack.Screen name="AdvocateProfile" component={AdvocateProfileScreen} />
               <Stack.Screen name="Filter" component={FilterScreen} />
