@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Image, StatusBar, Alert, ActivityIndicator, Dimensions,
+  Image, Alert, ActivityIndicator, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,194 +12,41 @@ import { bookingAPI, firAPI, chatAPI } from '../../services/api';
 
 const { width } = Dimensions.get('window');
 
-// ─────────────────────────────────────────────────────────────────────────────
-// GUEST VIEW — shown when user is NOT logged in
-// ─────────────────────────────────────────────────────────────────────────────
-const GuestView = ({ navigation }) => (
-  <SafeAreaView style={g.container}>
-    <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
-
-    {/* Navy header */}
-    <View style={g.header}>
-      <View style={g.logoCircle}>
-        <Text style={g.logoEmoji}>⚖️</Text>
-      </View>
-      <Text style={g.headerTitle}>My Profile</Text>
-      <Text style={g.headerSub}>
-        Sign in to access bookings, FIR drafts,{'\n'}chats and legal services
-      </Text>
-    </View>
-
-    <ScrollView contentContainerStyle={g.body} showsVerticalScrollIndicator={false}>
-
-      {/* ── CLIENT SIGN IN ── */}
-      <Text style={g.sectionLabel}>FOR CLIENTS</Text>
-
-      <TouchableOpacity
-        style={g.clientBtn}
-        activeOpacity={0.88}
-        onPress={() => navigation.navigate('LoginRegister', { role: 'client' })}
-      >
-        <View style={g.clientIconWrap}>
-          <Ionicons name="person" size={26} color="#fff" />
-        </View>
-        <View style={g.btnInfo}>
-          <Text style={g.btnTitle}>Sign in as Client</Text>
-          <Text style={g.btnSub}>Book advocates, FIR drafts, AI legal help</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.7)" />
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={g.linkRow}
-        onPress={() => navigation.navigate('LoginRegister', { role: 'client', mode: 'register' })}
-      >
-        <Text style={g.linkTxt}>
-          New user?{'  '}
-          <Text style={g.linkHighlight}>Create Client Account →</Text>
-        </Text>
-      </TouchableOpacity>
-
-      {/* ── DIVIDER ── */}
-      <View style={g.divRow}>
-        <View style={g.divLine} />
-        <Text style={g.divTxt}>OR</Text>
-        <View style={g.divLine} />
-      </View>
-
-      {/* ── ADVOCATE SIGN IN ── */}
-      <Text style={g.sectionLabel}>FOR ADVOCATES</Text>
-
-      <TouchableOpacity
-        style={g.advocateBtn}
-        activeOpacity={0.88}
-        onPress={() => navigation.navigate('LoginRegister', { role: 'advocate' })}
-      >
-        <View style={g.advocateIconWrap}>
-          <Ionicons name="briefcase" size={24} color={COLORS.accent || '#C9A84C'} />
-        </View>
-        <View style={g.btnInfo}>
-          <Text style={[g.btnTitle, { color: '#7A5C1E' }]}>Sign in as Advocate</Text>
-          <Text style={[g.btnSub, { color: '#92742D' }]}>Manage cases, earnings & practice</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color={COLORS.accent || '#C9A84C'} />
-      </TouchableOpacity>
-
-      {/* ── FEATURE PILLS ── */}
-      <View style={g.pills}>
-        {[
-          { icon: 'lock-closed-outline', label: 'Encrypted' },
-          { icon: 'shield-checkmark-outline', label: 'Verified' },
-          { icon: 'flash-outline', label: 'Instant' },
-        ].map((p, i) => (
-          <View key={i} style={g.pill}>
-            <Ionicons name={p.icon} size={14} color={COLORS.primary} />
-            <Text style={g.pillTxt}>{p.label}</Text>
-          </View>
-        ))}
-      </View>
-
-      <View style={{ height: 100 }} />
-    </ScrollView>
-  </SafeAreaView>
-);
-
-const g = StyleSheet.create({
-  container:    { flex: 1, backgroundColor: '#F4F6F9' },
-  header: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 24, paddingTop: 24, paddingBottom: 40,
-    alignItems: 'center',
-    borderBottomLeftRadius: 32, borderBottomRightRadius: 32,
-  },
-  logoCircle: {
-    width: 72, height: 72, borderRadius: 36,
-    backgroundColor: 'rgba(255,255,255,0.14)',
-    alignItems: 'center', justifyContent: 'center',
-    marginBottom: 14, borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.22)',
-  },
-  logoEmoji:    { fontSize: 32 },
-  headerTitle:  { fontSize: 22, fontWeight: '800', color: '#fff' },
-  headerSub:    { fontSize: 13, color: 'rgba(255,255,255,0.72)', textAlign: 'center', marginTop: 6, lineHeight: 20 },
-
-  body: { paddingHorizontal: 20, paddingTop: 28 },
-
-  sectionLabel: {
-    fontSize: 11, fontWeight: '800', color: '#9BA3B4',
-    letterSpacing: 1, marginBottom: 10, marginLeft: 4,
-  },
-
-  // Client button — full navy
-  clientBtn: {
-    backgroundColor: COLORS.primary, borderRadius: 20, padding: 18,
-    flexDirection: 'row', alignItems: 'center', gap: 14,
-    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3, shadowRadius: 14, elevation: 7,
-  },
-  clientIconWrap: {
-    width: 50, height: 50, borderRadius: 15,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  btnInfo:  { flex: 1 },
-  btnTitle: { fontSize: 16, fontWeight: '800', color: '#fff' },
-  btnSub:   { fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 3 },
-
-  linkRow: { alignItems: 'center', marginTop: 14, marginBottom: 6 },
-  linkTxt: { fontSize: 13, color: '#6B7280' },
-  linkHighlight: { color: COLORS.primary, fontWeight: '700' },
-
-  // Divider
-  divRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 24 },
-  divLine: { flex: 1, height: 1, backgroundColor: '#DDE3ED' },
-  divTxt: { fontSize: 11, fontWeight: '800', color: '#B0BAC9' },
-
-  // Advocate button — gold outline
-  advocateBtn: {
-    backgroundColor: '#FFFCF0', borderRadius: 20, padding: 18,
-    flexDirection: 'row', alignItems: 'center', gap: 14,
-    borderWidth: 2, borderColor: COLORS.accent || '#C9A84C',
-    shadowColor: COLORS.accent || '#C9A84C',
-    shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 10, elevation: 4,
-  },
-  advocateIconWrap: {
-    width: 50, height: 50, borderRadius: 15,
-    backgroundColor: 'rgba(201,168,76,0.12)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-
-  // Pills
-  pills: { flexDirection: 'row', justifyContent: 'center', gap: 10, marginTop: 30 },
-  pill: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: '#fff', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7,
-    borderWidth: 1, borderColor: '#DDE3ED',
-  },
-  pillTxt: { fontSize: 11, fontWeight: '700', color: '#5A6478' },
-});
-
-
-// ─────────────────────────────────────────────────────────────────────────────
-// AUTHENTICATED PROFILE SCREEN
-// ─────────────────────────────────────────────────────────────────────────────
 const ProfileScreen = ({ navigation }) => {
   const { user, isAuthenticated, refreshUser, logout } = useAuth();
   const [loading, setLoading]       = useState(false);
   const [completeness, setComplete] = useState(user?.completeness || 0);
   const [stats, setStats]           = useState({ consultations: 0, drafts: 0, chats: 0 });
 
-  // ── If guest → show role-selection screen ──────────────────────────────────
-  if (!isAuthenticated) return <GuestView navigation={navigation} />;
-
-  // ── Fetch stats on focus ───────────────────────────────────────────────────
+  // ── Guest: jab bhi Profile tab pe aao aur login nahi hai → LoginRegisterScreen pe bhejo
   useEffect(() => {
-    const unsub = navigation.addListener('focus', () => {
-      refreshUser();
-      fetchStats();
+    if (!isAuthenticated) {
+      // Navigate to client login. "Sign in as Advocate" is shown on that screen.
+      navigation.navigate('LoginRegister', { role: 'client' });
+    }
+  }, [isAuthenticated]);
+
+  // ── Also catch tabPress so clicking tab again navigates
+  useEffect(() => {
+    const unsub = navigation.addListener('tabPress', (e) => {
+      if (!isAuthenticated) {
+        e.preventDefault();
+        navigation.navigate('LoginRegister', { role: 'client' });
+      }
     });
     return unsub;
-  }, [navigation]);
+  }, [navigation, isAuthenticated]);
+
+  // ── Focus listener to refresh data ──────────────────────────────────────────
+  useEffect(() => {
+    const unsub = navigation.addListener('focus', () => {
+      if (isAuthenticated) {
+        refreshUser();
+        fetchStats();
+      }
+    });
+    return unsub;
+  }, [navigation, isAuthenticated]);
 
   useEffect(() => { if (user) setComplete(user.completeness || 0); }, [user]);
 
@@ -231,16 +78,16 @@ const ProfileScreen = ({ navigation }) => {
   };
 
   const menuItems = [
-    { id: '0', icon: 'time-outline',          title: 'My FIR Drafts',    subtitle: 'View your saved legal drafts',         screen: 'MyDrafts' },
-    { id: '1', icon: 'chatbubble-outline',     title: 'My Chats',         subtitle: 'All conversations with advocates',     screen: 'ChatList' },
-    { id: '2', icon: 'document-text-outline',  title: 'My Requests',      subtitle: 'Status and report',                   screen: 'MyBookings' },
-    { id: '3', icon: 'bookmark-outline',       title: 'Saved Advocates',  subtitle: 'Your bookmarked lawyers',              screen: 'SavedAdvocates' },
+    { id: '0', icon: 'time-outline',          title: 'My FIR Drafts',    subtitle: 'View your saved legal drafts',        screen: 'MyDrafts' },
+    { id: '1', icon: 'chatbubble-outline',     title: 'My Chats',         subtitle: 'All conversations with advocates',    screen: 'ChatList' },
+    { id: '2', icon: 'document-text-outline',  title: 'My Requests',      subtitle: 'Booking status and reports',          screen: 'MyBookings' },
+    { id: '3', icon: 'bookmark-outline',       title: 'Saved Advocates',  subtitle: 'Your bookmarked lawyers',             screen: 'SavedAdvocates' },
     { id: '4', icon: 'settings-outline',       title: 'Settings',         subtitle: 'Language, notifications & privacy',   screen: 'Settings' },
-    { id: '5', icon: 'card-outline',           title: 'Payments',         subtitle: 'Consultation payments & invoices',     screen: 'MyBookings' },
+    { id: '5', icon: 'card-outline',           title: 'Payments',         subtitle: 'Consultation payments & invoices',    screen: 'MyBookings' },
   ];
 
-  if (loading) return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+  if (!isAuthenticated || loading) return (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
       <ActivityIndicator size="large" color={COLORS.primary} />
     </View>
   );
@@ -267,7 +114,7 @@ const ProfileScreen = ({ navigation }) => {
         {/* Stats */}
         <View style={s.statsCard}>
           {[
-            { num: stats.consultations, label: 'Bookings',  screen: 'MyBookings' },
+            { num: stats.consultations, label: 'Bookings',   screen: 'MyBookings' },
             { num: stats.drafts,        label: 'FIR Drafts', screen: 'MyDrafts' },
             { num: stats.chats,         label: 'Chats',      screen: 'ChatList' },
           ].map((st, i) => (
