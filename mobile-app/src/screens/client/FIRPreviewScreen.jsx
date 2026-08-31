@@ -4,9 +4,11 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { exportFIRToPDF } from '../../utils/pdfExport';
+import { useAuth } from '../../context/AuthContext';
 import { COLORS } from '../../constants/theme';
 
 const FIRPreviewScreen = ({ route, navigation }) => {
+  const { isAuthenticated } = useAuth();
   const { draft } = route.params;
 
   const handleShare = async () => {
@@ -21,6 +23,17 @@ const FIRPreviewScreen = ({ route, navigation }) => {
   };
 
   const handleSaveToDevice = async () => {
+    if (!isAuthenticated) {
+      Alert.alert(
+        'Sign in Required',
+        'Please sign in to save your FIR draft.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Sign in', onPress: () => navigation.navigate('LoginRegister', { role: 'client' }) },
+        ]
+      );
+      return;
+    }
     try {
       await exportFIRToPDF(draft); // This will open the share sheet where they can "Save to Files"
       Alert.alert('Saved', 'Your FIR Draft has been processed. You can find it in your files.');

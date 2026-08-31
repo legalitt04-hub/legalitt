@@ -16,6 +16,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { bookingAPI } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import { COLORS, SIZES, SHADOWS } from '../../constants/theme';
@@ -32,6 +33,7 @@ const TIME_SLOTS = [
 ];
 
 const BookingScreen = ({ route, navigation }) => {
+  const { isAuthenticated } = useAuth();
   const { advocateId, advocateName, fee, advocateAvatar } = route.params || {};
   const insets = useSafeAreaInsets();
 
@@ -61,6 +63,17 @@ const BookingScreen = ({ route, navigation }) => {
   const [selectedTime, setSelectedTime] = useState(null);
 
   const handleBook = async () => {
+    if (!isAuthenticated) {
+      Alert.alert(
+        'Sign in Required',
+        'Please sign in to proceed with consultation booking & payment.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Sign in', onPress: () => navigation.navigate('LoginRegister', { role: 'client' }) },
+        ]
+      );
+      return;
+    }
     if (!issue.trim()) {
       Alert.alert('Required', 'Please describe your legal issue.');
       return;

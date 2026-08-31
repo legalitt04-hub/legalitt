@@ -351,11 +351,9 @@ const AppNavigator = () => {
               <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
             </>
           ) : !isAuthenticated ? (
-            // ─── UNAUTHENTICATED: Onboarding first, then ClientMain as guest ────
+            // ─── UNAUTHENTICATED: Onboarding first (3 slides), then ClientMain ──
             <>
-              {!hasOnboarded && (
-                <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-              )}
+              <Stack.Screen name="Onboarding" component={OnboardingScreen} />
               <Stack.Screen name="ClientMain" component={ClientTabs} />
               <Stack.Screen name="AdvocateProfile" component={AdvocateProfileScreen} />
               <Stack.Screen name="Filter" component={FilterScreen} />

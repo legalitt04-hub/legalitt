@@ -13,9 +13,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/theme';
+import { useAuth } from '../../context/AuthContext';
 import { paymentAPI, bookingAPI } from '../../services/api';
 
 const PaymentScreen = ({ navigation, route }) => {
+  const { isAuthenticated } = useAuth();
   const [selectedMethod, setSelectedMethod] = useState(null);
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState('select'); // 'select' | 'processing' | 'verifying'
@@ -48,6 +50,17 @@ const PaymentScreen = ({ navigation, route }) => {
   ];
 
   const handlePayment = async () => {
+    if (!isAuthenticated) {
+      Alert.alert(
+        'Sign in Required',
+        'Please sign in to complete payment.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Sign in', onPress: () => navigation.navigate('LoginRegister', { role: 'client' }) },
+        ]
+      );
+      return;
+    }
     if (!selectedMethod) {
       Alert.alert('Selection Required', 'Please select a payment method');
       return;
