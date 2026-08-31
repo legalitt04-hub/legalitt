@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   StatusBar, Alert, RefreshControl, ActivityIndicator, Modal
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../services/api';
 import { COLORS } from '../../constants/theme';
@@ -64,6 +64,7 @@ const line = StyleSheet.create({
 });
 
 const EarningsScreen = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
   const [balance, setBalance]       = useState({ totalEarned: 0, available: 0, totalBookings: 0 });
   const [transactions, setTx]       = useState([]);
   const [monthly, setMonthly]       = useState([]);
@@ -158,7 +159,10 @@ const EarningsScreen = ({ navigation }) => {
       </View>
 
       <ScrollView
-        contentContainerStyle={s.scroll}
+        contentContainerStyle={[
+          s.scroll,
+          { paddingBottom: Math.max(insets.bottom, 12) + 95 }
+        ]}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />}
       >
@@ -255,6 +259,23 @@ const EarningsScreen = ({ navigation }) => {
             })
           )}
         </View>
+
+        {/* Action Buttons */}
+        <View style={s.actionButtonsContainer}>
+          <TouchableOpacity
+            style={[s.withdrawBtn, { flex: 1 }, (balance.available < 100 || withdrawing) && s.withdrawBtnDisabled]}
+            onPress={handleWithdraw}
+            disabled={withdrawing || (balance.available < 100)}
+          >
+            <Text style={s.withdrawBtnText}>{withdrawing ? 'Processing...' : 'Withdraw Funds'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[s.withdrawBtn, { flex: 1, backgroundColor: '#0D9488' }]}
+            onPress={() => navigation.navigate('AdvocateWallet')}
+          >
+            <Text style={s.withdrawBtnText}>💼 My Wallet</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
 
       {/* Invoice modal */}
@@ -327,25 +348,6 @@ const EarningsScreen = ({ navigation }) => {
           </View>
         </View>
       </Modal>
-
-      {/* Footer Buttons */}
-      <View style={s.footer}>
-        <View style={{ flexDirection: 'row', gap: 10 }}>
-          <TouchableOpacity
-            style={[s.withdrawBtn, { flex: 1 }, (balance.available < 100 || withdrawing) && s.withdrawBtnDisabled]}
-            onPress={handleWithdraw}
-            disabled={withdrawing || (balance.available < 100)}
-          >
-            <Text style={s.withdrawBtnText}>{withdrawing ? 'Processing...' : 'Withdraw Funds'}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[s.withdrawBtn, { flex: 1, backgroundColor: '#0D9488' }]}
-            onPress={() => navigation.navigate('AdvocateWallet')}
-          >
-            <Text style={s.withdrawBtnText}>💼 My Wallet</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
     </SafeAreaView>
   );
 };
@@ -402,9 +404,11 @@ const s = StyleSheet.create({
   txAmount: { fontSize: 14, fontWeight: '800', color: COLORS.success },
   invoiceBadge: { flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: 'rgba(20, 184, 166, 0.08)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
   invoiceBadgeText: { fontSize: 9, fontWeight: '700', color: COLORS.primary },
-  footer: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    backgroundColor: '#FFFFFF', padding: 16, paddingBottom: 36, borderTopWidth: 1, borderColor: '#F3F4F6'
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 8,
+    marginBottom: 8,
   },
   withdrawBtn: { backgroundColor: COLORS.primary, paddingVertical: 14, borderRadius: 99, alignItems: 'center' },
   withdrawBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },

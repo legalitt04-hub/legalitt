@@ -9,6 +9,7 @@ import * as ImagePicker from 'expo-image-picker';
 import api, { caseAPI, bookingAPI, chatAPI, legalAdviceAPI } from '../../services/api';
 import { COLORS } from '../../constants/theme';
 import { formatDate, formatINR } from '../../utils/helpers';
+import { MOCK_ADVOCATE_CASES } from '../../data/advocateCasesMock';
 
 const Section = ({ title, actionIcon, onActionPress, children }) => (
   <View style={styles.section}>
@@ -93,48 +94,50 @@ const CaseDetailScreen = ({ route, navigation }) => {
       const response = await caseAPI.getOne(caseId);
       if (response.data?.success) {
         setLegalCase(response.data.data);
+        setLoading(false);
+        return;
       }
     } catch (err) {
-      Alert.alert('Error', 'Failed to load case details.');
-      navigation.goBack();
-    } finally {
-      setLoading(false);
+      console.log('Case API getOne error, falling back to mock or booking data:', err);
     }
+
+    // Development demo fallback
+    if (booking) {
+      setLegalCase({
+        isBooking: true,
+        title: booking.issue || booking.caseType || 'Divorce Matter',
+        description: booking.description || booking.issue || 'Client consultation and notice review.',
+        caseNumber: booking.caseId || 'CASE-DEMO-001',
+        courtName: 'Family Court',
+        client: booking.client || { name: 'Rahul Sharma', email: 'rahul.sharma@example.com', phone: '+91 98765 43210' },
+        status: booking.status || 'pending',
+        date: booking.date || new Date().toISOString(),
+        timeSlot: booking.timeSlot || { startTime: '4:00 PM' },
+        payment: booking.payment || { amount: 1500 },
+        type: booking.type || 'video',
+        timeline: booking.timeline || [
+          { title: 'Case Request Received', date: '2026-08-21T10:00:00.000Z', status: 'completed', description: 'Client submitted consultation request.' },
+          { title: 'Notice Review', date: '2026-08-21T12:00:00.000Z', status: 'scheduled', description: 'Legal notice response preparation.' },
+        ],
+        documents: booking.documents || [
+          { _id: 'DOC-NOTICE-001', name: 'Divorce_Notice_Rahul.pdf', type: 'pdf', url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf' },
+        ],
+        notes: booking.notes || [],
+        _id: booking._id || caseId,
+      });
+      setClientDocs(booking.documents || [
+        { _id: 'DOC-NOTICE-001', name: 'Divorce_Notice_Rahul.pdf', type: 'pdf', url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf' },
+      ]);
+    } else {
+      const demoCase = MOCK_ADVOCATE_CASES.todayCases[0];
+      setLegalCase(demoCase);
+      setClientDocs(demoCase.documents || []);
+    }
+    setLoading(false);
   };
 
   useEffect(() => {
-    if (caseId) {
-      fetchCaseDetails();
-    } else if (booking) {
-      setLegalCase({
-        isBooking: true,
-        title: booking.issue?.split('\n')[0] || 'Consultation Request',
-        description: booking.issue,
-        caseNumber: 'TBD (Confirm Consultation)',
-        courtName: 'Pending Confirmation',
-        client: booking.client || {},
-        status: booking.status,
-        date: booking.date,
-        timeSlot: booking.timeSlot,
-        payment: booking.payment,
-        type: booking.type,
-        timeline: [],
-        documents: [],
-        notes: [],
-        _id: booking._id
-      });
-      setLoading(false);
-      // Fetch booking details with client documents
-      if (booking._id) {
-        legalAdviceAPI.getRequestDetail(booking._id)
-          .then(res => {
-            if (res.data?.success) {
-              setClientDocs(res.data.data?.documents || []);
-            }
-          })
-          .catch(() => {}); // silent fail — docs optional
-      }
-    }
+    fetchCaseDetails();
   }, [caseId, booking]);
 
   const handleAccept = async () => {
@@ -388,6 +391,35 @@ const CaseDetailScreen = ({ route, navigation }) => {
                   ))}
                 </View>
               )}
+            </Section>
+
+            {/* Legal Notice Response Workflow Module */}
+            <Section title="⚖️ Legal Notice & Response">
+              <View style={styles.legalNoticePromoCard}>
+                <View style={styles.legalNoticePromoLeft}>
+                  <Text style={styles.legalNoticePromoTitle}>Legal Notice Response</Text>
+                  <Text style={styles.legalNoticePromoSub}>
+                    Prepare, draft with AI, sign & submit formal response
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.legalNoticePromoBtn}
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    navigation.navigate('LegalNoticeResponse', {
+                      caseId: legalCase._id || 'CASE-DEMO-001',
+                      clientId: legalCase.client?._id || 'CLIENT-DEMO-001',
+                      clientName: legalCase.client?.name || 'Rahul Sharma',
+                      clientEmail: legalCase.client?.email || 'rahul.sharma@example.com',
+                      clientPhone: legalCase.client?.phone || '+91 98765 43210',
+                      caseTitle: legalCase.issue || legalCase.title || 'Divorce Matter',
+                      legalNoticeId: 'NOTICE-DEMO-001',
+                    });
+                  }}
+                >
+                  <Text style={styles.legalNoticePromoBtnText}>Open Workflow →</Text>
+                </TouchableOpacity>
+              </View>
             </Section>
           </>
         )}
@@ -703,7 +735,44 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary, borderRadius: 10, paddingVertical: 14,
     alignItems: 'center', marginTop: 12
   },
-  submitBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' }
+  submitBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+
+  // Legal Notice Promo Styles
+  legalNoticePromoCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FAF8F5',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#EFEAE4',
+    gap: 10,
+  },
+  legalNoticePromoLeft: {
+    flex: 1,
+  },
+  legalNoticePromoTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#2D2824',
+  },
+  legalNoticePromoSub: {
+    fontSize: 11,
+    color: '#7D756E',
+    marginTop: 2,
+  },
+  legalNoticePromoBtn: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  legalNoticePromoBtnText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
+  },
 });
 
 export default CaseDetailScreen;

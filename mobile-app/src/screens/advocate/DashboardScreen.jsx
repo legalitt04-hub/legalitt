@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   StatusBar, Switch, RefreshControl, Image, Alert, ActivityIndicator
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -17,6 +17,7 @@ import Constants from 'expo-constants';
 import StatsCard from '../../components/advocate/StatsCard';
 import AppointmentCard from '../../components/advocate/AppointmentCard';
 import EarningsSummary from '../../components/advocate/EarningsSummary';
+import RecentReviewsSection from '../../components/advocate/RecentReviewsSection';
 import Svg, { Polyline, Circle } from 'react-native-svg';
 
 // Mini line chart using SVG Polyline and Circle
@@ -122,6 +123,7 @@ const chartStyles = StyleSheet.create({
 });
 
 const AdvocateDashboardScreen = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
   const { user, logout } = useAuth();
   const { chats, refetch } = useChatList();
   const unreadCount = chats.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
@@ -148,6 +150,7 @@ const AdvocateDashboardScreen = ({ navigation }) => {
     todayAppointments: [],
     pendingMessagesCount: 0,
     recentReviews: [],
+    ratingStats: null,
     earningsSummary: { daily: 0, weekly: 0, monthly: 0 },
     profileCompletion: 0,
     analytics: {
@@ -205,17 +208,14 @@ const AdvocateDashboardScreen = ({ navigation }) => {
                   advocateAvatar: data.client?.avatar,
                   advocateId: data.client?._id,
                 });
-              } else if ((data.consultationMode === 'voice' || data.consultationMode === 'video') && data.zegoRoomId) {
-                navigation.navigate('VideoCall', {
-                  zegoRoomId:  data.zegoRoomId,
-                  zegoToken:   data.zegoToken,
-                  zegoAppId:   Number(ZEGO_APP_ID || 0),
-                  zegoAppSign: ZEGO_APP_SIGN || '',
-                  advocateName: data.client?.name || 'Client',
-                  myUserId:    String(advocateUser._id || ''),
-                  myUserName:  String(advocateUser.name || 'Advocate'),
-                  mode:        data.consultationMode,
-                  bookingId:   data.bookingId,
+              } else if (data.consultationMode === 'voice' || data.consultationMode === 'video') {
+                navigation.navigate('AdvocateCall', {
+                  clientName:   data.client?.name || 'Client',
+                  clientAvatar: data.client?.avatar,
+                  callType:     data.consultationMode,
+                  bookingId:    data.bookingId,
+                  clientId:     data.client?._id,
+                  isIncoming:   false,
                 });
               }
             },
@@ -226,8 +226,23 @@ const AdvocateDashboardScreen = ({ navigation }) => {
       fetchDashboardData();
     };
 
+    const handleIncomingCall = (callData) => {
+      navigation.navigate('AdvocateCall', {
+        clientName:   callData?.client?.name || callData?.clientName || 'Client',
+        clientAvatar: callData?.client?.avatar || callData?.avatar || null,
+        callType:     callData?.callType || callData?.mode || 'video',
+        bookingId:    callData?.bookingId,
+        clientId:     callData?.clientId || callData?.client?._id,
+        isIncoming:   true,
+      });
+    };
+
     socket.on('new_booking_assigned', handleNewBooking);
-    return () => socket.off('new_booking_assigned', handleNewBooking);
+    socket.on('incoming_call', handleIncomingCall);
+    return () => {
+      socket.off('new_booking_assigned', handleNewBooking);
+      socket.off('incoming_call', handleIncomingCall);
+    };
   }, [navigation, user]);
 
   const onRefresh = async () => {
@@ -344,45 +359,57 @@ const AdvocateDashboardScreen = ({ navigation }) => {
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />}
-        contentContainerStyle={{ padding: 16, paddingBottom: 120 }}
+        contentContainerStyle={{
+          padding: 16,
+          paddingBottom: Math.max(insets.bottom, 12) + 115,
+        }}
       >
         {/* Profile Card & Completion Status */}
-        <TouchableOpacity 
-          style={styles.profileCard}
-          activeOpacity={0.9}
-          onPress={handleProfilePress}
-        >
+        <View style={styles.profileCard}>
           <View style={styles.profileCardTop}>
-            <View style={styles.profileAvatarWrap}>
-              <View style={styles.profileAvatar}>
-                {user?.avatar ? (
-                  <Image source={{ uri: user.avatar }} style={{ width: 52, height: 52, borderRadius: 26 }} />
-                ) : (
-                  <Text style={{ fontSize: 24, fontWeight: '700', color: COLORS.primary }}>{(user?.name || 'A')[0].toUpperCase()}</Text>
-                )}
+            <TouchableOpacity 
+              style={styles.profileClickableArea}
+              activeOpacity={0.7}
+              onPress={handleProfilePress}
+            >
+              <View style={styles.profileAvatarWrap}>
+                <View style={styles.profileAvatar}>
+                  {user?.avatar ? (
+                    <Image source={{ uri: user.avatar }} style={{ width: 52, height: 52, borderRadius: 26 }} />
+                  ) : (
+                    <Text style={{ fontSize: 24, fontWeight: '700', color: COLORS.primary }}>{(user?.name || 'A')[0].toUpperCase()}</Text>
+                  )}
+                </View>
               </View>
-            </View>
-            <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{user?.name || 'Advocate'}</Text>
-              <View style={styles.verifiedRow}>
-                <Ionicons name="checkmark-circle" size={16} color={COLORS.primary} />
-                <Text style={styles.verifiedText}>verified advocate</Text>
+              <View style={styles.profileInfo}>
+                <Text style={styles.profileName}>{user?.name || 'Advocate'}</Text>
+                <View style={styles.verifiedRow}>
+                  <Ionicons name="checkmark-circle" size={16} color={COLORS.primary} />
+                  <Text style={styles.verifiedText}>verified advocate</Text>
+                </View>
               </View>
-            </View>
+            </TouchableOpacity>
+
             <View style={styles.onlineToggle}>
               <Text style={[styles.onlineLabel, { color: online ? COLORS.primary : COLORS.textSecondary }]}>
                 {online ? 'Online' : 'Offline'}
               </Text>
               <Switch
                 value={online}
-                onValueChange={setOnline}
+                onValueChange={(val) => {
+                  setOnline(val);
+                }}
                 trackColor={{ false: '#E5E7EB', true: COLORS.primaryLight }}
                 thumbColor={online ? COLORS.primary : '#9CA3AF'}
               />
             </View>
           </View>
 
-          <View style={styles.completionContainer}>
+          <TouchableOpacity 
+            style={styles.completionContainer}
+            activeOpacity={0.7}
+            onPress={handleProfilePress}
+          >
             <View style={styles.completionLabelRow}>
               <Text style={styles.completionLabel}>Practice Profile Completion</Text>
               <Text style={styles.completionPercent}>{dashboardData.profileCompletion}%</Text>
@@ -390,8 +417,8 @@ const AdvocateDashboardScreen = ({ navigation }) => {
             <View style={styles.completionBarBg}>
               <View style={[styles.completionBar, { width: `${dashboardData.profileCompletion}%` }]} />
             </View>
-          </View>
-        </TouchableOpacity>
+          </TouchableOpacity>
+        </View>
 
         {/* Dynamic Analytics StatsCards Grid */}
         <View style={styles.statsGrid}>
@@ -486,32 +513,36 @@ const AdvocateDashboardScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Recent Client Reviews display */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Recent Client Reviews</Text>
-          {dashboardData.recentReviews.length === 0 ? (
-            <Text style={styles.noReviews}>No client reviews received yet.</Text>
-          ) : (
-            dashboardData.recentReviews.map((rev) => (
-              <View key={rev._id} style={styles.reviewRow}>
-                <View style={styles.reviewHeader}>
-                  <Text style={styles.reviewName}>{rev.client?.name || 'Client'}</Text>
-                  <View style={styles.stars}>
-                    {[...Array(5)].map((_, i) => (
-                      <Ionicons 
-                        key={i} 
-                        name={i < rev.rating ? "star" : "star-outline"} 
-                        size={12} 
-                        color="#FBBF24" 
-                      />
-                    ))}
-                  </View>
-                </View>
-                {rev.comment && <Text style={styles.reviewComment}>{rev.comment}</Text>}
-              </View>
-            ))
-          )}
-        </View>
+        {/* Recent Client Reviews Section */}
+        <RecentReviewsSection
+          reviews={dashboardData.recentReviews || []}
+          ratingStats={dashboardData.ratingStats}
+          advocateRating={user?.rating}
+          onViewAll={() => {
+            try {
+              navigation.navigate('ReviewRating');
+            } catch {
+              const parent = navigation.getParent();
+              if (parent) {
+                try {
+                  parent.navigate('ReviewRating');
+                } catch (e) {
+                  console.log('Navigation to ReviewRating failed:', e);
+                }
+              }
+            }
+          }}
+          onReviewPress={(rev) => {
+            if (rev.booking?._id || rev.booking) {
+              const bookingObj = typeof rev.booking === 'object' ? rev.booking : { _id: rev.booking };
+              try {
+                navigation.navigate('CaseDetail', { booking: bookingObj });
+              } catch {
+                // Ignore if not applicable
+              }
+            }
+          }}
+        />
       </ScrollView>
     </SafeAreaView>
   );
@@ -536,6 +567,7 @@ const styles = StyleSheet.create({
     marginBottom: 16
   },
   profileCardTop: { flexDirection: 'row', alignItems: 'center' },
+  profileClickableArea: { flex: 1, flexDirection: 'row', alignItems: 'center' },
   profileAvatarWrap: { marginRight: 16 },
   profileAvatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: 'rgba(20, 184, 166, 0.1)', alignItems: 'center', justifyContent: 'center' },
   profileInfo: { flex: 1 },
@@ -571,13 +603,6 @@ const styles = StyleSheet.create({
   actionBtn: { alignItems: 'center', flex: 1 },
   actionIconBg: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
   actionLabel: { fontSize: 11, color: COLORS.textPrimary, fontWeight: '600' },
-  
-  noReviews: { fontSize: 12, color: '#9CA3AF', fontWeight: '500', textAlign: 'center', marginVertical: 8 },
-  reviewRow: { borderBottomWidth: 1, borderColor: '#F3F4F6', paddingVertical: 10 },
-  reviewHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  reviewName: { fontSize: 13, fontWeight: '700', color: COLORS.textPrimary },
-  stars: { flexDirection: 'row', gap: 2 },
-  reviewComment: { fontSize: 12, color: COLORS.textSecondary, marginTop: 4, lineHeight: 18, fontWeight: '500' },
   badgeDot: {
     position: 'absolute',
     right: -4,

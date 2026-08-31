@@ -57,12 +57,35 @@ exports.getDashboardStats = async (req, res) => {
       readAt: { $exists: false }
     });
 
-    // 5. Recent Reviews
-    const recentReviews = await Review.find({ advocate: advocateId })
+    // 5. Recent Reviews & Aggregated Rating Analytics
+    const allAdvocateReviews = await Review.find({ advocate: advocateId })
       .populate('client', 'name avatar')
+      .populate('booking', 'type issue')
       .sort({ createdAt: -1 })
-      .limit(5)
       .lean();
+
+    const totalReviewCount = allAdvocateReviews.length;
+    const ratingDistribution = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    let ratingSum = 0;
+    let positiveReviewsCount = 0;
+
+    allAdvocateReviews.forEach(r => {
+      const rounded = Math.min(5, Math.max(1, Math.round(r.rating || 5)));
+      ratingDistribution[rounded] = (ratingDistribution[rounded] || 0) + 1;
+      ratingSum += (r.rating || 0);
+      if (r.rating >= 4) {
+        positiveReviewsCount += 1;
+      }
+    });
+
+    const averageRating = totalReviewCount > 0 
+      ? Math.round((ratingSum / totalReviewCount) * 10) / 10 
+      : (advocate.rating?.average || 0);
+    const positivePercentage = totalReviewCount > 0 
+      ? Math.round((positiveReviewsCount / totalReviewCount) * 100) 
+      : 0;
+
+    const recentReviews = allAdvocateReviews.slice(0, 5);
 
     // 6. Calculate Earnings Summary
     const confirmedBookings = await Booking.find({
@@ -150,6 +173,12 @@ exports.getDashboardStats = async (req, res) => {
         todayAppointments,
         pendingMessagesCount,
         recentReviews,
+        ratingStats: {
+          totalReviews: totalReviewCount,
+          averageRating: Number(averageRating),
+          positivePercentage,
+          distribution: ratingDistribution
+        },
         earningsSummary: {
           daily: dailyEarnings,
           weekly: weeklyEarnings,

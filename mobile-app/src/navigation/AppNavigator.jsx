@@ -1,15 +1,4 @@
-// navigation/AppNavigator.jsx - PRODUCTION READY WITH TOKEN VALIDATION & REFRESH
-import { NativeModules, Platform, View, ActivityIndicator, Text, StatusBar } from 'react-native';
-
-// Fallback for ZegoCloud NativeModules in Expo Go to prevent crash: Cannot read property 'prefix' of null
-if (Platform.OS !== 'web' && NativeModules) {
-  if (!NativeModules.ZegoExpressNativeModule) {
-    NativeModules.ZegoExpressNativeModule = { prefix: 'zego' };
-  }
-  if (!NativeModules.ZIMNativeModule) {
-    NativeModules.ZIMNativeModule = { prefix: 'zim' };
-  }
-}
+import { Platform, View, ActivityIndicator, Text, StatusBar, TouchableOpacity, StyleSheet as RNStyleSheet, Dimensions } from 'react-native';
 
 import AuthLoadingScreen from './AuthLoadingScreen';
 import React, { useState, useEffect } from 'react';
@@ -23,6 +12,8 @@ import * as SecureStore from '../utils/secureStorage';
 import axios from 'axios';
 import Constants from 'expo-constants';
 import { useAuth } from '../context/AuthContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 
 // AUTH SCREENS
 import SplashScreen from '../screens/auth/SplashScreen';
@@ -46,6 +37,17 @@ import PaymentSuccessScreen from '../screens/client/PaymentSuccessScreen';
 import MyBookingsScreen from '../screens/client/MyBookingsScreen';
 import BookingScreen from '../screens/client/BookingScreen';
 import FIRTypeSelector from '../screens/client/FIRTypeSelector';
+import FIRDraftScreen from '../screens/client/FIRDraftScreen';
+import DocumentForensicScreen from '../screens/client/DocumentForensicScreen';
+import DocumentForensicUploadScreen from '../screens/client/DocumentForensicUploadScreen';
+import DocumentForensicReviewScreen from '../screens/client/DocumentForensicReviewScreen';
+import DocumentForensicPaymentScreen from '../screens/client/DocumentForensicPaymentScreen';
+import DocumentForensicSuccessScreen from '../screens/client/DocumentForensicSuccessScreen';
+import DocumentForensicTrackScreen from '../screens/client/DocumentForensicTrackScreen';
+import DocumentForensicAnalysisScreen from '../screens/client/DocumentForensicAnalysisScreen';
+import DocumentForensicExpertReviewScreen from '../screens/client/DocumentForensicExpertReviewScreen';
+import DocumentForensicReportReadyScreen from '../screens/client/DocumentForensicReportReadyScreen';
+import DocumentForensicCompleteScreen from '../screens/client/DocumentForensicCompleteScreen';
 import FIRFormScreen from '../screens/client/FIRFormScreen';
 import FIRPreviewScreen from '../screens/client/FIRPreviewScreen';
 import AILegalNoticeScreen from '../screens/client/AILegalNoticeScreen';
@@ -88,7 +90,7 @@ import EarningsScreen from '../screens/advocate/EarningsScreen';
 import AdvocateWalletScreen from '../screens/advocate/AdvocateWalletScreen';
 import DocumentUploadScreen from '../screens/advocate/DocumentUploadScreen';
 import PendingApprovalScreen from '../screens/advocate/PendingApprovalScreen';
-import { CasesScreen, ClientsScreen, CaseDetailScreen, ProfileEditScreen as AdvocateProfileEditScreen } from '../screens/advocate';
+import { CasesScreen, ClientsScreen, CaseDetailScreen, ProfileEditScreen as AdvocateProfileEditScreen, ReviewRatingScreen, DocumentViewerScreen, AdvocateCallScreen, LegalNoticeResponseScreen } from '../screens/advocate';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -155,71 +157,153 @@ const ClientTabs = () => {
   );
 };
 
+// ─── ADVOCATE FLOATING PILL NAV BAR ───────────────────────────────────────────
+
+// Active (tan) and inactive (tan) color — white icon when active
+const PILL_ACTIVE_BG = '#8C6E52';   // same muted tan as project primary
+const PILL_INACTIVE_COLOR = '#8C6E52';
+const PILL_ACTIVE_ICON = '#FFFFFF';
+
+const PILL_TABS = [
+  { name: 'Dashboard',   icon: 'home-outline',         iconActive: 'home'          },
+  { name: 'TodayCases',  icon: 'scale-outline',        iconActive: 'scale'         },
+  { name: 'Requests',    icon: 'people-outline',       iconActive: 'people'        },
+  { name: 'Earnings',    icon: 'wallet-outline',       iconActive: 'wallet'        },
+];
+
+const AdvocatePillTabBar = ({ state, descriptors, navigation }) => {
+  const insets = useSafeAreaInsets();
+
+  return (
+    <View
+      style={[
+        pillStyles.wrapper,
+        { bottom: Math.max(insets.bottom, 12) + 8 },
+      ]}
+      pointerEvents="box-none"
+    >
+      <View style={pillStyles.pill}>
+        {PILL_TABS.map((tab, index) => {
+          const route = state.routes[index];
+          const isFocused = state.index === index;
+
+          const onPress = () => {
+            const event = navigation.emit({
+              type: 'tabPress',
+              target: route.key,
+              canPreventDefault: true,
+            });
+            if (!isFocused && !event.defaultPrevented) {
+              navigation.navigate(route.name);
+            }
+          };
+
+          const iconName = isFocused ? tab.iconActive : tab.icon;
+
+          return (
+            <TouchableOpacity
+              key={tab.name}
+              onPress={onPress}
+              activeOpacity={0.85}
+              style={pillStyles.tabItem}
+              accessibilityRole="button"
+              accessibilityState={isFocused ? { selected: true } : {}}
+            >
+              {isFocused ? (
+                <View style={pillStyles.activeCapsule}>
+                  <Ionicons name={iconName} size={24} color={PILL_ACTIVE_ICON} />
+                </View>
+              ) : (
+                <View style={pillStyles.inactiveItem}>
+                  <Ionicons name={iconName} size={24} color={PILL_INACTIVE_COLOR} />
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+};
+
+const pillStyles = RNStyleSheet.create({
+  wrapper: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 999,
+    paddingHorizontal: 16,
+  },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 40,
+    height: 70,
+    width: '100%',
+    maxWidth: 420,
+    paddingHorizontal: 8,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    elevation: 10,
+  },
+  tabItem: {
+    flex: 1,
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeCapsule: {
+    backgroundColor: PILL_ACTIVE_BG,
+    width: 78,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inactiveItem: {
+    width: 78,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
+
 // ADVOCATE BOTTOM TABS - 4 TABS FOR PRACTICE MANAGEMENT
 const AdvocateTabs = () => {
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
-        headerShown: false,
-        tabBarIcon: ({ focused, color, size }) => {
-          let iconName;
-
-          if (route.name === 'Dashboard') {
-            iconName = focused ? 'home' : 'home-outline';
-          } else if (route.name === 'TodayCases') {
-            iconName = focused ? 'scale' : 'scale-outline';
-          } else if (route.name === 'Requests') {
-            iconName = focused ? 'document-text' : 'document-text-outline';
-          } else if (route.name === 'Earnings') {
-            iconName = focused ? 'wallet' : 'wallet-outline';
-          }
-
-          return <Ionicons name={iconName} size={size} color={color} />;
-        },
-        tabBarActiveTintColor: COLORS.primary,
-        tabBarInactiveTintColor: '#6B7280',
-        tabBarStyle: {
-          height: 70,
-          paddingBottom: 16,
-          paddingTop: 8,
-          borderTopWidth: 0,
-          elevation: 20,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: 0.1,
-          shadowRadius: 12,
-          backgroundColor: '#FFFFFF',
-        },
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '600',
-        },
-      })}
+      tabBar={(props) => <AdvocatePillTabBar {...props} />}
+      screenOptions={{ headerShown: false }}
     >
-      <Tab.Screen 
-        name="Dashboard" 
+      <Tab.Screen
+        name="Dashboard"
         component={AdvocateDashboardScreen}
         options={{ title: 'Dashboard' }}
       />
-      <Tab.Screen 
-        name="TodayCases" 
+      <Tab.Screen
+        name="TodayCases"
         component={CasesScreen}
         options={{ title: 'Today Cases' }}
       />
-      <Tab.Screen 
-        name="Requests" 
+      <Tab.Screen
+        name="Requests"
         component={CaseRequestsScreen}
         options={{ title: 'Requests' }}
       />
-      <Tab.Screen 
-        name="Earnings" 
+      <Tab.Screen
+        name="Earnings"
         component={EarningsScreen}
         options={{ title: 'Earnings' }}
       />
       <Tab.Screen
         name="AdvocateWallet"
         component={AdvocateWalletScreen}
-        options={{ title: 'Wallet', tabBarButton: () => null, tabBarStyle: { display: 'none' } }}
+        options={{ tabBarButton: () => null }}
       />
     </Tab.Navigator>
   );
@@ -280,10 +364,15 @@ const AppNavigator = () => {
               <Stack.Screen name="CaseDetail" component={CaseDetailScreen} />
               <Stack.Screen name="Clients" component={ClientsScreen} />
               <Stack.Screen name="AdvocateProfileEdit" component={AdvocateProfileEditScreen} />
+              <Stack.Screen name="ReviewRating" component={ReviewRatingScreen} />
+              <Stack.Screen name="LegalNoticeResponse" component={LegalNoticeResponseScreen} />
+              <Stack.Screen name="DocumentViewer" component={DocumentViewerScreen} />
               <Stack.Screen name="ChatList" component={ChatListScreen} />
               <Stack.Screen name="Chat" component={ChatScreen} />
-              <Stack.Screen name="VideoCall" component={VideoCallScreen}
-                options={{ animation: 'slide_from_bottom', gestureEnabled: false }} />
+              <Stack.Screen name="AdvocateCall" component={AdvocateCallScreen}
+                options={{ animation: 'slide_from_bottom', gestureEnabled: false, headerShown: false }} />
+              <Stack.Screen name="VideoCall" component={AdvocateCallScreen}
+                options={{ animation: 'slide_from_bottom', gestureEnabled: false, headerShown: false }} />
               <Stack.Screen name="Notifications" component={NotificationsScreen} />
               <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
               <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
@@ -301,7 +390,18 @@ const AppNavigator = () => {
               <Stack.Screen name="ChatList" component={ChatListScreen} />
               <Stack.Screen name="Chat" component={ChatScreen} />
               <Stack.Screen name="MyBookings" component={MyBookingsScreen} />
-              <Stack.Screen name="FIRTypeSelector" component={FIRTypeSelector} />
+              <Stack.Screen name="FIRDraft" component={FIRDraftScreen} />
+              <Stack.Screen name="FIRTypeSelector" component={FIRDraftScreen} />
+              <Stack.Screen name="DocumentForensic" component={DocumentForensicScreen} />
+              <Stack.Screen name="DocumentForensicUpload" component={DocumentForensicUploadScreen} />
+              <Stack.Screen name="DocumentForensicReview" component={DocumentForensicReviewScreen} />
+              <Stack.Screen name="DocumentForensicPayment" component={DocumentForensicPaymentScreen} />
+              <Stack.Screen name="DocumentForensicSuccess" component={DocumentForensicSuccessScreen} />
+              <Stack.Screen name="DocumentForensicTrack" component={DocumentForensicTrackScreen} />
+              <Stack.Screen name="DocumentForensicAnalysis" component={DocumentForensicAnalysisScreen} />
+              <Stack.Screen name="DocumentForensicExpertReview" component={DocumentForensicExpertReviewScreen} />
+              <Stack.Screen name="DocumentForensicReportReady" component={DocumentForensicReportReadyScreen} />
+              <Stack.Screen name="DocumentForensicComplete" component={DocumentForensicCompleteScreen} />
               <Stack.Screen name="FIRForm" component={FIRFormScreen} />
               <Stack.Screen name="FIRPreview" component={FIRPreviewScreen} />
               <Stack.Screen name="AILegalNotice" component={AILegalNoticeScreen} />

@@ -5,3 +5,7 @@ export { default as CaseDetailScreen } from './CaseDetailScreen';
 export { default as DashboardScreen } from './DashboardScreen';
 export { default as CaseRequestsScreen } from './CaseRequestsScreen';
 export { default as EarningsScreen } from './EarningsScreen';
+export { default as ReviewRatingScreen } from './ReviewRatingScreen';
+export { default as DocumentViewerScreen } from './DocumentViewerScreen';
+export { default as AdvocateCallScreen } from './AdvocateCallScreen';
+export { default as LegalNoticeResponseScreen } from './LegalNoticeResponseScreen';

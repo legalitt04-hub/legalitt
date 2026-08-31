@@ -52,8 +52,9 @@ export default function HomeScreen({ navigation }) {
 
   // More Services list (displayed directly without dropdown)
   const moreServicesList = [
-    { id: '5', icon: 'document-text-outline', title: 'FIR Draft Generator', subtitle: 'Generate Drafts', screen: 'FIRTypeSelector' },
+    { id: '5', icon: 'document-text-outline', title: 'FIR Draft Service', subtitle: 'Professional FIR Drafting', screen: 'FIRDraft' },
     { id: '6', icon: 'calendar-outline', title: 'My Bookings', subtitle: 'Track Consultations', screen: 'MyBookings' },
+    { id: '7', icon: 'document-attach-outline', title: 'Online Documents Forensic', subtitle: 'Verify Document Authenticity', screen: 'DocumentForensic' },
   ];
 
   return (
