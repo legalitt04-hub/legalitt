@@ -251,11 +251,13 @@ const LoginRegisterScreen = ({ navigation, route }) => {
             </TouchableOpacity>
 
             <View style={styles.headerTitleWrap}>
-              <Text style={styles.title}>Login / Register</Text>
+              <Text style={styles.title}>
+                {selectedRole === 'advocate' ? 'Advocate Portal' : 'Login / Register'}
+              </Text>
               <Text style={styles.subtitle}>
-                {mode === 'login' 
-                  ? 'Login With Your Account' 
-                  : 'Register With Your Account'}
+                {selectedRole === 'advocate'
+                  ? mode === 'login' ? 'Sign in to your Advocate account' : 'Register as an Advocate'
+                  : mode === 'login' ? 'Login With Your Account' : 'Register With Your Account'}
               </Text>
             </View>
           </View>

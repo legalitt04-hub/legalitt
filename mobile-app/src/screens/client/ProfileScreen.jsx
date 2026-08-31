@@ -65,7 +65,6 @@ const ProfileScreen = ({ navigation }) => {
     { id: '0', icon: 'time-outline',        title: 'My FIR Drafts',    subtitle: 'View your saved legal drafts',          screen: 'MyDrafts',      requiresAuth: false },
     { id: '1', icon: 'chatbubble-outline',   title: 'My Chats',         subtitle: 'All conversations with advocates',      screen: 'ChatList',      requiresAuth: true  },
     { id: '2', icon: 'document-text-outline',title: 'My Requests',      subtitle: 'Status and Report',                     screen: 'MyBookings',    requiresAuth: true  },
-    { id: '3', icon: 'bookmark-outline',     title: 'Saved Advocates',  subtitle: 'Your bookmarked lawyers',               screen: 'SavedAdvocates',requiresAuth: true  },
     { id: '4', icon: 'settings-outline',     title: 'Settings',         subtitle: 'Language, notification & Privacy',      screen: 'Settings',      requiresAuth: false },
     { id: '5', icon: 'card-outline',         title: 'Payments',         subtitle: 'Consultation Payments & invoice',       screen: 'MyBookings',    requiresAuth: true  },
   ];
