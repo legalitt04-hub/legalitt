@@ -341,15 +341,30 @@ const AppNavigator = () => {
               <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
             </>
           ) : !isAuthenticated ? (
-            // ─── AUTHENTICATION FLOW (UNAUTHENTICATED) ───────────────────
+            // ─── GUEST FLOW — all screens accessible, login only when needed ───
             <>
               <Stack.Screen name="ClientMain" component={ClientTabs} />
               <Stack.Screen name="Onboarding" component={OnboardingScreen} />
               <Stack.Screen name="LoginRegister" component={LoginRegisterScreen} />
               <Stack.Screen name="OTP" component={OTPScreen} />
               <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+              <Stack.Screen name="AdvocateProfile" component={AdvocateProfileScreen} />
+              <Stack.Screen name="Filter" component={FilterScreen} />
+              <Stack.Screen name="Booking" component={BookingScreen} />
+              <Stack.Screen name="ChatList" component={ChatListScreen} />
+              <Stack.Screen name="Chat" component={ChatScreen} />
+              <Stack.Screen name="FIRDraft" component={FIRDraftScreen} />
+              <Stack.Screen name="FIRTypeSelector" component={FIRDraftScreen} />
+              <Stack.Screen name="FIRForm" component={FIRFormScreen} />
+              <Stack.Screen name="FIRPreview" component={FIRPreviewScreen} />
+              <Stack.Screen name="AILegalNotice" component={AILegalNoticeScreen} />
+              <Stack.Screen name="MyDrafts" component={MyDraftsScreen} />
+              <Stack.Screen name="AIAssistant" component={AIAssistantScreen} />
+              <Stack.Screen name="LegalAdviceLanding" component={LegalAdviceLandingScreen} />
+              <Stack.Screen name="LegalMatter" component={LegalMatterScreen} />
+              <Stack.Screen name="ConsultationDetails" component={ConsultationDetailsScreen} />
+              <Stack.Screen name="Notifications" component={NotificationsScreen} />
               <Stack.Screen name="AdvocateFlow" component={AdvocateStack} />
-              {/* Policy screens reachable from the login/register checkbox links */}
               <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
               <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
             </>
