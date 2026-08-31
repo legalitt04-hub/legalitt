@@ -15,6 +15,7 @@ import * as SecureStore from '../../utils/secureStorage';
 import EventSource from 'react-native-sse';
 import { COLORS, SIZES, SHADOWS } from '../../constants/theme';
 import api, { BASE_URL } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 import { FormattedAIResponse } from '../../components/ai/FormattedAIResponse';
 
