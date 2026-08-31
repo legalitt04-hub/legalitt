@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { COLORS } from '../../constants/theme';
 import {
   View,
   Text,

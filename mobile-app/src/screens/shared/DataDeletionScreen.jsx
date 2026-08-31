@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { COLORS } from '../../constants/theme';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   StatusBar, TextInput, Alert, ActivityIndicator,

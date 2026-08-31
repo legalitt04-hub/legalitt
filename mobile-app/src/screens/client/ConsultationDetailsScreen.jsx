@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { COLORS } from '../../constants/theme';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Alert, ActivityIndicator, Platform
