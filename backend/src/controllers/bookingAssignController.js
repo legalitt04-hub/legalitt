@@ -142,20 +142,23 @@ exports.getNearbyAdvocatesForBooking = async (req, res, next) => {
       ];
     }
 
-    // Fetch ALL advocates in database without 200 cap, sorted by rating
+    // Fetch advocates with cap to prevent timeout on large datasets
     const [nearbyAdvocates, allAdvocates, totalAdvocatesCount] = await Promise.all([
       Advocate.find(cityFilter)
         .select('user specializations rating consultationFee location experience verificationStatus isVerified')
         .populate('user', 'name avatar phone email')
         .sort({ 'rating.average': -1, createdAt: -1 })
+        .limit(100)
         .lean(),
       Advocate.find(allFilter)
         .select('user specializations rating consultationFee location experience verificationStatus isVerified')
         .populate('user', 'name avatar phone email')
         .sort({ 'rating.average': -1, createdAt: -1 })
+        .limit(100)
         .lean(),
       Advocate.countDocuments({ verificationStatus: { $ne: 'rejected' } }),
     ]);
+
 
     res.json({
       success: true,

@@ -5,58 +5,67 @@ const logger = require('../utils/logger');
 // Generate FIR Draft using AI
 exports.generateFIR = async (req, res, next) => {
   try {
-    const { type, incident, complainant, accused, witnesses, additionalInfo } = req.body;
+    // Support BOTH old structured format AND new simple format from mobile app
+    const {
+      // Old format (FIRFormScreen)
+      type, incident, complainant, accused, witnesses, additionalInfo,
+      // New simple format (FIRDraftScreen / FIRTypeSelector)
+      incidentType, description, location, date, clientName,
+    } = req.body;
 
-    // Construct prompt for AI
+    // Build a unified prompt regardless of format
+    const resolvedType = type || incidentType || 'General Incident';
+    const resolvedDesc = (incident?.description) || description || 'Not provided';
+    const resolvedLocation = (incident?.location) || location || 'Not provided';
+    const resolvedDate = (incident?.date) || date || new Date().toISOString().split('T')[0];
+    const resolvedName = complainant?.name || clientName || 'Complainant';
+
     const prompt = `
-      As a legal expert in Indian Law, draft a formal First Information Report (FIR) based on these details:
-      
-      TYPE OF INCIDENT: ${type}
-      
-      INCIDENT DETAILS:
-      Date: ${incident.date}
-      Time: ${incident.time}
-      Location: ${incident.location}
-      Description: ${incident.description}
-      
-      COMPLAINANT:
-      Name: ${complainant.name}, Age: ${complainant.age}
-      Address: ${complainant.address}
-      
-      ACCUSED DETAILS:
-      ${accused.map(a => `- Name: ${a.name}, Address: ${a.address}, Desc: ${a.description}`).join('\n')}
-      
-      WITNESSES:
-      ${witnesses.map(w => `- Name: ${w.name}, Contact: ${w.contact}`).join('\n')}
-      
-      ADDITIONAL INFO: ${additionalInfo || 'None'}
-      
-      INSTRUCTIONS:
-      1. Use formal legal language (IPC/BNS sections if applicable).
-      2. Structure it like an official FIR format used in Indian Police Stations.
-      3. Keep it detailed but concise.
-      4. Ensure all names and locations provided are included accurately.
-    `;
+As a legal expert in Indian Law, draft a formal First Information Report (FIR) based on these details:
 
-    // We reuse the callAI logic from our AI service
+TYPE OF INCIDENT: ${resolvedType}
+
+INCIDENT DETAILS:
+Date: ${resolvedDate}
+Location: ${resolvedLocation}
+Description: ${resolvedDesc}
+
+COMPLAINANT: ${resolvedName}
+${complainant?.age ? 'Age: ' + complainant.age : ''}
+${complainant?.address ? 'Address: ' + complainant.address : ''}
+
+${accused?.length ? 'ACCUSED:\n' + accused.map(a => `- ${a.name || 'Unknown'}, ${a.address || ''}`).join('\n') : ''}
+${witnesses?.length ? 'WITNESSES:\n' + witnesses.map(w => `- ${w.name || 'Unknown'}, ${w.contact || ''}`).join('\n') : ''}
+${additionalInfo ? 'ADDITIONAL INFO: ' + additionalInfo : ''}
+
+INSTRUCTIONS:
+1. Use formal legal language (IPC/BNS sections if applicable).
+2. Structure it like an official FIR format used in Indian Police Stations.
+3. Keep it detailed but concise.
+4. Include all provided names and locations accurately.
+    `.trim();
+
     const { callAI } = require('../services/aiService');
     const aiDraft = await callAI([{ role: 'user', content: prompt }]);
 
     // Save as draft
     const draft = await FIRDraft.create({
       user: req.user.id,
-      type, incident, complainant, accused, witnesses, additionalInfo,
-      aiDraft
+      type: resolvedType,
+      incident: incident || { date: resolvedDate, location: resolvedLocation, description: resolvedDesc },
+      complainant: complainant || { name: resolvedName },
+      accused: accused || [],
+      witnesses: witnesses || [],
+      additionalInfo: additionalInfo || '',
+      aiDraft,
     });
 
-    res.status(201).json({
-      success: true,
-      data: draft
-    });
+    res.status(201).json({ success: true, data: draft });
   } catch (err) {
     next(err);
   }
 };
+
 
 // Get User's Drafts
 exports.getMyDrafts = async (req, res, next) => {
