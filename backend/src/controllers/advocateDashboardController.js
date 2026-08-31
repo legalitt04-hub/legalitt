@@ -203,3 +203,36 @@ exports.getDashboardStats = async (req, res) => {
     });
   }
 };
+
+// ─── Advocate Bookings (all bookings for logged-in advocate) ──────────────────
+exports.getAdvocateBookings = async (req, res) => {
+  try {
+    const advocate = await Advocate.findOne({ user: req.user._id });
+    if (!advocate) {
+      return res.status(404).json({ success: false, message: 'Advocate profile not found.' });
+    }
+
+    const { status, page = 1, limit = 20 } = req.query;
+    const filter = { advocate: advocate._id };
+    if (status) filter.status = status;
+
+    const skip = (Number(page) - 1) * Number(limit);
+    const bookings = await Booking.find(filter)
+      .populate('client', 'name email phone avatar')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit))
+      .lean();
+
+    const total = await Booking.countDocuments(filter);
+
+    res.json({
+      success: true,
+      data: bookings,
+      pagination: { total, page: Number(page), pages: Math.ceil(total / Number(limit)) }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to fetch bookings.', error: error.message });
+  }
+};
+

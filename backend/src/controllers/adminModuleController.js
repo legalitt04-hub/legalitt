@@ -99,20 +99,40 @@ exports.getCases = async (req, res, next) => {
 
 exports.updateCase = async (req, res, next) => {
   try {
-    const updatedCase = await Case.findByIdAndUpdate(
+    const Booking = require('../models/Booking');
+    const { status, notes, adminNotes, advocateId, paymentStatus, priority } = req.body;
+
+    // Map from Case display status → Booking DB status
+    const STATUS_MAP = {
+      open: 'pending_assignment',
+      pending: 'pending',
+      in_progress: 'in_progress',
+      resolved: 'completed',
+      closed: 'cancelled',
+    };
+
+    const update = {};
+    if (status) update.status = STATUS_MAP[status] || status;
+    if (notes !== undefined || adminNotes !== undefined) update.adminNotes = adminNotes || notes;
+    if (advocateId !== undefined) update.advocate = advocateId || null;
+    if (paymentStatus) update['payment.status'] = paymentStatus;
+    if (priority) update.priority = priority;
+
+    const updated = await Booking.findByIdAndUpdate(
       req.params.id,
-      { $set: req.body },
-      { new: true, runValidators: true }
+      { $set: update },
+      { new: true, runValidators: false }
     )
-      .populate('client', 'name email avatar')
-      .populate('advocate', 'name email avatar');
-      
-    if (!updatedCase) return next(new AppError('Case not found', 404));
-    res.json({ success: true, data: updatedCase });
+      .populate('client', 'name email phone avatar')
+      .populate({ path: 'advocate', populate: { path: 'user', select: 'name email avatar' } });
+
+    if (!updated) return next(new AppError('Case/Booking not found', 404));
+    res.json({ success: true, data: updated });
   } catch (err) {
     next(err);
   }
 };
+
 
 exports.deleteCase = async (req, res, next) => {
   try {

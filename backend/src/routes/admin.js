@@ -69,9 +69,11 @@ router.get('/notifications/templates',adminModuleController.getNotificationTempl
 
 // ─── Production 17-Module Routes ─────────────────────────────────────────────
 router.get('/categories',             adminModuleController.getCategories);
+router.get('/service-categories',     adminModuleController.getCategories);  // alias for admin panel
 router.post('/categories',            adminModuleController.createCategory);
 router.put('/categories/:id',         adminModuleController.updateCategory);
 router.delete('/categories/:id',      adminModuleController.deleteCategory);
+
 
 router.get('/coupons',                adminModuleController.getCoupons);
 router.post('/coupons',               adminModuleController.createCoupon);
@@ -126,16 +128,27 @@ router.delete('/users/:id/notes/:noteId', adminController.deleteUserNote);
 
 // ─── Phase 4: Payment History ─────────────────────────────────────────────────
 router.get('/payment-history',           adminController.getPaymentHistory);
+router.get('/payments',                  adminController.getPaymentHistory); // alias for admin panel
+
 
 // ─── Phase 4: Transaction History ────────────────────────────────────────────
 router.get('/transactions',              adminController.getTransactionHistory);
 
 // ─── Phase 4: Upload Document for Client ─────────────────────────────────────
-router.post('/upload-for-client',        upload.single('file'), adminController.uploadDocumentForClient);
+router.post('/upload-for-client',             upload.single('file'), adminController.uploadDocumentForClient);
+router.post('/upload-client-document',        upload.single('document'), adminController.uploadDocumentForClient); // alias (Cases page)
+router.post('/documents/upload-for-booking',  upload.single('file'), adminController.uploadDocumentForClient);    // alias (Documents page)
 
 // ─── Phase 4: Create Case + Register Client ──────────────────────────────────
 router.post('/create-case-for-client',   adminController.createCaseForClient);
 router.post('/bookings/:id/internal-notes', adminController.addBookingInternalNote);
 router.get('/bookings/:id/chat-messages', adminController.getAdminBookingChatMessages);
 
+// ─── Compatibility Aliases ────────────────────────────────────────────────────
+// /admin/consultations → same as /admin/bookings (used by Documents page)
+router.get('/consultations',             bookingAssignController.getPendingBookings);
+// /admin/logs → same as /admin/audit-logs (used by Settings page)
+router.get('/logs',                      adminModuleController.getAuditLogs);
+
 module.exports = router;
+

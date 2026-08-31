@@ -354,3 +354,51 @@ export const uploadAPI = {
 
 export default api;
 
+// ─── Profile API (user profile management) ────────────────────────────────────
+export const profileAPI = {
+  getProfile: () => api.get('/users/profile'),      // GET /users/profile
+  getMe: () => api.get('/users/me'),                 // GET /users/me
+  updateProfile: (data) => api.put('/users/profile', data),
+  updateAvatar: (formData) => api.post('/users/avatar', formData),
+  getCompleteness: () => api.get('/users/profile/completeness'),
+  getSavedAdvocates: () => api.get('/users/saved-advocates'),
+  toggleSavedAdvocate: (advocateId) => api.post('/users/saved-advocates', { advocateId }),
+  registerPushToken: (expoPushToken) => api.post('/users/push-token', { expoPushToken }),
+  deleteAccount: () => api.delete('/users/me'),
+};
+
+// ─── Wallet API (advocate wallet) ─────────────────────────────────────────────
+export const walletAPI = {
+  getBalance: () => api.get('/wallet/balance'),
+  getTransactions: (params) => api.get('/wallet/transactions', { params }),
+  requestWithdrawal: (data) => api.post('/wallet/withdraw', data),
+};
+
+// ─── Advocate Dashboard API ───────────────────────────────────────────────────
+export const advocateDashboardAPI = {
+  getStats: () => api.get('/advocate-dashboard/stats'),
+  getBookings: (params) => api.get('/advocate-dashboard/bookings', { params }),
+  getCases: (params) => api.get('/advocate-dashboard/cases', { params }),
+};
+
+// ─── Property Research API ────────────────────────────────────────────────────
+export const propertyAPI = {
+  createRequest: (data) => api.post('/property-research/request', data),
+  confirmPayment: (data) => api.post('/property-research/confirm-payment', data),
+  getMyRequests: (params) => api.get('/property-research/my-requests', { params }),
+  getRequestDetail: (id) => api.get(`/property-research/request/${id}`),
+};
+
+// ─── Document Forensic API ────────────────────────────────────────────────────
+export const forensicAPI = {
+  createRequest: (data) => api.post('/forensic/request', data),
+  confirmPayment: (data) => api.post('/forensic/confirm-payment', data),
+  getMyRequests: (params) => api.get('/forensic/my-requests', { params }),
+  getRequestDetail: (id) => api.get(`/forensic/request/${id}`),
+};
+
+// ─── Settings API ─────────────────────────────────────────────────────────────
+export const settingsAPI = {
+  getSettings: () => api.get('/settings'),
+  updateSettings: (data) => api.put('/settings', data),
+};

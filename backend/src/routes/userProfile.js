@@ -6,10 +6,12 @@ const { uploadAvatar } = require('../services/cloudinaryService');
 
 router.use(protect);
 
-router.get('/me', profileController.getProfile);
+router.get('/me', profileController.getProfile);                          // standard
+router.get('/profile', profileController.getProfile);                     // mobile alias: /users/profile
 router.put('/profile', profileController.updateProfile);
 router.post('/avatar', uploadAvatar.single('avatar'), profileController.updateAvatar);
 router.get('/profile/completeness', profileController.getCompleteness);
+
 router.post('/saved-advocates', profileController.toggleSavedAdvocate);
 router.get('/saved-advocates', profileController.getSavedAdvocates);
 

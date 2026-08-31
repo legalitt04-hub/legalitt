@@ -30,7 +30,9 @@ const loginSchema = Joi.object({
 router.post('/register', validateBody(registerSchema), ctrl.register);
 router.post('/login', validateBody(loginSchema), ctrl.login);
 router.post('/google', ctrl.googleAuth);
-router.post('/refresh', ctrl.refreshToken);
+router.post('/refresh', ctrl.refreshToken);         // standard
+router.post('/refresh-token', ctrl.refreshToken);   // mobile app alias
+
 router.post('/logout', protect, ctrl.logout);
 router.get('/me', protect, ctrl.getMe);
 router.post('/fcm-token', protect, ctrl.updateFCMToken);

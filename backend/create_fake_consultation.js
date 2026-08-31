@@ -6,7 +6,7 @@ const User = require('./src/models/User');
 mongoose.connect(uri)
   .then(async () => {
     console.log('Connected to DB to add Fake Consultation Request...');
-    
+
     let client = await User.findOne({ role: 'client' });
     if (!client) {
       client = await User.create({
