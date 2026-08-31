@@ -20,6 +20,7 @@ interface Advocate {
   consultationFee?: number;
   location?: { address?: { city?: string; state?: string; street?: string } };
   experience?: number;
+  bio?: string;
   documents?: { barCouncilCertificate?: string; degreeDocument?: string; idProof?: string };
   verificationRejectionReason?: string;
   createdAt: string;
@@ -178,6 +179,7 @@ export default function Advocates() {
       street: adv.location?.address?.street || '',
       consultationFee: adv.consultationFee || '',
       experience: adv.experience || '',
+      bio: adv.bio || '',
     });
   };
 
@@ -196,6 +198,7 @@ export default function Advocates() {
       if (editForm.street) fd.append('street', editForm.street);
       if (editForm.consultationFee !== '') fd.append('consultationFee', String(editForm.consultationFee));
       if (editForm.experience !== '') fd.append('experience', String(editForm.experience));
+      if (editForm.bio !== undefined) fd.append('bio', editForm.bio);
       if (editAvatarFile) fd.append('avatar', editAvatarFile);
       await api.patch(`/admin/advocates/${editAdv._id}`, fd, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -738,6 +741,26 @@ export default function Advocates() {
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Street / Area</label>
                   <input value={editForm.street || ''} onChange={e => setEditForm((p: any) => ({ ...p, street: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder="Near High Court, Vijay Nagar..." />
+                </div>
+
+                {/* Bio */}
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5 text-purple-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                  Advocate Bio
+                </p>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Professional Bio
+                    <span className="ml-1 font-normal text-gray-400">({(editForm.bio || '').length}/500)</span>
+                  </label>
+                  <textarea
+                    value={editForm.bio || ''}
+                    onChange={e => setEditForm((p: any) => ({ ...p, bio: e.target.value.slice(0, 500) }))}
+                    rows={4}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none"
+                    placeholder="Write a short professional bio about this advocate — their expertise, experience, and approach to law practice..."
+                  />
+                  <p className="text-xs text-gray-400 mt-1">This bio is shown to clients browsing advocate profiles.</p>
                 </div>
 
                 <div className="flex gap-3 pt-2">
