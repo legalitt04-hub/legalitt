@@ -7,8 +7,8 @@ import { firAPI } from '../../services/api';
 import { COLORS } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 
-const FIRFormScreen = ({
-  const { isAuthenticated } = useAuth(); route, navigation }) => {
+const FIRFormScreen = ({ route, navigation }) => {
+  const { isAuthenticated } = useAuth();
   const { type, title } = route.params;
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
