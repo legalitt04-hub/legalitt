@@ -10,8 +10,8 @@ import { TrustBadge } from '../../components/legalAdvice/TrustBadge';
 import { PrimaryButton } from '../../components/legalAdvice/PrimaryButton';
 import { useAuth } from '../../context/AuthContext';
 
-export default function ReviewPaymentScreen({
-  const { isAuthenticated } = useAuth(); navigation, route }) {
+export default function ReviewPaymentScreen({ navigation, route }) {
+  const { isAuthenticated } = useAuth();
   const selectedType = route?.params?.selectedType || { id: 'audio', title: 'Audio Consultation', price: '799', duration: '20 Mins' };
   const selectedMatter = route?.params?.selectedMatter || { id: 'property', title: 'Property Law' };
   const clientDetails = route?.params?.clientDetails || {

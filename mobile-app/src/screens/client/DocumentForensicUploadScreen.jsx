@@ -56,8 +56,8 @@ const DOCUMENT_TYPES = [
 
 const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024; // 50MB
 
-export default function DocumentForensicUploadScreen({
-  const { isAuthenticated } = useAuth(); navigation }) {
+export default function DocumentForensicUploadScreen({ navigation }) {
+  const { isAuthenticated } = useAuth(); {
   const insets = useSafeAreaInsets();
 
   // Form State
