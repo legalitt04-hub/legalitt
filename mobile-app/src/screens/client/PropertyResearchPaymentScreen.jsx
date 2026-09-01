@@ -13,6 +13,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { SHADOWS } from '../../constants/theme';
+import { legalAdviceAPI } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 const PRIMARY_BEIGE = '#C2A98B';
 
@@ -27,20 +29,45 @@ const PAYMENT_METHODS = [
 export default function PropertyResearchPaymentScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const { propertyData } = route.params || {};
+  const { isAuthenticated } = useAuth();
 
   const [selectedMethod, setSelectedMethod] = useState('upi');
   const [processing, setProcessing] = useState(false);
 
   const requestId = '#PR-' + Math.floor(100000 + Math.random() * 900000);
 
-  const handlePayAndStart = () => {
+  const handlePayAndStart = async () => {
+    // Auth gate
+    if (!isAuthenticated) {
+      Alert.alert(
+        '🔐 Login Required',
+        'Please login to submit your Property Research request.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Login Now', onPress: () => navigation.navigate('LoginRegister', { role: 'client' }) },
+        ]
+      );
+      return;
+    }
+
     setProcessing(true);
-
-    // Simulate payment authorization
-    setTimeout(() => {
+    try {
+      // Save to backend — same flow as Legal Advice/Notice
+      await legalAdviceAPI.createRequest({
+        serviceType: 'property_research',
+        consultationMode: 'chat',
+        issueDescription: `Property Research Request\nAddress: ${propertyData?.propertyAddress || 'N/A'}\nType: ${propertyData?.propertyType || 'N/A'}\nDistrict: ${propertyData?.district || 'N/A'}, ${propertyData?.state || 'N/A'}\nPurpose: ${propertyData?.purpose || 'N/A'}`,
+        issueCategory: 'property',
+        amount: 2999,
+        clientCity: propertyData?.district || '',
+        requestId,
+        propertyData,
+        paymentMethod: selectedMethod,
+      });
+    } catch (err) {
+      console.log('Property research request note:', err?.message);
+    } finally {
       setProcessing(false);
-
-      // On successful payment, navigate to PAGE 5: PropertyResearchSuccess (Unlocked state)
       navigation.replace('PropertyResearchSuccess', {
         paymentStatus: 'SUCCESS',
         requestId,

@@ -27,7 +27,7 @@ const bookingSchema = new mongoose.Schema({
   // Service type — what the booking is for
   serviceType: {
     type: String,
-    enum: ['legal_advice', 'legal_notice', 'property_research', 'fir_draft', 'consultation'],
+    enum: ['legal_advice', 'legal_notice', 'property_research', 'fir_draft', 'consultation', 'document_forensic'],
     default: 'legal_advice',
   },
   type: {

@@ -33,7 +33,7 @@ exports.createLegalRequest = async (req, res, next) => {
     if (!consultationMode || !['chat', 'voice', 'video'].includes(consultationMode)) {
       return next(new AppError('Consultation mode must be chat, voice, or video.', 400));
     }
-    if (!serviceType || !['legal_advice', 'legal_notice', 'property_research', 'fir_draft', 'consultation'].includes(serviceType)) {
+    if (!serviceType || !['legal_advice', 'legal_notice', 'property_research', 'fir_draft', 'consultation', 'document_forensic'].includes(serviceType)) {
       return next(new AppError('Invalid service type.', 400));
     }
     if (!issueDescription || issueDescription.trim().length < 10) {

@@ -46,9 +46,57 @@ INSTRUCTIONS:
     `.trim();
 
     const { callAI } = require('../services/aiService');
-    const aiDraft = await callAI([{ role: 'user', content: prompt }]);
 
-    // Save as draft
+    // Try AI generation — fallback to template if AI fails
+    let aiDraft;
+    try {
+      aiDraft = await callAI([{ role: 'user', content: prompt }]);
+    } catch (aiErr) {
+      logger.warn('AI service unavailable for FIR generation, using template:', aiErr.message);
+      aiDraft = `
+FIRST INFORMATION REPORT (FIR)
+================================
+
+FIR No.: [To be assigned by Police Station]
+Date: ${resolvedDate}
+Time: ${new Date().toLocaleTimeString('en-IN')}
+Police Station: [To be filled]
+
+TYPE OF OFFENCE: ${resolvedType}
+
+COMPLAINANT DETAILS:
+Name: ${resolvedName}
+${complainant?.age ? 'Age: ' + complainant.age : ''}
+${complainant?.address ? 'Address: ' + complainant.address : ''}
+${complainant?.phone ? 'Phone: ' + complainant.phone : ''}
+
+INCIDENT DETAILS:
+Date of Incident: ${resolvedDate}
+Place of Occurrence: ${resolvedLocation}
+
+DESCRIPTION OF INCIDENT:
+${resolvedDesc}
+
+${accused?.length ? 'DETAILS OF ACCUSED:\n' + accused.map((a, i) => `${i+1}. Name: ${a.name || 'Unknown'}\n   Address: ${a.address || 'Unknown'}`).join('\n') : ''}
+
+${witnesses?.length ? 'WITNESSES:\n' + witnesses.map((w, i) => `${i+1}. Name: ${w.name || 'Unknown'}, Contact: ${w.contact || 'N/A'}`).join('\n') : ''}
+
+${additionalInfo ? 'ADDITIONAL INFORMATION:\n' + additionalInfo : ''}
+
+RELEVANT SECTIONS:
+[Applicable IPC/BNS sections to be determined by the investigating officer based on the nature of offence]
+
+DECLARATION:
+I hereby declare that the information given above is true and correct to the best of my knowledge and belief.
+
+Complainant's Signature: ________________
+Date: ${resolvedDate}
+
+[This is a draft FIR. Please review and submit to the nearest police station.]
+      `.trim();
+    }
+
+    // Save as draft — always succeeds regardless of AI status
     const draft = await FIRDraft.create({
       user: req.user.id,
       type: resolvedType,

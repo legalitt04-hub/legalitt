@@ -1,4 +1,3 @@
-// screens/client/DocumentForensicPaymentScreen.jsx
 import React, { useState } from 'react';
 import {
   View,
@@ -8,10 +7,12 @@ import {
   TouchableOpacity,
   StatusBar,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { legalAdviceAPI } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 // ─── COLOR PALETTE ─────────────────────────────────────────────────────────────
 const PALETTE = {
@@ -55,32 +56,45 @@ const PAYMENT_METHODS = [
 export default function DocumentForensicPaymentScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const { document, documentType, additionalNotes } = route?.params || {};
+  const { isAuthenticated } = useAuth();
 
   const [selectedMethod, setSelectedMethod] = useState('upi');
   const [processing, setProcessing] = useState(false);
 
   const handlePayAndStart = async () => {
+    // Auth gate
+    if (!isAuthenticated) {
+      Alert.alert(
+        '🔐 Login Required',
+        'Please login to submit your Document Forensic request.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Login Now', onPress: () => navigation.navigate('LoginRegister', { role: 'client' }) },
+        ]
+      );
+      return;
+    }
+
     setProcessing(true);
     const generatedRequestId = '#DF-' + Math.floor(100000 + Math.random() * 900000);
 
     try {
-      if (legalAdviceAPI?.createRequest) {
-        await legalAdviceAPI.createRequest({
-          serviceType: 'document_forensic',
-          consultationMode: 'comprehensive_analysis',
-          amount: 3737,
-          paymentMethod: selectedMethod,
-          documentName: document?.name,
-          documentType,
-          notes: additionalNotes,
-          requestId: generatedRequestId,
-        });
-      }
+      await legalAdviceAPI.createRequest({
+        serviceType: 'document_forensic',
+        consultationMode: 'chat',                          // must be chat/voice/video
+        issueDescription: `Document Forensic Analysis Request\nDocument: ${document?.name || 'N/A'}\nType: ${documentType || 'N/A'}\nNotes: ${additionalNotes || 'None'}`,
+        issueCategory: 'forensic',
+        amount: 3737,
+        paymentMethod: selectedMethod,
+        documentName: document?.name,
+        documentType,
+        notes: additionalNotes,
+        requestId: generatedRequestId,
+      });
     } catch (err) {
-      console.log('Payment request note:', err?.message);
+      console.log('Forensic request error:', err?.response?.data?.message || err?.message);
     } finally {
       setProcessing(false);
-      // Navigate to Page 5 (Success/Confirmation)
       navigation.navigate('DocumentForensicSuccess', {
         requestId: generatedRequestId,
         document,
