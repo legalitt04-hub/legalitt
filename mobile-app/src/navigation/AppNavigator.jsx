@@ -325,7 +325,7 @@ const AppNavigator = () => {
 
   // When user logs out → force reset navigation to Onboarding
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated && !isRestoring) {
       refreshOnboardState();
       // Reset navigation stack to Onboarding so ClientMain doesn't persist
       if (navigationRef.current?.isReady()) {
@@ -334,7 +334,7 @@ const AppNavigator = () => {
         );
       }
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, isRestoring]);
 
   // ─── SYNCHRONIZED SPLASH ANIMATION GATE ─────────────────────────────────
   // Render LegalittIntroScreen until the logo reveal animation completion event fires.

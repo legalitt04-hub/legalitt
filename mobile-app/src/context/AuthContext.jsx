@@ -143,13 +143,17 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const logout = useCallback(async () => {
+    // Always dispatch LOGOUT regardless of any errors — never throw
     try {
       const refreshToken = await SecureStore.getItemAsync(REFRESH_KEY);
       await authAPI.logout(refreshToken);
-    } catch { /* ignore */ }
-    await SecureStore.deleteItemAsync(TOKEN_KEY);
-    await SecureStore.deleteItemAsync(REFRESH_KEY);
-    disconnectSocket(); // Clean up socket on logout
+    } catch { /* ignore — backend logout is best-effort */ }
+
+    try { await SecureStore.deleteItemAsync(TOKEN_KEY); } catch { /* ignore */ }
+    try { await SecureStore.deleteItemAsync(REFRESH_KEY); } catch { /* ignore */ }
+    try { disconnectSocket(); } catch { /* ignore */ }
+
+    // This MUST always run — makes isAuthenticated false → AppNavigator → Onboarding
     dispatch({ type: 'LOGOUT' });
   }, []);
 
