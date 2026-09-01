@@ -278,13 +278,10 @@ const AdvocateDashboardScreen = ({ navigation }) => {
           text: 'Log Out', 
           style: 'destructive', 
           onPress: async () => {
-            try {
-              await AsyncStorage.removeItem('legalitt_onboarded');
-              await logout();
-              // AppNavigator's navigationRef handles redirect to Onboarding
-            } catch (err) {
-              Alert.alert('Error', 'Failed to log out. Please try again.');
-            }
+            // Each step wrapped individually — logout ALWAYS succeeds
+            try { await AsyncStorage.removeItem('legalitt_onboarded'); } catch (_) {}
+            try { await logout(); } catch (_) {}
+            // AppNavigator's navigationRef handles redirect to Onboarding
           } 
         }
       ]
