@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { bookingAPI, legalAdviceAPI } from '../../services/api';
+import { bookingAPI, legalAdviceAPI, firAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { getSocket } from '../../services/socket';
 import { COLORS } from '../../constants/theme';
@@ -55,20 +55,33 @@ export default function MyBookingsScreen({ navigation }) {
   const fetchBookings = useCallback(async (showRefresh = false) => {
     if (showRefresh) setRefreshing(true);
     try {
-      const [regularRes, legalRes] = await Promise.allSettled([
-        bookingAPI.getMy(),
-        legalAdviceAPI.getMyRequests(),
+      const [regularRes, legalRes, firRes] = await Promise.allSettled([
+        bookingAPI.getMy(),           // includes property_research + document_forensic
+        legalAdviceAPI.getMyRequests(), // legal_advice + legal_notice
+        firAPI.getMyDrafts(),          // FIR drafts (separate model)
       ]);
 
       const regular = regularRes.status === 'fulfilled' ? (regularRes.value?.data?.data || []) : [];
-      const legal = legalRes.status === 'fulfilled' ? (legalRes.value?.data?.data || []) : [];
+      const legal   = legalRes.status === 'fulfilled'   ? (legalRes.value?.data?.data   || []) : [];
+      // Normalize FIR drafts to booking-like shape for display
+      const firDrafts = firRes.status === 'fulfilled'
+        ? (firRes.value?.data?.data || firRes.value?.data || []).map(d => ({
+            _id: d._id,
+            serviceType: 'fir_draft',
+            status: d.status === 'finalized' ? 'completed' : d.status === 'submitted' ? 'confirmed' : 'pending_assignment',
+            createdAt: d.createdAt,
+            issue: d.incident?.description || d.aiDraft?.substring(0, 80) || 'FIR Draft Request',
+            notes: `Type: ${d.incident?.incidentType || 'General'}`,
+            payment: { amount: 0, status: 'not_required' },
+            _isFIRDraft: true,
+            _raw: d,
+          }))
+        : [];
 
       // Merge and deduplicate by _id
       const bookingMap = new Map();
-      [...regular, ...legal].forEach(item => {
-        if (item?._id) {
-          bookingMap.set(item._id.toString(), item);
-        }
+      [...regular, ...legal, ...firDrafts].forEach(item => {
+        if (item?._id) bookingMap.set(item._id.toString(), item);
       });
 
       const all = Array.from(bookingMap.values()).sort((a, b) =>
@@ -197,6 +210,20 @@ export default function MyBookingsScreen({ navigation }) {
     const advocateAvatar = advocate.avatar;
     const mode = item.consultationMode || (item.type === 'phone' ? 'voice' : item.type) || 'chat';
     const isLegalNotice = item.serviceType === 'legal_notice';
+    const isFIRDraft     = item.serviceType === 'fir_draft';
+    const isProperty     = item.serviceType === 'property_research';
+    const isForensic     = item.serviceType === 'document_forensic';
+
+    // Service badge config
+    const SERVICE_BADGE = {
+      legal_notice:       { label: 'Legal Notice',      bg: '#FEF3C7', color: '#92400E' },
+      fir_draft:          { label: 'FIR Draft',         bg: '#EDE9FE', color: '#5B21B6' },
+      property_research:  { label: 'Property Research', bg: '#D1FAE5', color: '#065F46' },
+      document_forensic:  { label: 'Forensic Analysis', bg: '#FCE7F3', color: '#9D174D' },
+    };
+    const serviceBadge = SERVICE_BADGE[item.serviceType];
+
+
 
     // 24h deadline countdown
     let deadlineText = null;
@@ -216,9 +243,9 @@ export default function MyBookingsScreen({ navigation }) {
               <Ionicons name={config.icon} size={13} color={config.text} />
               <Text style={[styles.statusText, { color: config.text }]}>{config.label}</Text>
             </View>
-            {isLegalNotice && (
-              <View style={styles.noticeBadge}>
-                <Text style={styles.noticeBadgeText}>Legal Notice</Text>
+            {serviceBadge && (
+              <View style={[styles.noticeBadge, { backgroundColor: serviceBadge.bg }]}>
+                <Text style={[styles.noticeBadgeText, { color: serviceBadge.color }]}>{serviceBadge.label}</Text>
               </View>
             )}
           </View>

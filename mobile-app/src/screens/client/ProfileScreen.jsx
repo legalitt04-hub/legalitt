@@ -98,6 +98,11 @@ const ProfileScreen = ({ navigation }) => {
             await AsyncStorage.removeItem('legalitt_onboarded');
             await logout();
             setLoading(false);
+            // Force navigate to Onboarding regardless of navigation state
+            try {
+              const rootNav = navigation.getParent() || navigation;
+              rootNav.reset({ index: 0, routes: [{ name: 'Onboarding' }] });
+            } catch (_) {}
           },
         },
       ],

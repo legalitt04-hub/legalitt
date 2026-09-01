@@ -455,7 +455,19 @@ export default function Advocates() {
                 ))}
               </div>
 
-              {/* Documents Verification Section */}
+              {/* Bio / About Section */}
+              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 mb-4">
+                <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <span>📝</span> Professional Bio
+                </h4>
+                {(selectedAdv.bio || selectedAdv.about) ? (
+                  <p className="text-xs text-gray-700 leading-relaxed">{selectedAdv.bio || selectedAdv.about}</p>
+                ) : (
+                  <p className="text-xs text-gray-400 italic">No bio added. Click Edit Advocate to add one.</p>
+                )}
+              </div>
+
+
               <div className="bg-amber-50/60 border border-amber-100 rounded-2xl p-4 mb-5">
                 <h4 className="text-xs font-bold text-amber-900 uppercase tracking-wider mb-3">Verification Documents</h4>
                 <div className="grid grid-cols-3 gap-2">

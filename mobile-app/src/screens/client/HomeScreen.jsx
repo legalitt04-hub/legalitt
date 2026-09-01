@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  Dimensions, RefreshControl
+  Dimensions, RefreshControl, Image
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/theme';
@@ -70,6 +70,13 @@ export default function HomeScreen({ navigation }) {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.userInfo} onPress={() => navigation.navigate('Profile')} activeOpacity={0.7}>
+            {isAuthenticated && user?.avatar ? (
+              <Image source={{ uri: user.avatar }} style={styles.headerAvatar} />
+            ) : isAuthenticated ? (
+              <View style={styles.headerAvatarPlaceholder}>
+                <Text style={styles.headerAvatarInitial}>{(user?.name || user?.fullName || 'U')[0].toUpperCase()}</Text>
+              </View>
+            ) : null}
             <View>
               <Text style={styles.greeting}>{getGreeting()},</Text>
               <Text style={styles.userName}>{firstName}</Text>
@@ -174,7 +181,10 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9FAFB' },
   scrollContent: { paddingBottom: 120 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 16 },
-  userInfo: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  userInfo: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  headerAvatar: { width: 38, height: 38, borderRadius: 19, borderWidth: 2, borderColor: '#B89A6A' },
+  headerAvatarPlaceholder: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#B89A6A', alignItems: 'center', justifyContent: 'center' },
+  headerAvatarInitial: { color: '#fff', fontSize: 16, fontWeight: '700' },
   greeting: { fontSize: 12, color: '#6B7280' },
   userName: { fontSize: 16, fontWeight: '700', color: '#0F172A' },
   headerIcons: { flexDirection: 'row', gap: 8 },

@@ -1,8 +1,8 @@
 import { Platform, View, ActivityIndicator, Text, StatusBar, TouchableOpacity, StyleSheet as RNStyleSheet, Dimensions } from 'react-native';
 
 import AuthLoadingScreen from './AuthLoadingScreen';
-import React, { useState, useEffect } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import React, { useRef, useState, useEffect } from 'react';
+import { NavigationContainer, CommonActions } from '@react-navigation/native';
 import OfflineBanner from '../components/common/OfflineBanner';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -314,6 +314,7 @@ const AppNavigator = () => {
   const { isAuthenticated, user, isRestoring, consentAccepted } = useAuth();
   const [splashFinished, setSplashFinished] = useState(false);
   const [hasOnboarded, setHasOnboarded] = useState(null); // null = loading
+  const navigationRef = useRef(null);
 
   const refreshOnboardState = async () => {
     const val = await AsyncStorage.getItem('legalitt_onboarded');
@@ -321,7 +322,19 @@ const AppNavigator = () => {
   };
 
   useEffect(() => { refreshOnboardState(); }, []);
-  useEffect(() => { if (!isAuthenticated) refreshOnboardState(); }, [isAuthenticated]);
+
+  // When user logs out → force reset navigation to Onboarding
+  useEffect(() => {
+    if (!isAuthenticated) {
+      refreshOnboardState();
+      // Reset navigation stack to Onboarding so ClientMain doesn't persist
+      if (navigationRef.current?.isReady()) {
+        navigationRef.current.dispatch(
+          CommonActions.reset({ index: 0, routes: [{ name: 'Onboarding' }] })
+        );
+      }
+    }
+  }, [isAuthenticated]);
 
   // ─── SYNCHRONIZED SPLASH ANIMATION GATE ─────────────────────────────────
   // Render LegalittIntroScreen until the logo reveal animation completion event fires.
@@ -341,7 +354,7 @@ const AppNavigator = () => {
   return (
     <View style={{ flex: 1, minHeight: Platform.OS === 'web' ? '100vh' : '100%', backgroundColor: '#000000' }}>
       <OfflineBanner />
-      <NavigationContainer>
+      <NavigationContainer ref={navigationRef}>
         <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade', animationDuration: 400 }}>
           {!consentAccepted ? (
             // ─── CONSENT GATE FLOW (UNACCEPTED) ────────────────────────

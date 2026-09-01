@@ -280,7 +280,12 @@ const CaseDetailScreen = ({ route, navigation }) => {
         <Text style={styles.headerTitle} numberOfLines={1}>{legalCase.title}</Text>
         <View style={styles.statusBadge}>
           <Text style={styles.statusText}>
-            {legalCase.isBooking ? 'CONSULTATION' : legalCase.status?.toUpperCase()}
+            {legalCase.serviceType === 'property_research' ? 'PROPERTY'
+              : legalCase.serviceType === 'document_forensic' ? 'FORENSIC'
+              : legalCase.serviceType === 'fir_draft' || legalCase.serviceType === 'fir_draft_assistance' ? 'FIR DRAFT'
+              : legalCase.serviceType === 'legal_notice' ? 'LEGAL NOTICE'
+              : legalCase.isBooking ? 'CONSULTATION'
+              : legalCase.status?.toUpperCase()}
           </Text>
         </View>
       </View>
@@ -393,11 +398,40 @@ const CaseDetailScreen = ({ route, navigation }) => {
               )}
             </Section>
 
+            {/* Admin / Expert Uploaded Documents */}
+            {(legalCase?.advocateDocuments?.length > 0 || legalCase?.adminDocuments?.length > 0) && (
+              <Section title="📋 Documents from Admin / Expert">
+                <View style={styles.docsList}>
+                  {[...(legalCase.advocateDocuments || []), ...(legalCase.adminDocuments || [])].map((doc, idx) => (
+                    <TouchableOpacity
+                      key={doc._id || idx}
+                      style={[styles.docRow, { backgroundColor: '#F0FDF4', borderRadius: 8, marginBottom: 6, paddingHorizontal: 10, paddingVertical: 8 }]}
+                      onPress={() => doc.url && Linking.openURL(doc.url)}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons
+                        name={doc.type === 'pdf' || doc.name?.toLowerCase().endsWith('.pdf') ? 'document-text' : 'image-outline'}
+                        size={20}
+                        color="#16A34A"
+                      />
+                      <Text style={[styles.docName, { color: '#15803D' }]} numberOfLines={1}>
+                        {doc.name || `Admin Document ${idx + 1}`}
+                      </Text>
+                      <View style={[styles.docViewBtn, { backgroundColor: '#16A34A' }]}>
+                        <Text style={styles.docViewBtnText}>Open ↗</Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </Section>
+            )}
+
             {/* Legal Notice Response Workflow Module */}
             <Section title="⚖️ Legal Notice & Response">
               <View style={styles.legalNoticePromoCard}>
                 <View style={styles.legalNoticePromoLeft}>
                   <Text style={styles.legalNoticePromoTitle}>Legal Notice Response</Text>
+
                   <Text style={styles.legalNoticePromoSub}>
                     Prepare, draft with AI, sign & submit formal response
                   </Text>
