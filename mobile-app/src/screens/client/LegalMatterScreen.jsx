@@ -9,7 +9,7 @@ import { PrimaryButton } from '../../components/legalAdvice/PrimaryButton';
 import { useAuth } from '../../context/AuthContext';
 
 export default function LegalMatterScreen({ navigation, route }) {
-  const { isAuthenticated } = useAuth(); {
+  const { isAuthenticated } = useAuth();
   const selectedType = route?.params?.selectedType || { id: 'audio', title: 'Audio Consultation', price: '799' };
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(null);
