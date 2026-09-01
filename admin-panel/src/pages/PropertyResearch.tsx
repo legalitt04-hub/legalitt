@@ -249,11 +249,11 @@ export default function PropertyResearch() {
                   {uploadStatus && <p className={`mt-2 text-sm text-center font-medium ${uploadStatus.startsWith('✅') ? 'text-green-600' : 'text-red-500'}`}>{uploadStatus}</p>}
                 </div>
 
-                {selected.adminDocuments && selected.adminDocuments.length > 0 && (
+                {((selected.adminDocuments?.length || 0) + (selected.advocateDocuments?.length || 0)) > 0 && (
                   <div>
                     <h3 className="text-sm font-bold text-slate-700 mb-2">Admin Uploaded Reports</h3>
                     <div className="space-y-2">
-                      {selected.adminDocuments.map((doc, i) => (
+                      {[...(selected.adminDocuments || []), ...(selected.advocateDocuments || [])].map((doc, i) => (
                         <a key={i} href={doc.url} target="_blank" rel="noopener noreferrer"
                           className="flex items-center gap-3 p-3 bg-green-50 rounded-xl border border-green-200 hover:bg-green-100 transition-colors">
                           <CheckCircle2 className="w-4 h-4 text-green-500" />
