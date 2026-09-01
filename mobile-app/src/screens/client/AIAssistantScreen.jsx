@@ -254,6 +254,9 @@ const AIAssistantScreen = ({ navigation }) => {
   );
 
 
+  // ─── ALL HOOKS MUST BE BEFORE ANY CONDITIONAL RETURN ───────────────────────
+  const insets = useSafeAreaInsets(); // Must be here, BEFORE any conditional return
+
   // ─── Guest Gate: show login prompt without navigating (avoids Android addView crash)
   if (isAuthenticated === false) {
     return (
@@ -274,8 +277,6 @@ const AIAssistantScreen = ({ navigation }) => {
       </View>
     );
   }
-
-  const insets = useSafeAreaInsets();
 
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.background }}>

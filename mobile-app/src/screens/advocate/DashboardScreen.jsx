@@ -281,11 +281,7 @@ const AdvocateDashboardScreen = ({ navigation }) => {
             try {
               await AsyncStorage.removeItem('legalitt_onboarded');
               await logout();
-              // Force navigate to Onboarding
-              try {
-                const rootNav = navigation.getParent() || navigation;
-                rootNav.reset({ index: 0, routes: [{ name: 'Onboarding' }] });
-              } catch (_) {}
+              // AppNavigator's navigationRef handles redirect to Onboarding
             } catch (err) {
               Alert.alert('Error', 'Failed to log out. Please try again.');
             }

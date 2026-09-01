@@ -97,12 +97,9 @@ const ProfileScreen = ({ navigation }) => {
             setLoading(true);
             await AsyncStorage.removeItem('legalitt_onboarded');
             await logout();
+            // AppNavigator's navigationRef useEffect handles redirecting to Onboarding
+            // when isAuthenticated becomes false - no manual reset needed here
             setLoading(false);
-            // Force navigate to Onboarding regardless of navigation state
-            try {
-              const rootNav = navigation.getParent() || navigation;
-              rootNav.reset({ index: 0, routes: [{ name: 'Onboarding' }] });
-            } catch (_) {}
           },
         },
       ],
