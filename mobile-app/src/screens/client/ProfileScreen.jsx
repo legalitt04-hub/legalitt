@@ -248,7 +248,7 @@ const ProfileScreen = ({ navigation }) => {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.signInAdvBtn}
-              onPress={() => navigation.navigate('LoginRegister', { role: 'advocate' })}
+              onPress={() => navigation.navigate('AdvocateFlow')}
               activeOpacity={0.85}
             >
               <Ionicons name="briefcase-outline" size={20} color={COLORS.accent} />

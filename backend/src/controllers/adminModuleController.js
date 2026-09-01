@@ -136,7 +136,12 @@ exports.updateCase = async (req, res, next) => {
 
 exports.deleteCase = async (req, res, next) => {
   try {
-    await Case.findByIdAndDelete(req.params.id);
+    const Booking = require('../models/Booking');
+    const deleted = await Booking.findByIdAndDelete(req.params.id);
+    if (!deleted) {
+      // Fallback: try Case model
+      await Case.findByIdAndDelete(req.params.id);
+    }
     res.json({ success: true, message: 'Case deleted' });
   } catch (err) {
     next(err);

@@ -79,16 +79,15 @@ export default function LoginScreen({ navigation }) {
       const response = await googleLogin(idToken, 'advocate');
 
       if (response.success && response.user) {
-        // Profile check
+        // AppNavigator auto-switches when isAuthenticated=true & role=advocate
         try {
           const profileRes = await advocateAPI.getMyProfile();
           if (profileRes.data.success && profileRes.data.data) {
             const profile = profileRes.data.data;
-            if (profile.verificationStatus === 'approved') {
-              navigation.replace('AdvocateMain');
-            } else {
+            if (profile.verificationStatus !== 'approved') {
               navigation.replace('PendingApproval', { status: profile.verificationStatus });
             }
+            // approved → AppNavigator handles routing automatically
           } else {
             navigation.replace('DocumentUpload', { 
               registerData: { name: response.user.name, email: response.user.email, barCouncilId: 'GOOGLE_SIGNIN' } 
@@ -101,9 +100,6 @@ export default function LoginScreen({ navigation }) {
             });
           } else {
             console.log('Google Profile fetch error:', profileErr.message);
-            navigation.replace('DocumentUpload', { 
-              registerData: { name: response.user.name, email: response.user.email, barCouncilId: 'GOOGLE_SIGNIN' } 
-            });
           }
         }
       } else {
@@ -173,15 +169,16 @@ export default function LoginScreen({ navigation }) {
         }
 
         // Check advocate profile status
+        // AppNavigator auto-switches to AdvocateTabs when isAuthenticated=true & role=advocate
+        // Only navigate manually for non-approved states
         try {
           const profileRes = await advocateAPI.getMyProfile();
           if (profileRes.data.success && profileRes.data.data) {
             const profile = profileRes.data.data;
-            if (profile.verificationStatus === 'approved') {
-              navigation.replace('AdvocateMain');
-            } else {
+            if (profile.verificationStatus !== 'approved') {
               navigation.replace('PendingApproval', { status: profile.verificationStatus });
             }
+            // approved → AppNavigator handles routing to AdvocateMain automatically
           } else {
             navigation.replace('DocumentUpload');
           }
@@ -190,7 +187,7 @@ export default function LoginScreen({ navigation }) {
             navigation.replace('DocumentUpload');
           } else {
             console.log('Profile fetch error:', profileErr.message);
-            navigation.replace('DocumentUpload');
+            // Let AppNavigator handle routing on auth state change
           }
         }
       } else {

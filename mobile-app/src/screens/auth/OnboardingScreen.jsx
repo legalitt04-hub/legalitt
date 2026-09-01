@@ -326,6 +326,22 @@ const OnboardingScreen = ({ navigation, route }) => {
             </Text>
           </TouchableOpacity>
         </Animated.View>
+
+        {/* Advocate Portal Link — only on last slide */}
+        {isLast && (
+          <TouchableOpacity
+            onPress={() => navigation.navigate('AdvocateFlow')}
+            style={{ marginTop: 16, alignItems: 'center', paddingVertical: 8 }}
+            activeOpacity={0.7}
+          >
+            <Text style={{ fontSize: 13, color: '#6B7280' }}>
+              Are you an Advocate?{' '}
+              <Text style={{ color: '#B89A6A', fontWeight: '700' }}>
+                Sign In to Advocate Portal →
+              </Text>
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );

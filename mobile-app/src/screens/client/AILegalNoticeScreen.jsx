@@ -182,6 +182,23 @@ export default function AILegalNoticeScreen({ navigation }) {
   };
 
   const handleSubmitReview = async () => {
+    // ─── Auth gate: require login before submission ───────────────────────────
+    if (!isAuthenticated) {
+      Alert.alert(
+        '🔐 Login Required',
+        'Please login to submit your Legal Notice request.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Login Now',
+            style: 'default',
+            onPress: () => navigation.navigate('LoginRegister', { role: 'client' }),
+          },
+        ]
+      );
+      return;
+    }
+
     if (!selectedCategory) return Alert.alert('Required', 'Please select a legal notice category.');
     if (!issueDescription.trim() || issueDescription.trim().length < 10) {
       return Alert.alert('Required', 'Please describe your issue (min 10 characters).');
@@ -291,7 +308,16 @@ export default function AILegalNoticeScreen({ navigation }) {
       if (err?.code === 'PAYMENT_CANCELLED') {
         Alert.alert('Payment Cancelled', 'Your legal notice request was not submitted.');
       } else {
-        Alert.alert('Error', err?.response?.data?.message || 'Submission failed. Please try again.');
+        const status = err?.response?.status;
+        const msg = err?.response?.data?.message || err?.message || '';
+        if (status === 401 || msg.toLowerCase().includes('unauthorized') || msg.toLowerCase().includes('not authenticated')) {
+          Alert.alert('🔐 Login Required', 'Please login to continue.', [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Login Now', onPress: () => navigation.navigate('LoginRegister', { role: 'client' }) },
+          ]);
+        } else {
+          Alert.alert('Error', msg || 'Submission failed. Please try again.');
+        }
       }
     }
   };
