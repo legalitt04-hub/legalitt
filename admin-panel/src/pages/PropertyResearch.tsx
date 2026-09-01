@@ -21,6 +21,7 @@ interface PropertyRequest {
   payment?: { amount: number; status: string };
   documents?: { url: string; name: string }[];
   adminDocuments?: { url: string; name: string; uploadedAt?: string }[];
+  advocateDocuments?: { url: string; name: string; uploadedAt?: string }[];  // advocate-uploaded docs
   notes?: string;
   createdAt: string;
 }

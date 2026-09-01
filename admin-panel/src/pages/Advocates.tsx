@@ -21,6 +21,7 @@ interface Advocate {
   location?: { address?: { city?: string; state?: string; street?: string } };
   experience?: number;
   bio?: string;
+  about?: string;  // legacy alias for bio
   documents?: { barCouncilCertificate?: string; degreeDocument?: string; idProof?: string };
   verificationRejectionReason?: string;
   createdAt: string;
