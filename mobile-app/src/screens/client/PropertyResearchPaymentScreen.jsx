@@ -74,7 +74,7 @@ export default function PropertyResearchPaymentScreen({ navigation, route }) {
         propertyData,
         amountPaid: '2,999',
       });
-    }, 1500);
+    }
   };
 
   return (
