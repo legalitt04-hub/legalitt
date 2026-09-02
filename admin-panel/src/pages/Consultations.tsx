@@ -316,36 +316,55 @@ export default function Consultations() {
   }, [activeTab, fetchBookings]);
 
   const [advocateSearch, setAdvocateSearch] = useState('');
-  const [advocatePage, setAdvocatePage] = useState(1);
-  const ADV_PAGE_SIZE = 10;
+  const [advocatePage, setAdvocatePage]     = useState(1);
+  const [advTotalPages, setAdvTotalPages]   = useState(1);
+  const [advTotalCount, setAdvTotalCount]   = useState(0);
+  const ADV_PAGE_SIZE = 20;
   const [assigning, setAssigning] = useState<string | null>(null);
-  const [showAllAdvocates, setShowAllAdvocates] = useState(false);
-  const [panelOpen, setPanelOpen] = useState(false);
+  const [showAllAdvocates, setShowAllAdvocates] = useState(true);
+  const [panelOpen, setPanelOpen]   = useState(false);
   const [loadingNearby, setLoadingNearby] = useState(false);
+  const searchTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Fetch advocates from server with page + search
+  const fetchAdvocates = React.useCallback(async (
+    bookingId: string, page = 1, search = '', showAll = true
+  ) => {
+    setLoadingNearby(true);
+    try {
+      const res = await api.get(`/admin/bookings/${bookingId}/nearby-advocates`, {
+        params: { page, limit: ADV_PAGE_SIZE, search: search || undefined },
+      });
+      if (res.data?.success) {
+        const d = res.data.data;
+        if (showAll) {
+          setAllAdvocates(d.allAdvocates || []);
+          setNearbyAdvocates(d.nearbyAdvocates || []);
+        } else {
+          setNearbyAdvocates(d.nearbyAdvocates || []);
+        }
+        setTotalAdvocatesCount(d.totalAdvocates || 0);
+        setAdvTotalPages(d.pages || 1);
+        setAdvTotalCount(d.totalAdvocates || 0);
+      }
+    } catch (err) {
+      console.error('Failed to fetch advocates', err);
+    } finally {
+      setLoadingNearby(false);
+    }
+  }, []);
 
   const openPanel = async (booking: Booking) => {
     setSelectedBooking(booking);
     setPanelOpen(true);
-    setShowAllAdvocates(true); // Show ALL advocates across all cities by default
+    setShowAllAdvocates(true);
     setAdvocateSearch('');
     setSpecFilter('');
     setCityFilter('');
     setMinRating(0);
     setSortBy('rating');
     setAdvocatePage(1);
-    setLoadingNearby(true);
-    try {
-      const res = await api.get(`/admin/bookings/${booking._id}/nearby-advocates`);
-      if (res.data?.success) {
-        setNearbyAdvocates(res.data.data.nearbyAdvocates || []);
-        setAllAdvocates(res.data.data.allAdvocates || []);
-        setTotalAdvocatesCount(res.data.data.totalAdvocates || res.data.data.allAdvocates?.length || 0);
-      }
-    } catch (err) {
-      console.error('Failed to fetch nearby advocates', err);
-    } finally {
-      setLoadingNearby(false);
-    }
+    await fetchAdvocates(booking._id, 1, '', true);
   };
 
   // Unique lists for filter dropdowns
@@ -911,7 +930,12 @@ export default function Consultations() {
                         </>
                       )}
                     </h3>
-                    <button onClick={() => setShowAllAdvocates(v => !v)}
+                    <button onClick={() => {
+                        const next = !showAllAdvocates;
+                        setShowAllAdvocates(next);
+                        setAdvocatePage(1);
+                        if (selectedBooking) fetchAdvocates(selectedBooking._id, 1, advocateSearch, next);
+                      }}
                       className="text-xs text-teal-600 font-semibold hover:underline flex items-center gap-1 bg-teal-50 px-2.5 py-1 rounded-lg">
                       {showAllAdvocates ? 'Show Nearby Advocates' : 'Show All Advocates'}
                       <Users size={12} />
@@ -920,8 +944,19 @@ export default function Consultations() {
 
                   <div className="relative mb-3">
                     <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input value={advocateSearch} onChange={e => { setAdvocateSearch(e.target.value); setAdvocatePage(1); }}
-                      placeholder="Search advocate by name, city, email, or specialization..."
+                    <input
+                      value={advocateSearch}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setAdvocateSearch(val);
+                        setAdvocatePage(1);
+                        // Debounced server-side search across all advocates
+                        if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+                        searchTimerRef.current = setTimeout(() => {
+                          if (selectedBooking) fetchAdvocates(selectedBooking._id, 1, val, showAllAdvocates);
+                        }, 400);
+                      }}
+                      placeholder="Search across all advocates by name, city, email, specialization..."
                       className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
                   </div>
 
@@ -1002,10 +1037,8 @@ export default function Consultations() {
                     </div>
                   ) : (
                     <>
-                      <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
-                        {advocatesDisplay
-                          .slice((advocatePage - 1) * ADV_PAGE_SIZE, advocatePage * ADV_PAGE_SIZE)
-                          .map(adv => (
+                       <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+                        {(showAllAdvocates ? allAdvocates : nearbyAdvocates).map(adv => (
                             <motion.div key={adv._id}
                               initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                               className="flex items-center gap-3 p-4 border-2 border-gray-100 rounded-2xl hover:border-teal-200 hover:bg-teal-50/30 transition-all">
@@ -1053,28 +1086,34 @@ export default function Consultations() {
                           ))}
                       </div>
 
-                      {/* Advocate List Pagination Controls */}
-                      {advocatesDisplay.length > ADV_PAGE_SIZE && (
-                        <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100 text-xs">
-                          <span className="text-gray-500">
-                            Page {advocatePage} of {Math.ceil(advocatesDisplay.length / ADV_PAGE_SIZE)} · ({advocatesDisplay.length} total)
-                          </span>
-                          <div className="flex gap-2">
-                            <button
-                              disabled={advocatePage <= 1}
-                              onClick={() => setAdvocatePage(p => p - 1)}
-                              className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 font-semibold disabled:opacity-40 hover:bg-gray-50">
-                              Previous
-                            </button>
-                            <button
-                              disabled={advocatePage >= Math.ceil(advocatesDisplay.length / ADV_PAGE_SIZE)}
-                              onClick={() => setAdvocatePage(p => p + 1)}
-                              className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 font-semibold disabled:opacity-40 hover:bg-gray-50">
-                              Next
-                            </button>
-                          </div>
+                      {/* Server-side Pagination */}
+                      <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100 text-xs">
+                        <span className="text-gray-500 font-medium">
+                          Page {advocatePage} of {advTotalPages} · {advTotalCount.toLocaleString()} advocates total
+                        </span>
+                        <div className="flex gap-2">
+                          <button
+                            disabled={advocatePage <= 1 || loadingNearby}
+                            onClick={() => {
+                              const p = advocatePage - 1;
+                              setAdvocatePage(p);
+                              if (selectedBooking) fetchAdvocates(selectedBooking._id, p, advocateSearch, showAllAdvocates);
+                            }}
+                            className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 font-semibold disabled:opacity-40 hover:bg-gray-50">
+                            ← Previous
+                          </button>
+                          <button
+                            disabled={advocatePage >= advTotalPages || loadingNearby}
+                            onClick={() => {
+                              const p = advocatePage + 1;
+                              setAdvocatePage(p);
+                              if (selectedBooking) fetchAdvocates(selectedBooking._id, p, advocateSearch, showAllAdvocates);
+                            }}
+                            className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 font-semibold disabled:opacity-40 hover:bg-gray-50">
+                            Next →
+                          </button>
                         </div>
-                      )}
+                      </div>
                     </>
                   )}
                 </div>

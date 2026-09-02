@@ -104,14 +104,16 @@ exports.getBookingDetail = async (req, res, next) => {
 // Returns advocates in the same city as the client who made this booking
 exports.getNearbyAdvocatesForBooking = async (req, res, next) => {
   try {
+    const { specialization, search, limit: qLimit = 20, page: qPage = 1 } = req.query;
+    const pageLimit = Math.min(Number(qLimit), 100); // max 100 per page
+    const skip = (Number(qPage) - 1) * pageLimit;
+
     const booking = await Booking.findById(req.params.id)
       .populate('client', 'name address')
       .lean();
 
-    if (!booking) return next(new AppError('Booking not found.', 404));
-
-    const city = booking.clientCity || booking.client?.address?.city;
-    const { specialization, search } = req.query;
+    // For FIR Drafts (not in Booking collection), skip city filter and return all advocates
+    const city = booking?.clientCity || booking?.client?.address?.city;
 
     let cityFilter = { verificationStatus: { $ne: 'rejected' } };
     if (city) {
@@ -142,20 +144,23 @@ exports.getNearbyAdvocatesForBooking = async (req, res, next) => {
       ];
     }
 
-    // Fetch advocates with cap to prevent timeout on large datasets
-    const [nearbyAdvocates, allAdvocates, totalAdvocatesCount] = await Promise.all([
+    // Server-side paginated fetch
+    const [nearbyAdvocates, allAdvocates, totalNearbyCount, totalAdvocatesCount] = await Promise.all([
       Advocate.find(cityFilter)
         .select('user specializations rating consultationFee location experience verificationStatus isVerified')
         .populate('user', 'name avatar phone email')
         .sort({ 'rating.average': -1, createdAt: -1 })
-        .limit(100)
+        .skip(search ? 0 : skip)   // skip only when not searching
+        .limit(pageLimit)
         .lean(),
       Advocate.find(allFilter)
         .select('user specializations rating consultationFee location experience verificationStatus isVerified')
         .populate('user', 'name avatar phone email')
         .sort({ 'rating.average': -1, createdAt: -1 })
-        .limit(100)
+        .skip(skip)
+        .limit(pageLimit)
         .lean(),
+      Advocate.countDocuments(cityFilter),
       Advocate.countDocuments({ verificationStatus: { $ne: 'rejected' } }),
     ]);
 
@@ -166,8 +171,11 @@ exports.getNearbyAdvocatesForBooking = async (req, res, next) => {
         nearbyAdvocates,
         allAdvocates,
         bookingCity: city || 'Unknown',
-        totalNearby: nearbyAdvocates.length,
+        totalNearby: totalNearbyCount,
         totalAdvocates: totalAdvocatesCount,
+        page: Number(qPage),
+        limit: pageLimit,
+        pages: Math.ceil(totalAdvocatesCount / pageLimit),
       },
     });
   } catch (err) {

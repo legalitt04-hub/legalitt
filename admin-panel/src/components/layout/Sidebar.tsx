@@ -15,16 +15,15 @@ import {
   BarChart3,
   MessageSquare,
   UserCog,
-  Grid,
   Wallet,
   Megaphone,
   Shield,
   History,
   ReceiptText,
-  FolderOpen,
   FileText,
   Building,
-  Microscope
+  Microscope,
+  Tag
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRole } from '../../contexts/RoleContext';
@@ -46,7 +45,6 @@ const navSections = [
       { icon: FileText, label: 'FIR Drafts', path: '/fir-drafts' },
       { icon: Building, label: 'Property Research', path: '/property-research' },
       { icon: Microscope, label: 'Document Forensic', path: '/document-forensic' },
-      { icon: Grid, label: 'Service Categories', path: '/categories' },
     ]
   },
   {
@@ -69,8 +67,9 @@ const navSections = [
   {
     title: 'Support & Growth',
     items: [
-      { icon: LifeBuoy, label: 'Support Desk & Tickets', path: '/support' },
-      { icon: Megaphone, label: 'Ads & Promotions', path: '/ads' },
+      { icon: LifeBuoy,  label: 'Support Desk & Tickets', path: '/support' },
+      { icon: Tag,       label: 'Coupons & Offers',       path: '/coupons' },
+      { icon: Megaphone, label: 'Ads & Promotions',       path: '/ads' },
     ]
   },
   {
