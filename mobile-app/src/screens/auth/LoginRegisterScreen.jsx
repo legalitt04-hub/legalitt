@@ -94,13 +94,8 @@ const LoginRegisterScreen = ({ navigation, route }) => {
         const response = await login(safeEmail, safePassword);
         
         if (response.success && response.user) {
-          if (response.user.role !== 'client') {
-            await logout();
-            Alert.alert(
-              'Access Denied',
-              'This account is registered as an Advocate. Please use the Advocate Portal to log in.'
-            );
-          }
+          // Account logged in successfully.
+          // AppNavigator handles routing to AdvocateMain or ClientMain based on user.role
         } else {
           const errorMsg = response.message || '';
           if (errorMsg.toLowerCase().includes('credential') || errorMsg.toLowerCase().includes('password') || errorMsg.toLowerCase().includes('username') || errorMsg.toLowerCase().includes('invalid')) {
