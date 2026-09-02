@@ -30,9 +30,9 @@ export const connectSocket = async (tokenOverride) => {
 
     socket = io(SOCKET_URL, {
       auth: { token },
-      transports: ['websocket', 'polling'],
-      reconnectionAttempts: 5,
-      reconnectionDelay: 2000,
+      transports: ['polling', 'websocket'],
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1000,
       timeout: 10000,
     });
 
