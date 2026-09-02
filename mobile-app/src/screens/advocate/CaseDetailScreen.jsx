@@ -101,37 +101,50 @@ const CaseDetailScreen = ({ route, navigation }) => {
       console.log('Case API getOne error, falling back to mock or booking data:', err);
     }
 
-    // Development demo fallback
+    // Real booking fallback (no mock data)
     if (booking) {
+      const svcLabel = {
+        property_research: 'Property Research',
+        document_forensic: 'Document Forensic',
+        fir_draft: 'FIR Draft',
+        legal_notice: 'Legal Notice',
+        legal_advice: 'Legal Advice',
+        consultation: 'Consultation',
+      }[booking.serviceType] || 'Consultation';
+
       setLegalCase({
         isBooking: true,
-        title: booking.issue || booking.caseType || 'Divorce Matter',
-        description: booking.description || booking.issue || 'Client consultation and notice review.',
-        caseNumber: booking.caseId || 'CASE-DEMO-001',
-        courtName: 'Family Court',
-        client: booking.client || { name: 'Rahul Sharma', email: 'rahul.sharma@example.com', phone: '+91 98765 43210' },
+        serviceType: booking.serviceType,
+        title: booking.issue || `${svcLabel} Request`,
+        description: booking.issue || 'No description provided.',
+        caseNumber: `REQ-${(booking._id || '').toString().slice(-8).toUpperCase()}`,
+        client: booking.client || {},
         status: booking.status || 'pending',
-        date: booking.date || new Date().toISOString(),
-        timeSlot: booking.timeSlot || { startTime: '4:00 PM' },
-        payment: booking.payment || { amount: 1500 },
-        type: booking.type || 'video',
-        timeline: booking.timeline || [
-          { title: 'Case Request Received', date: '2026-08-21T10:00:00.000Z', status: 'completed', description: 'Client submitted consultation request.' },
-          { title: 'Notice Review', date: '2026-08-21T12:00:00.000Z', status: 'scheduled', description: 'Legal notice response preparation.' },
-        ],
-        documents: booking.documents || [
-          { _id: 'DOC-NOTICE-001', name: 'Divorce_Notice_Rahul.pdf', type: 'pdf', url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf' },
-        ],
+        date: booking.createdAt || new Date().toISOString(),
+        timeSlot: booking.timeSlot || null,
+        payment: booking.payment || { amount: 0 },
+        type: booking.consultationMode || booking.type || 'chat',
+        timeline: booking.timeline || [],
+        documents: booking.documents || [],
         notes: booking.notes || [],
         _id: booking._id || caseId,
+        // Property Research fields
+        propertyAddress:    booking.propertyAddress,
+        propertyType:       booking.propertyType,
+        surveyNumber:       booking.surveyNumber,
+        registrationNumber: booking.registrationNumber,
+        district:           booking.district,
+        state:              booking.state,
+        purpose:            booking.purpose,
+        // Forensic fields
+        documentName: booking.documentName,
+        documentType: booking.documentType,
+        advocateDocuments: booking.advocateDocuments || [],
       });
-      setClientDocs(booking.documents || [
-        { _id: 'DOC-NOTICE-001', name: 'Divorce_Notice_Rahul.pdf', type: 'pdf', url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf' },
-      ]);
+      setClientDocs(booking.documents || []);
     } else {
-      const demoCase = MOCK_ADVOCATE_CASES.todayCases[0];
-      setLegalCase(demoCase);
-      setClientDocs(demoCase.documents || []);
+      // No booking and no case found — show empty
+      setLegalCase(null);
     }
     setLoading(false);
   };
@@ -266,6 +279,13 @@ const CaseDetailScreen = ({ route, navigation }) => {
     </View>
   );
 
+  if (!legalCase) return (
+    <View style={styles.center}>
+      <Ionicons name="document-text-outline" size={48} color="#D1D5DB" />
+      <Text style={{ color: '#6B7280', fontSize: 14, marginTop: 12 }}>Case details not found.</Text>
+    </View>
+  );
+
   const client = legalCase.client || {};
 
   return (
@@ -369,6 +389,46 @@ const CaseDetailScreen = ({ route, navigation }) => {
                 <Text style={styles.meta}>{legalCase.timeSlot?.startTime || 'TBD'}</Text>
               </View>
             </Section>
+
+            {/* Service-specific Details Card */}
+            {legalCase.serviceType === 'property_research' && (
+              <Section title="🏠 Property Details">
+                {[
+                  { label: 'Address',          value: legalCase.propertyAddress },
+                  { label: 'Property Type',    value: legalCase.propertyType },
+                  { label: 'Survey No',        value: legalCase.surveyNumber },
+                  { label: 'Registration No',  value: legalCase.registrationNumber },
+                  { label: 'District',         value: legalCase.district },
+                  { label: 'State',            value: legalCase.state },
+                  { label: 'Purpose',          value: legalCase.purpose },
+                ].filter(f => f.value).map((f, i) => (
+                  <View key={i} style={{ flexDirection: 'row', marginBottom: 6 }}>
+                    <Text style={{ fontSize: 12, color: '#6B7280', width: 120 }}>{f.label}:</Text>
+                    <Text style={{ fontSize: 12, color: '#111827', flex: 1, fontWeight: '600' }}>{f.value}</Text>
+                  </View>
+                ))}
+                {!legalCase.propertyAddress && !legalCase.district && (
+                  <Text style={styles.emptyText}>No property details available.</Text>
+                )}
+              </Section>
+            )}
+
+            {legalCase.serviceType === 'document_forensic' && (
+              <Section title="🔬 Forensic Document Details">
+                {[
+                  { label: 'Document Name', value: legalCase.documentName },
+                  { label: 'Document Type', value: legalCase.documentType },
+                ].filter(f => f.value).map((f, i) => (
+                  <View key={i} style={{ flexDirection: 'row', marginBottom: 6 }}>
+                    <Text style={{ fontSize: 12, color: '#6B7280', width: 130 }}>{f.label}:</Text>
+                    <Text style={{ fontSize: 12, color: '#111827', flex: 1, fontWeight: '600' }}>{f.value}</Text>
+                  </View>
+                ))}
+                {!legalCase.documentName && (
+                  <Text style={styles.emptyText}>No forensic document details available.</Text>
+                )}
+              </Section>
+            )}
 
             {/* Client Uploaded Documents */}
             <Section title="📎 Documents from Client">

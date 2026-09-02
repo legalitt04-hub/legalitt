@@ -39,15 +39,14 @@ const CasesScreen = ({ navigation }) => {
     try {
       setLoadingToday(true);
       const response = await bookingAPI.getAdvocateBookings({ today: 'true', status: 'confirmed' });
-      if (response.data?.success && response.data.data && response.data.data.length > 0) {
-        setTodayCases(response.data.data);
+      if (response.data?.success) {
+        setTodayCases(response.data.data || []);
       } else {
-        // Fall back to development mock appointment
-        setTodayCases(MOCK_ADVOCATE_CASES.todayCases);
+        setTodayCases([]);
       }
     } catch (err) {
-      console.log('Error fetching today cases, using mock data:', err);
-      setTodayCases(MOCK_ADVOCATE_CASES.todayCases);
+      console.log('Error fetching today cases:', err?.message);
+      setTodayCases([]);
     } finally {
       setLoadingToday(false);
     }
@@ -63,25 +62,14 @@ const CasesScreen = ({ navigation }) => {
         Rejected: 'cancelled',
       };
       const response = await bookingAPI.getAdvocateBookings({ status: statusMap[tab] });
-      if (response.data?.success && response.data.data && response.data.data.length > 0) {
-        setCaseRequests(response.data.data);
+      if (response.data?.success) {
+        setCaseRequests(response.data.data || []);
       } else {
-        // Filter development mock case requests by normalized status
-        const normalizedTab = tab.toLowerCase(); // 'all' | 'pending' | 'accepted' | 'rejected'
-        const mockList = MOCK_ADVOCATE_CASES.caseRequests.filter((item) => {
-          if (normalizedTab === 'all') return true;
-          return item.status.toLowerCase() === normalizedTab;
-        });
-        setCaseRequests(mockList);
+        setCaseRequests([]);
       }
     } catch (err) {
-      console.log('Error fetching case requests, using mock data:', err);
-      const normalizedTab = tab.toLowerCase();
-      const mockList = MOCK_ADVOCATE_CASES.caseRequests.filter((item) => {
-        if (normalizedTab === 'all') return true;
-        return item.status.toLowerCase() === normalizedTab;
-      });
-      setCaseRequests(mockList);
+      console.log('Error fetching case requests:', err?.message);
+      setCaseRequests([]);
     } finally {
       setLoadingRequests(false);
     }
