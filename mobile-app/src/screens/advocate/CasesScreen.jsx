@@ -230,17 +230,19 @@ const CasesScreen = ({ navigation }) => {
 
                     <View style={styles.textContent}>
                       <View style={styles.nameRow}>
-                        <Text style={styles.cardTitle}>{client.name || 'Rahul Sharma'}</Text>
-                        <Ionicons name="checkmark-circle" size={15} color={COLORS.primary} />
+                        <Text style={styles.cardTitle}>{client.name || 'Client'}</Text>
+                        {client.isVerified !== false && (
+                          <Ionicons name="checkmark-circle" size={15} color={COLORS.primary} />
+                        )}
                       </View>
-                      <Text style={styles.caseType}>{item.issue || 'Divorce Matter'}</Text>
+                      <Text style={styles.caseType}>{item.issue || `${item.serviceType ? item.serviceType.replace('_', ' ').toUpperCase() : 'Legal'} Request`}</Text>
                       <Text style={styles.consultationLabel}>
-                        {item.consultationType || 'Legal Consultation'}
+                        {(item.consultationMode || item.type || 'Chat').toUpperCase()} Consultation
                       </Text>
                       <View style={styles.timeRow}>
                         <Ionicons name="time-outline" size={13} color={COLORS.primary} />
                         <Text style={styles.timeText}>
-                          Today • {item.timeSlot?.startTime || '4:00 PM'}
+                          Today • {item.timeSlot?.startTime || formatDate(item.createdAt, 'time')}
                         </Text>
                       </View>
                     </View>
@@ -300,7 +302,7 @@ const CasesScreen = ({ navigation }) => {
         ) : caseRequests.length === 0 ? (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyEmoji}>📋</Text>
-            <Text style={styles.emptyText}>No requests</Text>
+            <Text style={styles.emptyText}>No requests in {activeRequestTab}</Text>
           </View>
         ) : (
           <View style={styles.cardsList}>
@@ -310,6 +312,16 @@ const CasesScreen = ({ navigation }) => {
               const isAccepted = statusStr === 'accepted' || statusStr === 'confirmed';
               const isRejected = statusStr === 'rejected' || statusStr === 'cancelled';
               const client = item.client || {};
+
+              const svcLabel = {
+                legal_advice: 'Legal Advice',
+                legal_notice: 'Legal Notice',
+                property_research: 'Property Research',
+                document_forensic: 'Document Forensic',
+                fir_draft: 'FIR Draft',
+              }[item.serviceType] || 'Consultation';
+
+              const docName = item.documents?.[0]?.name || item.documentName || (item.documents?.length > 0 ? 'Uploaded Document' : 'No document attached');
 
               return (
                 <View key={item._id} style={styles.caseRequestCard}>
@@ -333,7 +345,7 @@ const CasesScreen = ({ navigation }) => {
                           )}
                         </View>
                         <Text style={styles.reqCategoryText}>
-                          {item.caseType || item.issue || 'Legal Matter'} • {item.category || 'Family Law'}
+                          {item.issue?.substring(0, 40) || svcLabel} • {svcLabel}
                         </Text>
                       </View>
                     </View>
@@ -365,35 +377,18 @@ const CasesScreen = ({ navigation }) => {
                     <View style={styles.detailRow}>
                       <Ionicons name="document-text-outline" size={14} color={COLORS.primary} />
                       <Text style={styles.detailDocName} numberOfLines={1}>
-                        {item.document?.name || 'Divorce_Notice_Rahul.pdf'}
+                        {docName}
                       </Text>
-                      {item.priority && (
-                        <View
-                          style={[
-                            styles.priorityPill,
-                            item.priority === 'High' && styles.priorityHigh,
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.priorityText,
-                              item.priority === 'High' && styles.priorityHighText,
-                            ]}
-                          >
-                            {item.priority} Priority
-                          </Text>
-                        </View>
-                      )}
                     </View>
 
                     <View style={styles.dateMetaGrid}>
                       <View style={styles.dateCol}>
                         <Text style={styles.dateLabel}>Request Date</Text>
-                        <Text style={styles.dateValue}>{item.requestDate || '21 Aug 2026'}</Text>
+                        <Text style={styles.dateValue}>{formatDate(item.createdAt)}</Text>
                       </View>
                       <View style={styles.dateCol}>
                         <Text style={styles.dateLabel}>Response Due</Text>
-                        <Text style={styles.dateValue}>{item.responseDue || '25 Aug 2026'}</Text>
+                        <Text style={styles.dateValue}>{item.assignmentDeadline ? formatDate(item.assignmentDeadline) : 'Within 24 Hours'}</Text>
                       </View>
                     </View>
                   </View>

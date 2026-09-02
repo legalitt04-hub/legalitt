@@ -305,11 +305,11 @@ const ChatScreen = ({ navigation, route }) => {
       )}
 
       {/* Error / Offline banner */}
-      {(error || !isConnected) && (
+      {(!connected || !isConnected) && (
         <View style={styles.offlineBanner}>
           <Ionicons name="cloud-offline-outline" size={14} color="#FFFFFF" />
           <Text style={styles.offlineBannerText}>
-            {!isConnected ? 'Connection lost. Working offline' : 'Reconnecting... Messages will send when back online'}
+            {!isConnected ? 'Connection lost. Working offline' : 'Connecting to chat... Messages will send when back online'}
           </Text>
         </View>
       )}
