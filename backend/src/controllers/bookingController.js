@@ -184,7 +184,12 @@ exports.getAdvocateBookings = async (req, res, next) => {
       const now = new Date();
       const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-      filter.date = { $gte: startOfToday, $lte: endOfToday };
+      filter.$or = [
+        { date: { $gte: startOfToday, $lte: endOfToday } },
+        { createdAt: { $gte: startOfToday, $lte: endOfToday } },
+        { date: { $exists: false } },
+        { date: null },
+      ];
     }
 
     const skip = (Number(page) - 1) * Number(limit);
@@ -219,8 +224,22 @@ exports.updateStatus = async (req, res, next) => {
     }
     await booking.save();
 
-    // Notify Client when booking is confirmed or cancelled
+    // Real-time Socket.io notifications
+    const io = req.app.get('io');
     if (status === 'confirmed') {
+      if (io) {
+        io.to(`user:${booking.client}`).emit('booking_status_updated', {
+          bookingId: booking._id,
+          status: 'confirmed',
+          message: 'Your consultation request has been accepted by the advocate.',
+          chatId: booking.chat,
+        });
+        io.to(`user:${booking.client}`).emit('booking_assigned', {
+          bookingId: booking._id,
+          status: 'confirmed',
+          chatId: booking.chat,
+        });
+      }
       await createNotification({
         recipientId: booking.client,
         senderId: req.user._id,
@@ -230,6 +249,13 @@ exports.updateStatus = async (req, res, next) => {
         relatedId: booking._id,
       });
     } else if (status === 'cancelled') {
+      if (io) {
+        io.to(`user:${booking.client}`).emit('booking_status_updated', {
+          bookingId: booking._id,
+          status: 'cancelled',
+          message: `Your consultation request was cancelled.`,
+        });
+      }
       await createNotification({
         recipientId: booking.client,
         senderId: req.user._id,

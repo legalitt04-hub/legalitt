@@ -7,8 +7,8 @@ import { TOKEN_KEY } from '../services/api';
 import Constants from 'expo-constants';
 import { useAuth } from '../context/AuthContext';
 
-// Derive SOCKET_URL dynamically from BASE_URL (which properly resolves hostIp for simulators/devices)
-const SOCKET_URL = BASE_URL.replace('/api', '');
+// Derive SOCKET_URL from BASE_URL — must strip full /api/v1 suffix
+const SOCKET_URL = BASE_URL.replace('/api/v1', '');
 const PAGE_SIZE = 30;
 
 /**

@@ -204,9 +204,10 @@ exports.assignAdvocate = async (req, res, next) => {
       return next(new AppError('Only verified advocates can be assigned.', 400));
     }
 
-    // Assign advocate
+    // Set to 'pending' so advocate sees it as a new Pending Request
+    // Advocate must accept → status becomes 'confirmed' (via /bookings/:id/status)
     booking.advocate = advocateId;
-    booking.status = 'confirmed';
+    booking.status = 'pending';
     booking.assignedAt = new Date();
     booking.assignedBy = req.user._id;
 
@@ -295,7 +296,7 @@ exports.assignAdvocate = async (req, res, next) => {
         zegoRoomId:    booking.videoRoomId,
         zegoToken:     booking.videoRoomToken,
         zegoAppId:     booking.zegoAppId,
-        status: 'confirmed',
+        status: 'pending',
       });
 
       // Emit to advocate — room: user:${id} (matches socket.js join)
@@ -308,6 +309,12 @@ exports.assignAdvocate = async (req, res, next) => {
         zegoRoomId:  booking.videoRoomId,
         zegoToken:   booking.advocateVideoToken,
         zegoAppId:   booking.zegoAppId,
+        status: 'pending',
+      });
+
+      io.to(`user:${advocate.user._id}`).emit('new_case_request', {
+        bookingId: booking._id,
+        status: 'pending',
       });
     }
 

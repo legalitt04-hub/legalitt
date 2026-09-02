@@ -100,22 +100,33 @@ export default function MyBookingsScreen({ navigation }) {
     fetchBookings();
   }, [fetchBookings]));
 
-  // Listen to live socket assignment events
+  // Listen to live socket assignment & status updates
   useEffect(() => {
     const socket = getSocket();
     if (!socket) return;
 
-    const handleAssigned = (data) => {
+    const handleAssigned = () => {
       fetchBookings();
-      Alert.alert(
-        'Advocate Assigned! ⚖️',
-        'An advocate has been assigned to your legal request.',
-        [{ text: 'View Requests', onPress: () => fetchBookings() }]
-      );
+    };
+
+    const handleStatusUpdated = (data) => {
+      fetchBookings();
+      if (data?.status === 'confirmed') {
+        Alert.alert(
+          'Consultation Confirmed! 🎉',
+          'Your advocate has accepted the consultation request. You can now start chatting.',
+          [{ text: 'OK', onPress: () => fetchBookings() }]
+        );
+      }
     };
 
     socket.on('booking_assigned', handleAssigned);
-    return () => socket.off('booking_assigned', handleAssigned);
+    socket.on('booking_status_updated', handleStatusUpdated);
+
+    return () => {
+      socket.off('booking_assigned', handleAssigned);
+      socket.off('booking_status_updated', handleStatusUpdated);
+    };
   }, [fetchBookings]);
 
   const handleOpenSession = (actionType, item, params) => {

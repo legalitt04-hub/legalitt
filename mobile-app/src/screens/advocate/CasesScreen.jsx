@@ -18,6 +18,8 @@ import { COLORS } from '../../constants/theme';
 import { formatDate } from '../../utils/helpers';
 import { MOCK_ADVOCATE_CASES } from '../../data/advocateCasesMock';
 
+import { getSocket } from '../../services/socket';
+
 const REQUEST_TABS = ['All', 'Pending', 'Accepted', 'Rejected'];
 
 const CasesScreen = ({ navigation }) => {
@@ -89,6 +91,24 @@ const CasesScreen = ({ navigation }) => {
   useEffect(() => {
     fetchCaseRequests(activeRequestTab);
   }, [activeRequestTab]);
+
+  // Real-time socket listener for assigned bookings
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    const handleNewRequest = () => {
+      loadAllData();
+    };
+
+    socket.on('new_case_request', handleNewRequest);
+    socket.on('new_booking_assigned', handleNewRequest);
+
+    return () => {
+      socket.off('new_case_request', handleNewRequest);
+      socket.off('new_booking_assigned', handleNewRequest);
+    };
+  }, [loadAllData]);
 
   const onRefresh = async () => {
     setRefreshing(true);

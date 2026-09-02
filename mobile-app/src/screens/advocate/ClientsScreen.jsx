@@ -207,19 +207,11 @@ export default function ClientsScreen({ navigation }) {
               )}
             </View>
 
-            {/* Email */}
+            {/* Contact Protected Label */}
             <View style={styles.metaRow}>
-              <Text style={styles.metaLabel}>Email</Text>
+              <Text style={styles.metaLabel}>Contact Info</Text>
               <Text style={styles.metaValue} numberOfLines={1}>
-                {item.email}
-              </Text>
-            </View>
-
-            {/* Phone */}
-            <View style={styles.metaRow}>
-              <Text style={styles.metaLabel}>Phone</Text>
-              <Text style={styles.metaValue}>
-                {item.phone ? formatIndianPhone(item.phone) : '+91 98765 43210'}
+                Protected by Legalitt
               </Text>
             </View>
           </View>

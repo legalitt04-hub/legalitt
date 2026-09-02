@@ -345,18 +345,9 @@ const CaseDetailScreen = ({ route, navigation }) => {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.clientName}>{client.name || 'Client'}</Text>
-              <Text style={styles.clientMeta}>{client.email}</Text>
-              <Text style={styles.clientMeta}>{client.phone || 'No phone number shared'}</Text>
+              <Text style={styles.clientMeta}>Contact protected · In-app chat enabled</Text>
             </View>
             <View style={{ flexDirection: 'row', gap: 8 }}>
-              {client.phone && (
-                <TouchableOpacity 
-                  style={styles.callBtn}
-                  onPress={() => Linking.openURL(`tel:${client.phone}`)}
-                >
-                  <Ionicons name="call" size={16} color="#FFFFFF" />
-                </TouchableOpacity>
-              )}
               <TouchableOpacity 
                 style={[styles.callBtn, { backgroundColor: COLORS.primary }]}
                 onPress={handleMessagePress}
