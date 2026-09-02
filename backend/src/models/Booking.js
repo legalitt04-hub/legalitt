@@ -88,6 +88,17 @@ const bookingSchema = new mongoose.Schema({
     lat: Number,
     lng: Number,
   },
+  // ─── Property Research Fields ────────────────────────────────────────────
+  propertyAddress: String,
+  propertyType: String,
+  surveyNumber: String,
+  registrationNumber: String,
+  district: String,
+  state: String,
+  purpose: String,
+  // ─── Document Forensic Fields ─────────────────────────────────────────────
+  documentName: String,
+  documentType: String,
   // Video/Voice call room (Daily.co)
   videoRoomId: String,
   videoRoomUrl: String,

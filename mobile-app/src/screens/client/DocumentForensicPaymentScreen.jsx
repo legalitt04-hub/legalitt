@@ -79,16 +79,41 @@ export default function DocumentForensicPaymentScreen({ navigation, route }) {
     const generatedRequestId = '#DF-' + Math.floor(100000 + Math.random() * 900000);
 
     try {
+      // Step 1: Upload document to server so admin can view it
+      let uploadedDocs = [];
+      if (document?.uri) {
+        try {
+          const { api } = require('../../services/api');
+          const formData = new FormData();
+          formData.append('file', {
+            uri: document.uri,
+            name: document.name || 'forensic_document',
+            type: document.mimeType || 'application/octet-stream',
+          });
+          const uploadRes = await api.post('/upload', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+          });
+          if (uploadRes.data?.data?.url || uploadRes.data?.url) {
+            const url = uploadRes.data?.data?.url || uploadRes.data?.url;
+            uploadedDocs = [{ url, name: document.name || 'Forensic Document', type: document.mimeType || 'document' }];
+          }
+        } catch (uploadErr) {
+          console.log('Document upload skipped:', uploadErr?.message);
+          // Store local name at least so admin sees document name
+          uploadedDocs = [{ url: '', name: document.name || 'Forensic Document', type: document.mimeType || 'document' }];
+        }
+      }
+
+      // Step 2: Create booking with document info
       await legalAdviceAPI.createRequest({
         serviceType: 'document_forensic',
-        consultationMode: 'chat',                          // must be chat/voice/video
-        issueDescription: `Document Forensic Analysis Request\nDocument: ${document?.name || 'N/A'}\nType: ${documentType || 'N/A'}\nNotes: ${additionalNotes || 'None'}`,
+        consultationMode: 'chat',
+        issueDescription: `[forensic] Document Forensic Analysis Request\nDocument: ${document?.name || 'N/A'}\nType: ${documentType || 'N/A'}\nNotes: ${additionalNotes || 'None'}`,
         issueCategory: 'forensic',
         amount: 3737,
-        paymentMethod: selectedMethod,
         documentName: document?.name,
         documentType,
-        notes: additionalNotes,
+        documents: uploadedDocs,
         requestId: generatedRequestId,
       });
     } catch (err) {

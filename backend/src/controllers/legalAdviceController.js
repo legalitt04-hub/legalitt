@@ -18,7 +18,7 @@ exports.createLegalRequest = async (req, res, next) => {
   try {
     const {
       consultationMode,   // 'chat' | 'voice' | 'video'
-      serviceType,        // 'legal_advice' | 'legal_notice' | 'property_research' | 'fir_draft'
+      serviceType,        // 'legal_advice' | 'legal_notice' | 'property_research' | 'fir_draft' | 'document_forensic'
       issueCategory,      // 'property', 'family', 'criminal', etc.
       issueDescription,   // Client's problem description
       preferredSlot,      // e.g. "Tomorrow, 10:30 AM"
@@ -27,7 +27,28 @@ exports.createLegalRequest = async (req, res, next) => {
       clientState,
       clientCoords,       // { lat, lng }
       amount,             // Payment amount
+      // ─── Property Research specific fields ───
+      propertyData,       // Full property form object
+      propertyAddress,
+      propertyType,
+      surveyNumber,
+      registrationNumber,
+      district,
+      state,
+      purpose,
+      // ─── Document Forensic specific fields ───
+      documentName,
+      documentType,
     } = req.body;
+
+    // Merge propertyData fields if passed as an object
+    const propAddress    = propertyAddress    || propertyData?.propertyAddress    || '';
+    const propType       = propertyType       || propertyData?.propertyType       || '';
+    const propSurvey     = surveyNumber       || propertyData?.surveyNumber       || '';
+    const propRegNo      = registrationNumber || propertyData?.registrationNumber || '';
+    const propDistrict   = district           || propertyData?.district           || clientCity || '';
+    const propState      = state              || propertyData?.state              || clientState || '';
+    const propPurpose    = purpose            || propertyData?.purpose            || '';
 
     // Validate required fields
     if (!consultationMode || !['chat', 'voice', 'video'].includes(consultationMode)) {
@@ -63,7 +84,6 @@ exports.createLegalRequest = async (req, res, next) => {
 
     const booking = await Booking.create({
       client: req.user._id,
-      // advocate: undefined — admin will assign
       consultationMode,
       serviceType,
       type: consultationMode === 'video' ? 'video' : consultationMode === 'voice' ? 'phone' : 'chat',
@@ -72,14 +92,29 @@ exports.createLegalRequest = async (req, res, next) => {
       payment: {
         amount: bookingAmount,
         currency: 'INR',
-        status: 'pending', // Will be updated after Razorpay payment
+        status: 'pending',
       },
       status: 'pending_assignment',
-      assignmentDeadline: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24h SLA
-      clientCity: clientCity || req.user?.address?.city || '',
-      clientState: clientState || req.user?.address?.state || '',
+      assignmentDeadline: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      clientCity: propDistrict || clientCity || req.user?.address?.city || '',
+      clientState: propState || clientState || req.user?.address?.state || '',
       clientCoords: clientCoords || undefined,
       notes: preferredSlot ? `Preferred slot: ${preferredSlot}` : undefined,
+      // ─── Property Research fields ────────────────────────────────────
+      ...(serviceType === 'property_research' && {
+        propertyAddress:    propAddress,
+        propertyType:       propType,
+        surveyNumber:       propSurvey,
+        registrationNumber: propRegNo,
+        district:           propDistrict,
+        state:              propState,
+        purpose:            propPurpose,
+      }),
+      // ─── Document Forensic fields ─────────────────────────────────────
+      ...(serviceType === 'document_forensic' && {
+        documentName: documentName || '',
+        documentType: documentType || '',
+      }),
     });
 
     logger.info(`Legal ${serviceType} request created: ${booking._id} by ${req.user.email}`);
