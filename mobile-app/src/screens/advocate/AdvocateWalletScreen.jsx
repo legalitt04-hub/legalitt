@@ -30,16 +30,25 @@ export default function AdvocateWalletScreen({ navigation }) {
     if (!silent) setLoading(true);
     try {
       const { data } = await api.get('/wallet');
-      setWallet(data.data.wallet);
-      setBankDetails(data.data.bankDetails);
-      setWithdrawals(data.data.recentWithdrawals || []);
-      if (data.data.bankDetails) {
+      // Handle both response shapes: { data: { wallet, bankDetails } } and { wallet, bankDetails }
+      const payload = data?.data || data || {};
+      const walletData = payload.wallet || payload;
+      setWallet({
+        balance: walletData.balance ?? 0,
+        totalEarned: walletData.totalEarned ?? 0,
+        pendingWithdrawal: walletData.pendingWithdrawal ?? 0,
+        totalWithdrawn: walletData.totalWithdrawn ?? 0,
+      });
+      const bankData = payload.bankDetails || null;
+      setBankDetails(bankData);
+      setWithdrawals(payload.recentWithdrawals || []);
+      if (bankData) {
         setBankForm({
-          accountHolder: data.data.bankDetails.accountHolder || '',
-          accountNumber: data.data.bankDetails.accountNumber || '',
-          ifscCode: data.data.bankDetails.ifscCode || '',
-          bankName: data.data.bankDetails.bankName || '',
-          upiId: data.data.bankDetails.upiId || '',
+          accountHolder: bankData.accountHolder || '',
+          accountNumber: bankData.accountNumber || '',
+          ifscCode: bankData.ifscCode || '',
+          bankName: bankData.bankName || '',
+          upiId: bankData.upiId || '',
         });
       }
     } catch (err) {

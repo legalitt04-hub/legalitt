@@ -54,6 +54,8 @@ const ChatScreen = ({ navigation, route }) => {
   // ── Register push token on mount ──────────────────────────────
   useEffect(() => {
     const registerPushToken = async () => {
+      // Guard: expo-notifications not available in all builds
+      if (!Notifications) return;
       try {
         const { status: existing } = await Notifications.getPermissionsAsync();
         let finalStatus = existing;

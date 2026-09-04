@@ -94,10 +94,11 @@ export const useChat = (chatId, userId) => {
 
       socket = io(SOCKET_URL, {
         auth: { token },
-        transports: ['polling', 'websocket'],
+        transports: ['websocket', 'polling'],
         reconnection: true,
         reconnectionDelay: 1000,
         reconnectionAttempts: 10,
+        timeout: 20000,
       });
 
       socket.on('connect', () => {

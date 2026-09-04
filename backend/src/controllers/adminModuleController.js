@@ -576,7 +576,34 @@ exports.getPropertyResearch = async (req, res, next) => {
     const requests = await Booking.find({ serviceType: 'property_research' })
       .populate('client', 'name email phone')
       .sort({ createdAt: -1 });
-    res.json({ success: true, data: requests });
+
+    // Map Booking fields → PropertyResearch interface expected by admin panel
+    const mapped = requests.map(b => {
+      const meta = b.serviceDetails || b.metadata || {};
+      return {
+        _id: b._id,
+        client: b.client,
+        user: b.client, // alias
+        // Property fields — stored in serviceDetails or parsed from issue/notes
+        propertyAddress: meta.propertyAddress || b.propertyAddress || b.issue || b.issueDescription || b.notes || '—',
+        propertyType: meta.propertyType || b.propertyType || '—',
+        surveyNumber: meta.surveyNumber || b.surveyNumber || '—',
+        registrationNumber: meta.registrationNumber || b.registrationNumber || '—',
+        district: meta.district || b.district || '—',
+        state: meta.state || b.state || '—',
+        purpose: meta.purpose || b.purpose || b.issueDescription || '—',
+        status: b.status === 'pending_assignment' ? 'pending' : b.status === 'confirmed' ? 'processing' : b.status === 'completed' ? 'completed' : b.status === 'cancelled' ? 'rejected' : b.status || 'pending',
+        payment: b.payment || (b.amount ? { amount: b.amount, status: b.paymentStatus === 'completed' ? 'paid' : 'pending' } : null),
+        documents: b.documents || [],
+        adminDocuments: b.adminDocuments || [],
+        advocateDocuments: b.advocateDocuments || [],
+        notes: b.adminNotes || b.notes || '',
+        createdAt: b.createdAt,
+        updatedAt: b.updatedAt,
+      };
+    });
+
+    res.json({ success: true, data: mapped });
   } catch (err) { next(err); }
 };
 
