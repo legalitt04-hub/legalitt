@@ -294,7 +294,6 @@ const FilterModal = ({ visible, onClose, onApplyFilters, onShowOnMap, initialFil
               </LinearGradient>
             </TouchableOpacity>
           </View>
-          </View>
         </KeyboardAvoidingView>
       </View>
     </Modal>

@@ -12,7 +12,12 @@ const GOOGLE_SIGNIN = path.resolve(__dirname, 'src/utils/GoogleSigninMock.js');
 
 // ─── Platform-aware module resolver ──────────────────────────────────────────
 config.resolver.resolveRequest = (context, moduleName, platform) => {
-  // Always safely stub Google Sign-In native TurboModule in Expo Go & Web
+  // When building standalone APK on EAS, use real native packages instead of mocks
+  if (process.env.EAS_BUILD === 'true') {
+    return context.resolveRequest(context, moduleName, platform);
+  }
+
+  // Only in Expo Go & Web: stub native TurboModules that are not present in Expo Go client
   if (moduleName.includes('@react-native-google-signin/google-signin')) {
     return { type: 'sourceFile', filePath: GOOGLE_SIGNIN };
   }

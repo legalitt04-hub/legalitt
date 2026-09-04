@@ -1,11 +1,12 @@
 import React, { useEffect } from 'react';
 import { View, StyleSheet, StatusBar, Alert, Text, ActivityIndicator } from 'react-native';
 import Constants from 'expo-constants';
-import ZegoUIKitPrebuiltCall, {
+import ZegoUIKitPrebuiltCallComponent, {
   ONE_ON_ONE_VIDEO_CALL_CONFIG,
   ONE_ON_ONE_VOICE_CALL_CONFIG,
 } from '@zegocloud/zego-uikit-prebuilt-call-rn';
 
+const ZegoUIKitPrebuiltCall: any = ZegoUIKitPrebuiltCallComponent;
 const { ZEGO_APP_ID, ZEGO_APP_SIGN } = Constants.expoConfig?.extra || {};
 
 export default function VideoCallScreen({ navigation, route }: any) {

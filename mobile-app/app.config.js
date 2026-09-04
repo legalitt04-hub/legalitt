@@ -58,7 +58,6 @@ export default ({ config }) => ({
         }
       },
       package: "com.legalitt.app",
-      versionCode: 1,
       permissions: [
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
@@ -90,8 +89,8 @@ export default ({ config }) => ({
       "expo-web-browser"
     ],
     extra: {
-      API_URL: process.env.API_URL,
-      SOCKET_URL: process.env.SOCKET_URL,
+      API_URL: process.env.API_URL || 'https://legalitt-growth.onrender.com/api/v1',
+      SOCKET_URL: process.env.SOCKET_URL || 'https://legalitt-growth.onrender.com',
       GEMINI_API_KEY: process.env.GEMINI_API_KEY,
       GEMINI_API_URL: process.env.GEMINI_API_URL,
       GOOGLE_WEB_CLIENT_ID: process.env.GOOGLE_WEB_CLIENT_ID,
@@ -100,6 +99,10 @@ export default ({ config }) => ({
       // ZEGOCLOUD — Video/Voice/Chat
       ZEGO_APP_ID: parseInt(process.env.ZEGO_APP_ID || '0', 10),
       ZEGO_APP_SIGN: process.env.ZEGO_APP_SIGN || '',
+      // EAS Project linking
+      eas: {
+        projectId: '8136d29e-51a5-4de0-9ae3-cbdedc794e9b'
+      }
     }
   }
 });
