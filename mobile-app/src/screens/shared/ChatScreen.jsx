@@ -139,8 +139,8 @@ const ChatScreen = ({ navigation, route }) => {
                 const mimeMap = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', mp4: 'video/mp4', mov: 'video/quicktime' };
                 const type = mimeMap[ext] || asset.mimeType || 'image/jpeg';
                 const formData = new FormData();
-                formData.append('file', { uri, name: filename, type });
-                const response = await api.post('/uploads/document', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+                const { uploadAPI } = require('../../services/api');
+                const response = await uploadAPI.uploadFile(uri, filename, type);
                 const url = response.data?.data?.url || response.data?.url;
                 if (url) {
                   sendMessage(filename, 'document', url, filename);
@@ -171,13 +171,12 @@ const ChatScreen = ({ navigation, route }) => {
                 setSharing(true);
                 try {
                   const asset = result.assets[0];
-                  const formData = new FormData();
-                  formData.append('file', {
-                    uri: asset.uri,
-                    name: asset.name,
-                    type: asset.mimeType || 'application/octet-stream',
-                  });
-                  const response = await api.post('/uploads/document', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+                  const { uploadAPI } = require('../../services/api');
+                  const response = await uploadAPI.uploadFile(
+                    asset.uri, 
+                    asset.name, 
+                    asset.mimeType || 'application/octet-stream'
+                  );
                   const url = response.data?.data?.url || response.data?.url;
                   if (url) {
                     sendMessage(asset.name, 'document', url, asset.name);
@@ -447,7 +446,6 @@ const ChatScreen = ({ navigation, route }) => {
               onChangeText={handleTextChange}
               placeholder="Type your message..."
               placeholderTextColor="#9CA3AF"
-              color="#2E2A26"
               multiline
               maxHeight={80}
               returnKeyType="send"

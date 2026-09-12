@@ -163,6 +163,34 @@ router.post('/verify-payment', protect, authorize('client'), async (req, res, ne
     booking.payment.paidAt = new Date();
     await booking.save();
 
+    // ── 6. Update Advocate Wallet ──────────────────────────────────────────
+    if (booking.advocate) {
+      const grossAmount = booking.payment.amount || 499;
+      const commissionRate = 20; // 20% platform fee
+      const platformFee = Math.round(grossAmount * (commissionRate / 100));
+      const netAmount = grossAmount - platformFee;
+
+      await Advocate.findByIdAndUpdate(booking.advocate, {
+        $inc: {
+          'wallet.balance': netAmount,
+          'wallet.totalEarned': netAmount
+        },
+        $push: {
+          'wallet.earningTransactions': {
+            bookingId: booking._id,
+            clientName: req.user.name || 'Client',
+            serviceType: booking.serviceType || 'legal_advice',
+            consultationMode: booking.consultationMode || 'chat',
+            grossAmount,
+            platformFee,
+            netAmount,
+            commissionRate,
+            creditedAt: new Date()
+          }
+        }
+      });
+    }
+
     logger.info(`Payment verified: booking=${bookingId}, payment=${razorpay_payment_id}`);
 
     res.json({
