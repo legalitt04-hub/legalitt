@@ -104,7 +104,7 @@ export default function LegalAdviceLandingScreen({ navigation }) {
 
         {/* CONSULTATION TYPES SECTION */}
         <View style={styles.consultationSection}>
-          <Text style={styles.sectionHeading}>Choose How You Want To Consult</Text>
+          <Text style={styles.sectionHeading}>Do you want to choose Video Call or Voice Call?</Text>
           <Text style={styles.sectionSubheading}>Select a consultation type that suits you best.</Text>
 
           <View style={styles.cardsList}>
