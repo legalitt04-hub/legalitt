@@ -42,6 +42,8 @@ import FIRDrafts from './pages/FIRDrafts';
 import PropertyResearch from './pages/PropertyResearch';
 import DocumentForensic from './pages/DocumentForensic';
 import ErrorBoundary from './components/ErrorBoundary';
+import CallHistory from './pages/CallHistory';
+import PricingSettings from './pages/PricingSettings';
 
 function App() {
   return (
@@ -61,6 +63,7 @@ function App() {
             {/* Consultations & Ops */}
             <Route path="/consultations" element={<Consultations />} />
             <Route path="/chats" element={<ChatManagement />} />
+            <Route path="/call-history" element={<CallHistory />} />
             <Route path="/cases" element={<Cases />} />
             <Route path="/categories" element={<Categories />} />
             <Route path="/services" element={<Services />} />
@@ -98,6 +101,7 @@ function App() {
             {/* New Modules */}
             <Route path="/ads" element={<AdsManagement />} />
             <Route path="/roles" element={<RoleManagement />} />
+            <Route path="/pricing" element={<PricingSettings />} />
           </Route>
         </Routes>
         </BrowserRouter>

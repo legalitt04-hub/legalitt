@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Alert, ActivityIndicator, Platform
@@ -15,13 +15,15 @@ import { PrimaryButton } from '../../components/legalAdvice/PrimaryButton';
 import { useAuth } from '../../context/AuthContext';
 import { uploadAPI, legalAdviceAPI, paymentAPI } from '../../services/api';
 import RazorpayCheckout from 'react-native-razorpay';
+import { usePricing } from '../../context/PricingContext';
 
 const MAX_FILES = 5;
 const MAX_FILE_SIZE_MB = 10;
 
 export default function ConsultationDetailsScreen({ navigation, route }) {
   const { user, isAuthenticated } = useAuth();
-  const selectedType = route?.params?.selectedType || { id: 'chat', title: 'Chat Consultation', price: '499' };
+  const { getPrice } = usePricing();
+  const selectedType = route?.params?.selectedType || { id: 'chat', title: 'Chat Consultation', price: String(getPrice('chat_consultation', 499)) };
   const selectedMatter = route?.params?.selectedMatter || { id: 'property', title: 'Property Law' };
   const serviceType = route?.params?.serviceType || 'legal_advice'; // 'legal_advice' or 'legal_notice'
 
@@ -30,18 +32,54 @@ export default function ConsultationDetailsScreen({ navigation, route }) {
   const [phone, setPhone] = useState(userData.phone || '');
   const [email, setEmail] = useState(userData.email || '');
   const [city, setCity] = useState(userData.address?.city || '');
-  const [preferredSlot, setPreferredSlot] = useState('Tomorrow, 10:30 AM');
+  const [preferredSlot, setPreferredSlot] = useState('');
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedTime, setSelectedTime] = useState(null);
   const [description, setDescription] = useState('');
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const timeSlots = [
-    'Today, 4:00 PM',
-    'Today, 6:30 PM',
-    'Tomorrow, 10:30 AM',
-    'Tomorrow, 3:00 PM',
+  // ─── Calendar: next 14 days ─────────────────────────────────────────────────
+  const calDates = useMemo(() => {
+    const list = [];
+    const today = new Date();
+    for (let i = 0; i < 14; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      const iso = d.toISOString().split('T')[0];
+      list.push({
+        id: iso,
+        iso,
+        dayNum:  d.getDate(),
+        dayName: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()],
+        month:   ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()],
+        label:   i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : null,
+      });
+    }
+    return list;
+  }, []);
+
+  const TIME_SLOTS = [
+    '09:00 AM','10:00 AM','11:00 AM','12:00 PM',
+    '02:00 PM','03:00 PM','04:00 PM','05:00 PM',
   ];
+
+  const handleSelectDate = (iso) => {
+    setSelectedDate(iso);
+    updateSlot(iso, selectedTime);
+  };
+  const handleSelectTime = (t) => {
+    setSelectedTime(t);
+    updateSlot(selectedDate, t);
+  };
+  const updateSlot = (date, time) => {
+    if (date && time) {
+      const d = calDates.find(x => x.iso === date);
+      const label = d?.label || `${d?.dayName} ${d?.dayNum} ${d?.month}`;
+      setPreferredSlot(`${label}, ${time}`);
+    }
+  };
 
   // ─── Real Document Picker ────────────────────────────────────────────────────
   const handlePickFile = useCallback(async () => {
@@ -113,7 +151,7 @@ export default function ConsultationDetailsScreen({ navigation, route }) {
     try {
       const modeMap = { chat: 'chat', audio: 'voice', video: 'video' };
       const consultationMode = modeMap[selectedType.id] || 'chat';
-      const amount = parseInt(selectedType.price || '499', 10);
+      const amount = parseInt(selectedType.price || getPrice('chat_consultation', 499), 10);
 
       // Step 1: Create booking on backend
       const bookingRes = await legalAdviceAPI.createRequest({
@@ -264,23 +302,65 @@ export default function ConsultationDetailsScreen({ navigation, route }) {
             <InputField label="Your City" value={city} onChangeText={setCity}
               placeholder="e.g. Mumbai, Delhi, Bangalore" />
 
-            {/* Time Slot */}
+            {/* ── Calendar: Date + Time ─────────────────── */}
             <View style={styles.slotContainer}>
               <Text style={styles.slotLabel}>Preferred Consultation Slot *</Text>
-              <View style={styles.slotsRow}>
-                {timeSlots.map((slot, idx) => {
-                  const isSelected = preferredSlot === slot;
+
+              {/* Date row — horizontal ScrollView instead of FlatList to avoid crash inside ScrollView */}
+              <Text style={styles.calSubLabel}>Select Date</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={{ marginBottom: 14 }}
+                contentContainerStyle={{ paddingRight: 8 }}
+              >
+                {calDates.map(item => {
+                  const sel = selectedDate === item.iso;
                   return (
-                    <TouchableOpacity key={idx}
-                      style={[styles.slotChip, isSelected && styles.selectedSlotChip]}
-                      onPress={() => setPreferredSlot(slot)} activeOpacity={0.8}>
-                      <Ionicons name="time-outline" size={14}
-                        color={isSelected ? LEGAL_THEME.colors.white : LEGAL_THEME.colors.secondaryText} />
-                      <Text style={[styles.slotText, isSelected && styles.selectedSlotText]}>{slot}</Text>
+                    <TouchableOpacity
+                      key={item.id}
+                      activeOpacity={0.8}
+                      onPress={() => handleSelectDate(item.iso)}
+                      style={[styles.calDateCard, sel && styles.calDateCardSel]}
+                    >
+                      {item.label ? (
+                        <Text style={[styles.calDateLabel, sel && styles.calTextSel]}>{item.label}</Text>
+                      ) : (
+                        <Text style={[styles.calDateMon, sel && styles.calTextSel]}>{item.month}</Text>
+                      )}
+                      <Text style={[styles.calDateNum, sel && styles.calTextSel]}>{item.dayNum}</Text>
+                      <Text style={[styles.calDateDay, sel && styles.calTextSel]}>{item.dayName}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+
+              {/* Time grid */}
+              <Text style={styles.calSubLabel}>Select Time</Text>
+              <View style={styles.slotsGrid}>
+                {TIME_SLOTS.map(t => {
+                  const sel = selectedTime === t;
+                  return (
+                    <TouchableOpacity
+                      key={t}
+                      activeOpacity={0.8}
+                      onPress={() => handleSelectTime(t)}
+                      style={[styles.slotChip, sel && styles.selectedSlotChip]}
+                    >
+                      <Ionicons name={sel ? 'time' : 'time-outline'} size={13}
+                        color={sel ? '#fff' : LEGAL_THEME.colors.primaryGold} />
+                      <Text style={[styles.slotText, sel && styles.selectedSlotText]}>{t}</Text>
                     </TouchableOpacity>
                   );
                 })}
               </View>
+
+              {preferredSlot ? (
+                <View style={styles.selectedSlotBadge}>
+                  <Ionicons name="checkmark-circle" size={15} color={LEGAL_THEME.colors.primaryGold} />
+                  <Text style={styles.selectedSlotBadgeText}>Selected: {preferredSlot}</Text>
+                </View>
+              ) : null}
             </View>
 
             <TextArea label="Describe Your Legal Matter"
@@ -361,17 +441,43 @@ const styles = StyleSheet.create({
   heroSubtitle: { fontSize: 12, color: LEGAL_THEME.colors.secondaryText, lineHeight: 17 },
   formContainer: { marginBottom: 10 },
   slotContainer: { marginBottom: 16 },
-  slotLabel: { fontSize: 13, fontWeight: '600', color: LEGAL_THEME.colors.primaryText, marginBottom: 8 },
-  slotsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  slotLabel: { fontSize: 13, fontWeight: '700', color: LEGAL_THEME.colors.primaryText, marginBottom: 10 },
+  calSubLabel: { fontSize: 11, fontWeight: '600', color: LEGAL_THEME.colors.secondaryText, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
+
+  // Calendar date cards
+  calDateCard: {
+    width: 60, height: 78, borderRadius: 12, backgroundColor: LEGAL_THEME.colors.cream,
+    borderWidth: 1, borderColor: LEGAL_THEME.colors.border,
+    alignItems: 'center', justifyContent: 'center', marginRight: 8,
+  },
+  calDateCardSel: { backgroundColor: LEGAL_THEME.colors.primaryGold, borderColor: LEGAL_THEME.colors.primaryGold },
+  calDateLabel: { fontSize: 9, fontWeight: '700', color: LEGAL_THEME.colors.secondaryText, textTransform: 'uppercase' },
+  calDateMon:   { fontSize: 9, fontWeight: '600', color: LEGAL_THEME.colors.secondaryText },
+  calDateNum:   { fontSize: 20, fontWeight: '800', color: LEGAL_THEME.colors.primaryText, marginVertical: 1 },
+  calDateDay:   { fontSize: 9, fontWeight: '600', color: LEGAL_THEME.colors.secondaryText },
+  calTextSel:   { color: '#FFFFFF' },
+
+  // Time slot grid — 2 per row
+  slotsGrid:    { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
   slotChip: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
+    width: '47%',
     backgroundColor: LEGAL_THEME.colors.cream,
     borderRadius: 12, borderWidth: 1, borderColor: LEGAL_THEME.colors.border,
-    paddingHorizontal: 12, paddingVertical: 8,
+    paddingHorizontal: 10, paddingVertical: 10,
+    justifyContent: 'center',
   },
   selectedSlotChip: { backgroundColor: LEGAL_THEME.colors.primaryGold, borderColor: LEGAL_THEME.colors.primaryGold },
   slotText: { fontSize: 12, fontWeight: '600', color: LEGAL_THEME.colors.secondaryText },
   selectedSlotText: { color: LEGAL_THEME.colors.white },
+
+  // Selected slot confirmation
+  selectedSlotBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: '#FFF8EC', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8,
+    borderWidth: 1, borderColor: LEGAL_THEME.colors.primaryGold + '50', marginTop: 4,
+  },
+  selectedSlotBadgeText: { fontSize: 12, fontWeight: '600', color: LEGAL_THEME.colors.primaryGold },
   uploadSection: { marginBottom: 12 },
   uploadLabel: { fontSize: 13, fontWeight: '700', color: LEGAL_THEME.colors.primaryText, marginBottom: 2 },
   uploadSubLabel: { fontSize: 11, color: LEGAL_THEME.colors.secondaryText, marginBottom: 12 },

@@ -1,13 +1,14 @@
 // src/controllers/walletController.js
-// Handles: advocate wallet, withdrawal requests, commission crediting
+// Handles: advocate wallet, withdrawal requests, commission crediting, earnings history
 
 const Advocate = require('../models/Advocate');
 const Withdrawal = require('../models/Withdrawal');
 const Settings = require('../models/Settings');
+const Booking = require('../models/Booking');
 const { AppError } = require('../middlewares/errorHandler');
 const logger = require('../utils/logger');
 
-// ─── GET /api/v1/advocate/wallet ──────────────────────────────────────────────
+// ─── GET /api/v1/wallet ───────────────────────────────────────────────────────
 exports.getWallet = async (req, res, next) => {
   try {
     const advocate = await Advocate.findOne({ user: req.user._id })
@@ -17,16 +18,33 @@ exports.getWallet = async (req, res, next) => {
 
     const recentWithdrawals = await Withdrawal.find({ advocateUser: req.user._id })
       .sort({ createdAt: -1 })
-      .limit(10)
+      .limit(20)
       .lean();
+
+    // Get per-booking earning transactions (newest first, last 50)
+    const earningTransactions = (advocate.wallet?.earningTransactions || [])
+      .slice()
+      .sort((a, b) => new Date(b.creditedAt) - new Date(a.creditedAt))
+      .slice(0, 50);
+
+    // Pull real commission rate from Settings
+    const settings = await Settings.findOne().lean();
+    const commissionRate = settings?.commissionRate || 20;
 
     res.json({
       success: true,
       data: {
-        wallet: advocate.wallet || { balance: 0, totalEarned: 0, pendingWithdrawal: 0, totalWithdrawn: 0 },
+        wallet: {
+          balance:           advocate.wallet?.balance           ?? 0,
+          totalEarned:       advocate.wallet?.totalEarned       ?? 0,
+          pendingWithdrawal: advocate.wallet?.pendingWithdrawal ?? 0,
+          totalWithdrawn:    advocate.wallet?.totalWithdrawn    ?? 0,
+        },
         bankDetails: advocate.bankDetails || null,
         totalConsultations: advocate.totalConsultations || 0,
         recentWithdrawals,
+        earningTransactions,
+        commissionRate,   // Live from admin settings
       },
     });
   } catch (err) {
@@ -34,7 +52,7 @@ exports.getWallet = async (req, res, next) => {
   }
 };
 
-// ─── PUT /api/v1/advocate/bank-details ────────────────────────────────────────
+// ─── PUT /api/v1/wallet/bank-details ──────────────────────────────────────────
 exports.saveBankDetails = async (req, res, next) => {
   try {
     const { accountHolder, accountNumber, ifscCode, bankName, upiId } = req.body;
@@ -53,7 +71,7 @@ exports.saveBankDetails = async (req, res, next) => {
   }
 };
 
-// ─── POST /api/v1/advocate/request-withdrawal ─────────────────────────────────
+// ─── POST /api/v1/wallet/withdraw ─────────────────────────────────────────────
 exports.requestWithdrawal = async (req, res, next) => {
   try {
     const { amount, bankDetails } = req.body;
@@ -105,27 +123,107 @@ exports.requestWithdrawal = async (req, res, next) => {
 };
 
 // ─── Utility: Credit advocate wallet after payment ────────────────────────────
-// Called internally by payment confirmation
+// Called by bookingAssignController after admin assigns advocate + payment is paid
 exports.creditAdvocateWallet = async ({ advocateId, bookingAmount, bookingId }) => {
   try {
     // Get commission rate from settings
     const settings = await Settings.findOne();
-    const commissionRate = settings?.commissionRate || 20; // default 20%
+    const commissionRate = settings?.commissionRate || 20;
     const platformFee = Math.round(bookingAmount * (commissionRate / 100));
     const advocateEarning = bookingAmount - platformFee;
 
+    // Fetch booking details for the transaction log
+    let clientName = 'Client';
+    let serviceType = 'legal_advice';
+    let consultationMode = 'chat';
+
+    try {
+      const booking = await Booking.findById(bookingId)
+        .populate('client', 'name')
+        .lean();
+      if (booking) {
+        clientName      = booking.client?.name || 'Client';
+        serviceType     = booking.serviceType  || 'legal_advice';
+        consultationMode= booking.consultationMode || 'chat';
+      }
+    } catch (bErr) {
+      logger.warn('[Wallet] Could not fetch booking details for transaction log:', bErr.message);
+    }
+
+    // Update wallet balance + append earning transaction
     await Advocate.findByIdAndUpdate(advocateId, {
       $inc: {
         'wallet.balance':     advocateEarning,
         'wallet.totalEarned': advocateEarning,
         totalConsultations: 1,
       },
+      $push: {
+        'wallet.earningTransactions': {
+          bookingId,
+          clientName,
+          serviceType,
+          consultationMode,
+          grossAmount:    bookingAmount,
+          platformFee,
+          netAmount:      advocateEarning,
+          commissionRate,
+          creditedAt:     new Date(),
+        },
+      },
     });
 
     logger.info(`[Wallet] Advocate ${advocateId} credited ₹${advocateEarning} (${100 - commissionRate}% of ₹${bookingAmount}) for booking ${bookingId}`);
-    return { advocateEarning, platformFee };
+    return { advocateEarning, platformFee, commissionRate };
   } catch (err) {
     logger.error('[Wallet] Failed to credit advocate wallet:', err.message);
     return null;
+  }
+};
+
+// ─── GET /api/v1/wallet/earnings ──────────────────────────────────────────────
+// Returns paginated earning transaction history
+exports.getEarnings = async (req, res, next) => {
+  try {
+    const { page = 1, limit = 20 } = req.query;
+    const advocate = await Advocate.findOne({ user: req.user._id })
+      .select('wallet.earningTransactions wallet.balance wallet.totalEarned totalConsultations')
+      .lean();
+    if (!advocate) return next(new AppError('Advocate profile not found.', 404));
+
+    const allTxns = (advocate.wallet?.earningTransactions || [])
+      .slice()
+      .sort((a, b) => new Date(b.creditedAt) - new Date(a.creditedAt));
+
+    const pageNum  = Number(page);
+    const limitNum = Number(limit);
+    const paginated = allTxns.slice((pageNum - 1) * limitNum, pageNum * limitNum);
+
+    // Monthly breakdown
+    const monthlyMap = {};
+    allTxns.forEach(txn => {
+      const key = new Date(txn.creditedAt).toLocaleString('en-IN', { month: 'short', year: 'numeric' });
+      if (!monthlyMap[key]) monthlyMap[key] = { month: key, earnings: 0, count: 0 };
+      monthlyMap[key].earnings += txn.netAmount || 0;
+      monthlyMap[key].count   += 1;
+    });
+
+    res.json({
+      success: true,
+      data: paginated,
+      pagination: {
+        total: allTxns.length,
+        page: pageNum,
+        pages: Math.ceil(allTxns.length / limitNum),
+        hasMore: pageNum * limitNum < allTxns.length,
+      },
+      summary: {
+        totalEarned:      advocate.wallet?.totalEarned    || 0,
+        availableBalance: advocate.wallet?.balance        || 0,
+        totalConsultations: advocate.totalConsultations   || 0,
+      },
+      monthlyBreakdown: Object.values(monthlyMap).slice(0, 6), // Last 6 months
+    });
+  } catch (err) {
+    next(err);
   }
 };

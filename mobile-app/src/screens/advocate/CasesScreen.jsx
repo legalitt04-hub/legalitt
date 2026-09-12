@@ -121,31 +121,28 @@ const CasesScreen = ({ navigation }) => {
     try {
       const targetStatus = action === 'accept' ? 'confirmed' : 'cancelled';
       await bookingAPI.updateStatus(bookingId, { status: targetStatus });
+
+      // Emit socket event so client's app updates in real-time
+      const socket = getSocket();
+      if (socket) {
+        socket.emit('booking_status_changed', { bookingId, status: targetStatus });
+      }
+
       Alert.alert(
         'Success',
         action === 'accept'
-          ? 'Consultation request accepted!'
+          ? '✅ Consultation request accepted!'
           : 'Consultation request declined.'
       );
+      // Refresh both lists
       fetchTodayCases();
       fetchCaseRequests(activeRequestTab);
     } catch (err) {
-      // Local state update for mock test cases
-      setCaseRequests((prev) =>
-        prev.map((item) =>
-          item._id === bookingId
-            ? { ...item, status: action === 'accept' ? 'accepted' : 'rejected' }
-            : item
-        )
-      );
-      Alert.alert(
-        'Success',
-        action === 'accept'
-          ? 'Consultation request accepted!'
-          : 'Consultation request declined.'
-      );
+      console.error('handleRequestAction error:', err?.message);
+      Alert.alert('Error', 'Could not update status. Please try again.');
     }
   };
+
 
   const handleNavigateToCase = (item) => {
     navigation.navigate('CaseDetail', {

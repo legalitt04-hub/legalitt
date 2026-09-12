@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, RefreshCw, Eye, X, FileText, User, Calendar,
   Upload, Download, CheckCircle2, Clock, AlertTriangle,
-  ChevronDown, Loader2
+  ChevronDown, Loader2, Trash2
 } from 'lucide-react';
 import api from '../lib/api';
 
@@ -85,6 +85,17 @@ export default function FIRDrafts() {
       if (selected) setSelected({ ...selected, status });
     } catch (err) {
       console.error('Status update failed:', err);
+    }
+  };
+
+  const handleDelete = async (draftId: string) => {
+    if (!window.confirm('Delete this FIR draft permanently? This cannot be undone.')) return;
+    try {
+      await api.delete(`/admin/fir-drafts/${draftId}`);
+      setDrafts(prev => prev.filter(d => d._id !== draftId));
+      if (selected?._id === draftId) setSelected(null);
+    } catch (err: any) {
+      alert('Delete failed: ' + (err.response?.data?.message || err.message));
     }
   };
 
@@ -170,12 +181,20 @@ export default function FIRDrafts() {
                         {new Date(draft.createdAt).toLocaleDateString('en-IN')}
                       </td>
                       <td className="px-4 py-3">
-                        <button
-                          onClick={() => { setSelected(draft); setUploadStatus(null); }}
-                          className="flex items-center gap-1 px-3 py-1.5 bg-amber-50 text-amber-700 rounded-lg text-xs font-semibold hover:bg-amber-100 transition-colors border border-amber-200"
-                        >
-                          <Eye className="w-3.5 h-3.5" /> View
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => { setSelected(draft); setUploadStatus(null); }}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-amber-50 text-amber-700 rounded-lg text-xs font-semibold hover:bg-amber-100 transition-colors border border-amber-200"
+                          >
+                            <Eye className="w-3.5 h-3.5" /> View
+                          </button>
+                          <button
+                            onClick={() => handleDelete(draft._id)}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-semibold hover:bg-red-100 transition-colors border border-red-200"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" /> Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

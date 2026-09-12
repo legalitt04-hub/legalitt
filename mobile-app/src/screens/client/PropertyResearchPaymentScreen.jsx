@@ -17,6 +17,7 @@ import { legalAdviceAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import RazorpayCheckout from 'react-native-razorpay';
 import Constants from 'expo-constants';
+import { usePricing } from '../../context/PricingContext';
 
 const PRIMARY_BEIGE = '#C2A98B';
 
@@ -32,6 +33,7 @@ export default function PropertyResearchPaymentScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const { propertyData } = route.params || {};
   const { isAuthenticated } = useAuth();
+  const { getPrice } = usePricing();
 
   const [selectedMethod, setSelectedMethod] = useState('upi');
   const [processing, setProcessing] = useState(false);
@@ -54,7 +56,8 @@ export default function PropertyResearchPaymentScreen({ navigation, route }) {
     setProcessing(true);
     try {
       const RAZORPAY_KEY = Constants.expoConfig?.extra?.RAZORPAY_KEY_ID || 'rzp_test_SeC9MGzYmAerqz';
-      const AMOUNT_PAISE = 299900; // ₹2,999 in paise
+      const totalPrice = getPrice('property_research', 2999);
+      const AMOUNT_PAISE = totalPrice * 100;
 
       let paymentId;
 
@@ -82,7 +85,7 @@ export default function PropertyResearchPaymentScreen({ navigation, route }) {
         consultationMode: 'chat',
         issueDescription: `Property Research Request\nAddress: ${propertyData?.propertyAddress || 'N/A'}\nType: ${propertyData?.propertyType || 'N/A'}\nDistrict: ${propertyData?.district || 'N/A'}, ${propertyData?.state || 'N/A'}\nPurpose: ${propertyData?.purpose || 'N/A'}`,
         issueCategory: 'property',
-        amount: 2999,
+        amount: totalPrice,
         clientCity: propertyData?.district || '',
         requestId,
         propertyData,
@@ -94,7 +97,7 @@ export default function PropertyResearchPaymentScreen({ navigation, route }) {
         paymentStatus: 'SUCCESS',
         requestId,
         propertyData,
-        amountPaid: '2,999',
+        amountPaid: String(totalPrice),
       });
     } catch (err) {
       if (err?.code === 'PAYMENT_CANCELLED' || err?.description?.includes('cancel')) {
@@ -200,12 +203,12 @@ export default function PropertyResearchPaymentScreen({ navigation, route }) {
 
           <View style={styles.priceRow}>
             <Text style={styles.priceLabel}>Service Fee</Text>
-            <Text style={styles.priceValue}>₹ 2,499</Text>
+            <Text style={styles.priceValue}>₹ {Math.round((getPrice('property_research', 2999) - 50) / 1.18)}</Text>
           </View>
 
           <View style={styles.priceRow}>
             <Text style={styles.priceLabel}>GST (18%)</Text>
-            <Text style={styles.priceValue}>₹ 450</Text>
+            <Text style={styles.priceValue}>₹ {Math.round(((getPrice('property_research', 2999) - 50) / 1.18) * 0.18)}</Text>
           </View>
 
           <View style={styles.priceRow}>
@@ -217,7 +220,7 @@ export default function PropertyResearchPaymentScreen({ navigation, route }) {
 
           <View style={styles.priceRow}>
             <Text style={styles.totalLabel}>Total Amount</Text>
-            <Text style={styles.totalValue}>₹ 2,999</Text>
+            <Text style={styles.totalValue}>₹ {getPrice('property_research', 2999)}</Text>
           </View>
         </View>
 
@@ -269,7 +272,7 @@ export default function PropertyResearchPaymentScreen({ navigation, route }) {
             <ActivityIndicator size="small" color="#FFFFFF" />
           ) : (
             <>
-              <Text style={styles.payButtonText}>Pay ₹ 2,999 & Start Verification</Text>
+              <Text style={styles.payButtonText}>Pay ₹ {getPrice('property_research', 2999)} & Start Verification</Text>
               <Ionicons name="lock-closed" size={18} color="#FFFFFF" />
             </>
           )}

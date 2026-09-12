@@ -26,11 +26,23 @@ const settingsSchema = new mongoose.Schema({
   
   // Feature Flags
   features: {
-    aiEnabled: { type: Boolean, default: true },
-    pushEnabled: { type: Boolean, default: true },
-    registrationsEnabled: { type: Boolean, default: true },
-    googleEnabled: { type: Boolean, default: true },
+    aiEnabled:             { type: Boolean, default: true },
+    pushEnabled:           { type: Boolean, default: true },
+    registrationsEnabled:  { type: Boolean, default: true },
+    googleEnabled:         { type: Boolean, default: true },
   },
+
+  // ─── Consultation Session Duration Limits ───────────────────────────────────
+  // Duration in HOURS — admin can customise per mode
+  sessionDuration: {
+    chat:  { type: Number, default: 24 },   // 24 hours
+    voice: { type: Number, default: 1  },   // 1 hour
+    video: { type: Number, default: 1  },   // 1 hour
+  },
+  // Allow clients/advocates to request extension?
+  sessionExtensionEnabled: { type: Boolean, default: true },
+  // Max extension per session in hours
+  maxExtensionHours: { type: Number, default: 24 },
   
   // Maintenance Mode
   maintenanceMode: {

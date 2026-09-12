@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet, StatusBar, Alert, Text, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, StatusBar, Alert, Text, ActivityIndicator, TouchableOpacity } from 'react-native';
 import Constants from 'expo-constants';
 import ZegoUIKitPrebuiltCallComponent, {
   ONE_ON_ONE_VIDEO_CALL_CONFIG,
@@ -7,7 +7,11 @@ import ZegoUIKitPrebuiltCallComponent, {
 } from '@zegocloud/zego-uikit-prebuilt-call-rn';
 import { getSocket } from '../services/socket';
 
+// Guard: In Metro dev client, Zego native module is not linked → returns a plain object
+// typeof check prevents "Element type is invalid: got object" crash
 const ZegoUIKitPrebuiltCall: any = ZegoUIKitPrebuiltCallComponent;
+const isZegoComponent = typeof ZegoUIKitPrebuiltCall === 'function';
+
 const { ZEGO_APP_ID, ZEGO_APP_SIGN } = Constants.expoConfig?.extra || {};
 
 export default function VideoCallScreen({ navigation, route }: any) {
@@ -22,11 +26,16 @@ export default function VideoCallScreen({ navigation, route }: any) {
     advocateUserId,
   } = route?.params || {};
 
+  // In AppSign mode, zegoToken is OPTIONAL — appSign in app.json handles auth
+  // Only require zegoRoomId and ZEGO_APP_ID
+  const effectiveRoomId = zegoRoomId || (bookingId ? `legalitt-${bookingId}` : null);
+  const isCallReady = !!effectiveRoomId && !!ZEGO_APP_ID;
+
   useEffect(() => {
-    if (!zegoRoomId || !zegoToken || !ZEGO_APP_ID) {
+    if (!isCallReady) {
       Alert.alert(
         'Call Not Ready',
-        'The call room is not ready yet. Please wait a moment after advocate is assigned, then try again.',
+        'Missing booking ID. Please go back and try again.',
         [{ text: 'Go Back', onPress: () => navigation.goBack() }]
       );
     }
@@ -41,11 +50,30 @@ export default function VideoCallScreen({ navigation, route }: any) {
     return () => socket.off('call_ended', handler);
   }, []);
 
-  if (!zegoRoomId || !zegoToken || !ZEGO_APP_ID) {
+  if (!isCallReady) {
     return (
       <View style={styles.container}>
         <ActivityIndicator size="large" color="#14B8A6" />
         <Text style={styles.waitText}>Setting up call room...</Text>
+      </View>
+    );
+  }
+
+  // ── Dev mode: Zego native module not available ──────────────────
+  if (!isZegoComponent) {
+    return (
+      <View style={styles.container}>
+        <StatusBar hidden />
+        <Text style={styles.devIcon}>{mode === 'video' ? '📹' : '🎙️'}</Text>
+        <Text style={styles.devTitle}>{mode === 'video' ? 'Video Call' : 'Voice Call'}</Text>
+        <Text style={styles.devRoom}>Room: {effectiveRoomId}</Text>
+        <Text style={styles.devNote}>
+          Call works in EAS production build.{'\n'}
+          Dev mode mein Zego native module linked nahi hai.
+        </Text>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <Text style={styles.backBtnText}>← Go Back</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -87,10 +115,9 @@ export default function VideoCallScreen({ navigation, route }: any) {
       <ZegoUIKitPrebuiltCall
         appID={Number(ZEGO_APP_ID)}
         appSign={ZEGO_APP_SIGN || ''}
-        userID={String(myUserId)}
+        userID={String(myUserId || 'user_' + Date.now())}
         userName={String(myUserName)}
-        callID={String(zegoRoomId)}
-        token={zegoToken}
+        callID={String(effectiveRoomId)}
         config={{
           ...callConfig,
           onHangUp: handleHangUp,
@@ -101,6 +128,14 @@ export default function VideoCallScreen({ navigation, route }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f172a', alignItems: 'center', justifyContent: 'center' },
-  waitText: { color: '#94A3B8', fontSize: 14, marginTop: 12 },
+  container:   { flex: 1, backgroundColor: '#0f172a', alignItems: 'center', justifyContent: 'center' },
+  waitText:    { color: '#94A3B8', fontSize: 14, marginTop: 12 },
+  devIcon:     { fontSize: 64, marginBottom: 16 },
+  devTitle:    { color: '#FFFFFF', fontSize: 24, fontWeight: '700', marginBottom: 8 },
+  devRoom:     { color: '#14B8A6', fontSize: 13, marginBottom: 16 },
+  devNote:     { color: '#94A3B8', fontSize: 13, textAlign: 'center', lineHeight: 20, marginBottom: 32, paddingHorizontal: 32 },
+  backBtn:     { backgroundColor: '#14B8A6', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 10 },
+  backBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
 });
+
+

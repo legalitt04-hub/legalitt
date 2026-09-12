@@ -137,6 +137,21 @@ const bookingSchema = new mongoose.Schema({
   // WhatsApp notification tracking
   whatsappSentToNearby: { type: Boolean, default: false },
   whatsappSentToAdvocate: { type: Boolean, default: false },
+
+  // ─── Session Duration & Expiry ──────────────────────────────────────────────────────────
+  // Set when session starts (status → confirmed). Auto-computed from Settings.sessionDuration
+  sessionExpiresAt: { type: Date },
+  // History of every admin extension
+  extensionHistory: [{
+    extendedBy:  { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // admin user
+    extendedAt:  { type: Date, default: Date.now },
+    addedHours:  { type: Number },
+    reason:      { type: String },
+    newExpiresAt:{ type: Date },
+  }],
+  // ─── Wallet / Payout tracking ──────────────────────────────────────────────
+  // Becomes true after creditAdvocateWallet() runs — prevents double-crediting
+  walletCredited: { type: Boolean, default: false },
 }, {
   timestamps: true,
 });

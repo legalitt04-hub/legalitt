@@ -99,11 +99,18 @@ exports.confirmPayment = async (req, res, next) => {
         return next(new AppError('Payment verification failed.', 400));
     }
 
-    // Create chat room
-    const chat = await Chat.create({
-      participants: [booking.client, (await Advocate.findById(booking.advocate)).user],
-      booking: booking._id,
+    // Find or create chat room (prevent duplicates between same client-advocate pair)
+    const advocateUser = (await Advocate.findById(booking.advocate))?.user;
+    let chat = await Chat.findOne({
+      participants: { $all: [booking.client, advocateUser], $size: 2 },
+      isActive: true,
     });
+    if (!chat) {
+      chat = await Chat.create({
+        participants: [booking.client, advocateUser],
+        booking: booking._id,
+      });
+    }
 
     // Create Case portfolio entry
     await Case.create({

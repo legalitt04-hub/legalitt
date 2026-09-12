@@ -5,15 +5,17 @@ import { LEGAL_THEME } from '../../constants/legalAdviceTheme';
 import { LogoHeader } from '../../components/legalAdvice/LogoHeader';
 import { ConsultationCard } from '../../components/legalAdvice/ConsultationCard';
 import { FeatureCard } from '../../components/legalAdvice/FeatureCard';
+import { usePricing } from '../../context/PricingContext';
 
 export default function LegalAdviceLandingScreen({ navigation }) {
+  const { getPrice } = usePricing();
   const consultationTypes = [
     {
       id: 'chat',
       title: 'Chat Consultation',
       description: 'Quick text-based legal advice & instant document check with an expert advocate.',
       duration: '30 Mins',
-      price: '499',
+      price: String(getPrice('chat_consultation', 499)),
       iconName: 'chatbubbles-outline',
       accentColor: LEGAL_THEME.colors.pastelChat,
     },
@@ -22,7 +24,7 @@ export default function LegalAdviceLandingScreen({ navigation }) {
       title: 'Audio Consultation',
       description: 'Direct phone call with a senior advocate to clarify all legal queries.',
       duration: '20 Mins',
-      price: '799',
+      price: String(getPrice('voice_consultation', 499)),
       iconName: 'call-outline',
       accentColor: LEGAL_THEME.colors.pastelAudio,
     },
@@ -31,7 +33,7 @@ export default function LegalAdviceLandingScreen({ navigation }) {
       title: 'Video Consultation',
       description: 'Face-to-face video call for comprehensive strategy & document review.',
       duration: '30 Mins',
-      price: '1199',
+      price: String(getPrice('video_consultation', 1199)),
       iconName: 'videocam-outline',
       accentColor: LEGAL_THEME.colors.pastelVideo,
     },

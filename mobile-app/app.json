@@ -38,8 +38,9 @@
         }
       },
       "package": "com.legalitt.app",
-      "versionCode": 2,
+      "versionCode": 3,
       "jsEngine": "hermes",
+      "softwareKeyboardLayoutMode": "pan",
       "enableProguardInReleaseBuilds": true,
       "enableShrinkResourcesInReleaseBuilds": true,
       "permissions": [

@@ -267,7 +267,7 @@ const AdvocateProfileScreen = ({ navigation, route }) => {
         {/* Tab Content */}
         <View style={styles.tabContent}>
           {activeTab === 'Overview' && <OverviewTab advocate={advocate} navigation={navigation} />}
-          {activeTab === 'Experience' && <ExperienceTab />}
+          {activeTab === 'Experience' && <ExperienceTab advocate={advocate} />}
           {activeTab === 'Reviews' && <ReviewsTab advocate={advocate} advocateId={advocateId} />}
         </View>
 
@@ -425,26 +425,21 @@ const OverviewTab = ({ advocate, navigation }) => {
   );
 };
 
-// Experience Tab Component
-const ExperienceTab = () => (
+// Experience Tab — shows generic professional background based on advocate data
+const ExperienceTab = ({ advocate }) => (
   <View style={styles.experienceContainer}>
     <Section
       title="Professional Background"
       items={[
-        '12+ Years of Legal Practice',
-        '500+ Criminal, Civil & Property Cases Handled',
+        `${advocate?.experience || '5'}+ Years of Legal Practice`,
+        'Consultation across multiple court levels',
+        'Expertise in documentation and legal due diligence',
         'Representation in District & High Courts',
-        'Expertise in Property Title Verification & Legal Due Diligence',
       ]}
     />
     <Section
       title="Core Practice Areas"
-      items={[
-        'Criminal Defense & Bail Matters',
-        'Civil Disputes & Recovery Cases',
-        'Property Documentation & Title Clearance',
-        'Legal Advisory & Consultation Services',
-      ]}
+      items={(advocate?.specializations || ['Legal Services']).map(s => s)}
     />
     <Section
       title="Professional Approach"
@@ -488,20 +483,7 @@ const ReviewsTab = ({ advocate, advocateId }) => {
       const { reviewAPI } = await import('../../services/api');
       const response = await reviewAPI.getAdvocateReviews(advocateId);
       if (response.data.success) {
-        const fetched = response.data.data || [];
-        const mockReviews = [
-          {
-            _id: 'mock-prev-1',
-            client: {
-              name: 'Vaibhav Sharma',
-              avatar: 'https://i.pravatar.cc/100?img=22',
-            },
-            rating: 5,
-            comment: 'Good',
-            createdAt: '2026-01-12T22:20:00.000Z',
-          }
-        ];
-        setReviews([...fetched, ...mockReviews]);
+        setReviews(response.data.data || []);
       }
     } catch (error) {
       console.log('Error loading reviews:', error);
@@ -545,7 +527,11 @@ const ReviewsTab = ({ advocate, advocateId }) => {
       navigation.navigate('LoginRegister', { role: 'client' });
       return;
     }
-    const bId = selectedBookingId || 'mock';
+    const bId = selectedBookingId;
+    if (!bId) {
+      Alert.alert('No Booking', 'Please complete a consultation with this advocate before leaving a review.');
+      return;
+    }
     setSubmitting(true);
     try {
       const { reviewAPI } = await import('../../services/api');

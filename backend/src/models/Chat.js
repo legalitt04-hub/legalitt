@@ -19,6 +19,11 @@ const chatSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
   },
+  // Soft-delete: users who deleted this chat (it won't appear in their list)
+  hiddenFor: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+  }],
 }, {
   timestamps: true,
 });

@@ -179,5 +179,8 @@ router.get('/document-forensic',                adminModuleController.getDocumen
 router.put('/document-forensic/:id/status',     adminModuleController.updateDocumentForensicStatus);
 router.post('/document-forensic/:id/upload',    upload.single('document'), adminModuleController.uploadDocumentForensicReport);
 
+const pricingController = require('../controllers/pricingController');
+router.put('/pricing/:id', pricingController.updatePrice);
+
 module.exports = router;
 

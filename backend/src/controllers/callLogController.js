@@ -1,0 +1,202 @@
+// src/controllers/callLogController.js
+// Handles: logging calls, fetching call history for advocate + admin
+
+const CallLog = require('../models/CallLog');
+const { Chat, Message } = require('../models/Chat');
+const User = require('../models/User');
+const { AppError } = require('../middlewares/errorHandler');
+const logger = require('../utils/logger');
+
+// ─── POST /api/v1/calls/log ────────────────────────────────────────────────────
+// Called from mobile app on hangup to save the call record
+exports.logCall = async (req, res, next) => {
+  try {
+    const {
+      bookingId, advocateUserId, clientUserId,
+      mode, status = 'completed',
+      startedAt, endedAt, duration, zegoRoomId,
+    } = req.body;
+
+    if (!mode || !['video', 'voice'].includes(mode)) {
+      return next(new AppError('mode must be video or voice.', 400));
+    }
+
+    // Determine client & advocate from request + body
+    // Caller can be either role — use body fields to resolve
+    const callerId = req.user._id.toString();
+    const isAdvocate = req.user.role === 'advocate';
+
+    const clientId  = clientUserId   || (!isAdvocate ? callerId : null);
+    const advocateId = advocateUserId || ( isAdvocate ? callerId : null);
+
+    if (!clientId || !advocateId) {
+      return next(new AppError('clientUserId and advocateUserId are required.', 400));
+    }
+
+    // Calculate duration from timestamps if not provided
+    let callDuration = duration || 0;
+    if (!callDuration && startedAt && endedAt) {
+      callDuration = Math.max(0, Math.round((new Date(endedAt) - new Date(startedAt)) / 1000));
+    }
+
+    const callLog = await CallLog.create({
+      booking: bookingId || undefined,
+      client: clientId,
+      advocateUser: advocateId,
+      mode,
+      status,
+      duration: callDuration,
+      startedAt: startedAt ? new Date(startedAt) : undefined,
+      endedAt:   endedAt   ? new Date(endedAt)   : undefined,
+      initiatedBy: clientId,  // client always initiates
+      zegoRoomId: zegoRoomId || undefined,
+    });
+
+    logger.info(`[CallLog] ${mode} call saved: ${clientId} ↔ ${advocateId} | ${callDuration}s | ${status}`);
+    res.status(201).json({ success: true, data: callLog });
+  } catch (err) { next(err); }
+};
+
+// ─── GET /api/v1/calls/history ─────────────────────────────────────────────────
+// Advocate or Client fetches their own call history
+exports.getMyCallHistory = async (req, res, next) => {
+  try {
+    const { page = 1, limit = 20, mode, status } = req.query;
+    const userId = req.user._id;
+    const isAdvocate = req.user.role === 'advocate';
+
+    const filter = isAdvocate
+      ? { advocateUser: userId }
+      : { client: userId };
+
+    if (mode)   filter.mode   = mode;
+    if (status) filter.status = status;
+
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const [calls, total] = await Promise.all([
+      CallLog.find(filter)
+        .populate('client',       'name avatar')
+        .populate('advocateUser', 'name avatar')
+        .populate('booking',      'type')
+        .sort({ createdAt: -1 })
+        .skip(skip).limit(Number(limit)).lean(),
+      CallLog.countDocuments(filter),
+    ]);
+
+    res.json({
+      success: true,
+      data: calls,
+      pagination: { total, page: Number(page), pages: Math.ceil(total / Number(limit)) },
+    });
+  } catch (err) { next(err); }
+};
+
+// ─── GET /api/v1/admin/call-history ────────────────────────────────────────────
+// Admin views all calls across the platform
+exports.getAdminCallHistory = async (req, res, next) => {
+  try {
+    const { page = 1, limit = 20, mode, status, search } = req.query;
+    const skip = (Number(page) - 1) * Number(limit);
+    const filter = {};
+    if (mode)   filter.mode   = mode;
+    if (status) filter.status = status;
+
+    let calls = await CallLog.find(filter)
+      .populate('client',       'name avatar email phone')
+      .populate('advocateUser', 'name avatar email phone')
+      .populate('booking',      'type status consultationMode')
+      .sort({ createdAt: -1 })
+      .skip(skip).limit(Number(limit)).lean();
+
+    // Filter by name search after populate
+    if (search) {
+      const q = search.toLowerCase();
+      calls = calls.filter(c =>
+        c.client?.name?.toLowerCase().includes(q) ||
+        c.advocateUser?.name?.toLowerCase().includes(q)
+      );
+    }
+
+    const total = await CallLog.countDocuments(filter);
+
+    // Summary stats
+    const [totalToday, missedCount, avgDurationResult] = await Promise.all([
+      CallLog.countDocuments({
+        ...filter,
+        createdAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) }
+      }),
+      CallLog.countDocuments({ ...filter, status: 'missed' }),
+      CallLog.aggregate([
+        { $match: { ...filter, status: 'completed' } },
+        { $group: { _id: null, avg: { $avg: '$duration' } } },
+      ]),
+    ]);
+
+    res.json({
+      success: true,
+      data: calls,
+      stats: {
+        totalToday,
+        missedCount,
+        avgDuration: Math.round(avgDurationResult[0]?.avg || 0),
+      },
+      pagination: { total, page: Number(page), pages: Math.ceil(total / Number(limit)) },
+    });
+  } catch (err) { next(err); }
+};
+
+// ─── GET /api/v1/admin/chat-history ────────────────────────────────────────────
+// Admin views all chat sessions with message counts
+exports.getAdminChatHistory = async (req, res, next) => {
+  try {
+    const { page = 1, limit = 20, search } = req.query;
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const [chats, total] = await Promise.all([
+      Chat.find({ isActive: true })
+        .populate('participants', 'name avatar role email')
+        .populate('lastMessage')
+        .populate('booking', 'type status consultationMode createdAt')
+        .sort({ updatedAt: -1 })
+        .skip(skip).limit(Number(limit)).lean(),
+      Chat.countDocuments({ isActive: true }),
+    ]);
+
+    // Attach message count to each chat
+    const chatsWithCount = await Promise.all(chats.map(async (chat) => {
+      const [msgCount, unreadCount] = await Promise.all([
+        Message.countDocuments({ chat: chat._id }),
+        Message.countDocuments({ chat: chat._id, readAt: null }),
+      ]);
+      return { ...chat, messageCount: msgCount, unreadCount };
+    }));
+
+    // Filter by name search
+    const filtered = search
+      ? chatsWithCount.filter(c =>
+          c.participants?.some(p =>
+            p.name?.toLowerCase().includes(search.toLowerCase())
+          )
+        )
+      : chatsWithCount;
+
+    res.json({ success: true, data: filtered, pagination: { total, page: Number(page), pages: Math.ceil(total / Number(limit)) } });
+  } catch (err) { next(err); }
+};
+
+// ─── GET /api/v1/admin/chat-history/:chatId/messages ───────────────────────────
+// Admin views actual messages of a specific chat
+exports.getAdminChatMessages = async (req, res, next) => {
+  try {
+    const { page = 1, limit = 50 } = req.query;
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const messages = await Message.find({ chat: req.params.chatId })
+      .populate('sender', 'name avatar role')
+      .sort({ createdAt: -1 })
+      .skip(skip).limit(Number(limit)).lean();
+
+    res.json({ success: true, data: messages.reverse() });
+  } catch (err) { next(err); }
+};

@@ -23,7 +23,8 @@ import {
   FileText,
   Building,
   Microscope,
-  Tag
+  Tag,
+  IndianRupee
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRole } from '../../contexts/RoleContext';
@@ -77,6 +78,7 @@ const navSections = [
     items: [
       { icon: BarChart3, label: 'Reports & Analytics', path: '/reports' },
       { icon: Shield, label: 'Role Management', path: '/roles' },
+      { icon: IndianRupee, label: 'Pricing Settings', path: '/pricing' },
       { icon: Settings, label: 'System Settings', path: '/settings' },
     ]
   }

@@ -179,7 +179,7 @@ const IconButton = ({ children, onPress }) => (
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9FAFB' },
-  scrollContent: { paddingBottom: 120 },
+  scrollContent: { paddingBottom: 24 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 16 },
   userInfo: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   headerAvatar: { width: 38, height: 38, borderRadius: 19, borderWidth: 2, borderColor: '#B89A6A' },

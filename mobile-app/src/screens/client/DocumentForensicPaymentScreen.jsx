@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { legalAdviceAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { usePricing } from '../../context/PricingContext';
 
 // ─── COLOR PALETTE ─────────────────────────────────────────────────────────────
 const PALETTE = {
@@ -57,9 +58,12 @@ export default function DocumentForensicPaymentScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const { document, documentType, additionalNotes } = route?.params || {};
   const { isAuthenticated } = useAuth();
+  const { getPrice } = usePricing();
 
   const [selectedMethod, setSelectedMethod] = useState('upi');
   const [processing, setProcessing] = useState(false);
+
+  const totalPrice = getPrice('document_forensic', 2999) + Math.round(getPrice('document_forensic', 2999) * 0.18) + 199;
 
   const handlePayAndStart = async () => {
     // Auth gate
@@ -110,7 +114,7 @@ export default function DocumentForensicPaymentScreen({ navigation, route }) {
         consultationMode: 'chat',
         issueDescription: `[forensic] Document Forensic Analysis Request\nDocument: ${document?.name || 'N/A'}\nType: ${documentType || 'N/A'}\nNotes: ${additionalNotes || 'None'}`,
         issueCategory: 'forensic',
-        amount: 3737,
+        amount: totalPrice,
         documentName: document?.name,
         documentType,
         documents: uploadedDocs,
@@ -124,7 +128,7 @@ export default function DocumentForensicPaymentScreen({ navigation, route }) {
         requestId: generatedRequestId,
         document,
         documentType,
-        totalAmount: '₹3,737/-',
+        totalAmount: `₹${totalPrice}/-`,
       });
     }
   };
@@ -185,12 +189,12 @@ export default function DocumentForensicPaymentScreen({ navigation, route }) {
 
           <View style={styles.priceRow}>
             <Text style={styles.priceLabel}>Service Fee</Text>
-            <Text style={styles.priceValue}>₹2,999/-</Text>
+            <Text style={styles.priceValue}>₹{getPrice('document_forensic', 2999)}/-</Text>
           </View>
 
           <View style={styles.priceRow}>
             <Text style={styles.priceLabel}>GST (18%)</Text>
-            <Text style={styles.priceValue}>₹539/-</Text>
+            <Text style={styles.priceValue}>₹{Math.round(getPrice('document_forensic', 2999) * 0.18)}/-</Text>
           </View>
 
           <View style={styles.priceRow}>
@@ -202,7 +206,7 @@ export default function DocumentForensicPaymentScreen({ navigation, route }) {
 
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Total Amount</Text>
-            <Text style={styles.totalValue}>₹3,737/-</Text>
+            <Text style={styles.totalValue}>₹{totalPrice}/-</Text>
           </View>
         </View>
 

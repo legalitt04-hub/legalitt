@@ -151,7 +151,12 @@ const AdvocateDashboardScreen = ({ navigation }) => {
     pendingMessagesCount: 0,
     recentReviews: [],
     ratingStats: null,
-    earningsSummary: { daily: 0, weekly: 0, monthly: 0 },
+    earningsSummary: {
+      daily: 0, weekly: 0, monthly: 0,
+      totalEarned: 0, availableBalance: 0,
+      totalWithdrawn: 0, pendingWithdrawal: 0,
+    },
+    totalConsultations: 0,
     profileCompletion: 0,
     analytics: {
       labels: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
@@ -355,7 +360,7 @@ const AdvocateDashboardScreen = ({ navigation }) => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
       {/* Header */}
@@ -474,7 +479,13 @@ const AdvocateDashboardScreen = ({ navigation }) => {
         </View>
 
         {/* Dynamic Earnings breakdown progress summary */}
-        <EarningsSummary summary={dashboardData.earningsSummary} />
+        <EarningsSummary
+          summary={{
+            ...dashboardData.earningsSummary,
+            totalConsultations: dashboardData.totalConsultations,
+          }}
+          onWalletPress={() => navigation.navigate('Earnings')}
+        />
 
         {/* Today's appointments Section */}
         <View style={styles.sectionHeader}>
@@ -556,6 +567,20 @@ const AdvocateDashboardScreen = ({ navigation }) => {
                 <Ionicons name="settings-outline" size={20} color="#EF4444" />
               </View>
               <Text style={styles.actionLabel}>Settings</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate('CallHistory')}>
+              <View style={[styles.actionIconBg, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
+                <Ionicons name="call-outline" size={20} color="#EF4444" />
+              </View>
+              <Text style={styles.actionLabel}>Call History</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate('Support')}>
+              <View style={[styles.actionIconBg, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
+                <Ionicons name="help-circle-outline" size={20} color="#3B82F6" />
+              </View>
+              <Text style={styles.actionLabel}>Support</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.actionBtn} onPress={() => Alert.alert('Share Link', 'Copied your professional profile card link!')}>
@@ -654,8 +679,17 @@ const styles = StyleSheet.create({
   },
   cardTitle: { fontSize: 13, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
   
-  actionsGrid: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
-  actionBtn: { alignItems: 'center', flex: 1 },
+  actionsGrid: { 
+    flexDirection: 'row', 
+    flexWrap: 'wrap',
+    marginTop: 4,
+    gap: 12,
+  },
+  actionBtn: { 
+    alignItems: 'center', 
+    width: '22%',  // 4 per row with gap
+    marginBottom: 8,
+  },
   actionIconBg: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
   actionLabel: { fontSize: 11, color: COLORS.textPrimary, fontWeight: '600' },
   badgeDot: {

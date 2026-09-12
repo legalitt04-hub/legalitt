@@ -211,16 +211,22 @@ exports.assignAdvocate = async (req, res, next) => {
     booking.assignedAt = new Date();
     booking.assignedBy = req.user._id;
 
-    // Create chat room between client and advocate
+    // Find or create chat room (prevent duplicates between same client-advocate pair)
     let chat;
     try {
-      chat = await Chat.create({
-        participants: [booking.client._id, advocate.user._id],
-        booking: booking._id,
+      chat = await Chat.findOne({
+        participants: { $all: [booking.client._id, advocate.user._id], $size: 2 },
+        isActive: true,
       });
+      if (!chat) {
+        chat = await Chat.create({
+          participants: [booking.client._id, advocate.user._id],
+          booking: booking._id,
+        });
+      }
       booking.chat = chat._id;
     } catch (chatErr) {
-      logger.error('Failed to create chat room:', chatErr.message);
+      logger.error('Failed to find/create chat room:', chatErr.message);
     }
 
     // Create Case portfolio entry
@@ -269,6 +275,8 @@ exports.assignAdvocate = async (req, res, next) => {
             bookingAmount: booking.payment.amount,
             bookingId: booking._id,
           });
+          // Mark as credited to prevent double-credit on completion
+          await Booking.findByIdAndUpdate(booking._id, { $set: { walletCredited: true } });
         } catch (walletErr) {
           logger.error('[Wallet] Credit failed on assignment:', walletErr.message);
         }
@@ -376,15 +384,45 @@ exports.assignAdvocate = async (req, res, next) => {
 exports.updateBookingStatus = async (req, res, next) => {
   try {
     const { status, cancellationReason } = req.body;
-    const booking = await Booking.findById(req.params.id);
+    const booking = await Booking.findById(req.params.id)
+      .populate('advocate', '_id user consultationFee')
+      .populate('client', 'name');
     if (!booking) return next(new AppError('Booking not found.', 404));
 
+    const prevStatus = booking.status;
     booking.status = status;
     if (cancellationReason) {
       booking.cancellationReason = cancellationReason;
       booking.cancelledBy = 'admin';
     }
     await booking.save();
+
+    // ─── Credit advocate wallet when marking as COMPLETED ─────────────────────
+    // Only credit if: moving TO completed, payment was made, advocate exists
+    // Guard: only credit if not already credited (check walletCredited flag)
+    if (
+      status === 'completed' &&
+      prevStatus !== 'completed' &&
+      booking.payment?.status === 'paid' &&
+      booking.advocate &&
+      !booking.walletCredited
+    ) {
+      setImmediate(async () => {
+        try {
+          const { creditAdvocateWallet } = require('./walletController');
+          await creditAdvocateWallet({
+            advocateId:    booking.advocate._id,
+            bookingAmount: booking.payment.amount,
+            bookingId:     booking._id,
+          });
+          // Mark as credited to prevent double-crediting
+          await Booking.findByIdAndUpdate(booking._id, { $set: { walletCredited: true } });
+          logger.info(`[Wallet] Credited advocate on booking completion: ${booking._id}`);
+        } catch (walletErr) {
+          logger.error('[Wallet] Credit failed on completion:', walletErr.message);
+        }
+      });
+    }
 
     res.json({ success: true, data: booking });
   } catch (err) {

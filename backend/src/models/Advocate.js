@@ -117,6 +117,18 @@ const advocateSchema = new mongoose.Schema({
     totalEarned:        { type: Number, default: 0 },         // All-time earnings
     pendingWithdrawal:  { type: Number, default: 0 },         // Requested but not yet paid
     totalWithdrawn:     { type: Number, default: 0 },         // Paid out
+    // Per-booking earning log (shown in Earnings History tab)
+    earningTransactions: [{
+      bookingId:      { type: mongoose.Schema.Types.ObjectId, ref: 'Booking' },
+      clientName:     { type: String, default: 'Client' },
+      serviceType:    { type: String, default: 'legal_advice' },
+      consultationMode:{ type: String, default: 'chat' },    // chat | voice | video
+      grossAmount:    { type: Number },                      // Total client paid
+      platformFee:    { type: Number },                      // Legalitt commission
+      netAmount:      { type: Number },                      // Advocate received
+      commissionRate: { type: Number },                      // % taken by platform
+      creditedAt:     { type: Date, default: Date.now },
+    }],
   },
   // Saved bank details for withdrawals
   bankDetails: {

@@ -35,27 +35,22 @@ export default function ReviewPaymentScreen({ navigation, route }) {
       navigation.navigate('LoginRegister', { role: 'client' });
       return;
     }
-    // Generate request ID
-    const requestId = `LEG-2026-${Math.floor(1000 + Math.random() * 9000)}`;
 
     const bookingData = {
-      requestId,
       selectedType,
       selectedMatter,
       clientDetails,
       totalAmount,
       paymentMethod: selectedPaymentMethod,
       scheduledTime: clientDetails.preferredSlot,
-      lawyer: {
-        name: 'Adv. Rajesh Kumar',
-        title: 'Senior Advocate (15+ Yrs Exp.)',
-        rating: '4.9',
-        reviewsCount: '340+',
-        avatarUri: 'https://i.pravatar.cc/150?img=11',
-      },
     };
 
-    navigation.navigate('ConsultationScheduled', { bookingData });
+    // Navigate to full payment + booking creation flow
+    navigation.navigate('ConsultationDetails', {
+      selectedType,
+      selectedMatter,
+      serviceType: selectedMatter?.serviceType || 'legal_advice',
+    });
   };
 
   return (

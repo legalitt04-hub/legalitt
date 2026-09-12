@@ -82,6 +82,8 @@ import PrivacyPolicyScreen from '../screens/shared/PrivacyPolicyScreen';
 import TermsConditionsScreen from '../screens/shared/TermsConditionsScreen';
 import DataDeletionScreen from '../screens/shared/DataDeletionScreen';
 import VideoCallScreen from '../screens/VideoCallScreen';
+import CallHistoryScreen from '../screens/shared/CallHistoryScreen';
+import SupportScreen from '../screens/shared/SupportScreen';
 
 // ADVOCATE SCREENS
 import AdvocateStack from './AdvocateStack';
@@ -105,13 +107,16 @@ const BASE_URL = Constants.expoConfig?.extra?.API_URL;
 
 // CLIENT BOTTOM TABS - 3 TABS (Map/Nearby removed)
 const ClientTabs = () => {
+  const insets = useSafeAreaInsets();
+  // Proper bottom: safe area inset so tab bar sits ABOVE home indicator
+  const tabBottomPad = Math.max(insets.bottom, 8);
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
-
           if (route.name === 'Home') {
             iconName = focused ? 'home' : 'home-outline';
           } else if (route.name === 'AI') {
@@ -119,14 +124,13 @@ const ClientTabs = () => {
           } else if (route.name === 'Profile') {
             iconName = focused ? 'person' : 'person-outline';
           }
-
           return <Ionicons name={iconName} size={size} color={color} />;
         },
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: '#6B7280',
         tabBarStyle: {
-          height: 70,
-          paddingBottom: 16,
+          height: 56 + tabBottomPad,   // base 56 + safe area
+          paddingBottom: tabBottomPad,
           paddingTop: 8,
           borderTopWidth: 0,
           elevation: 20,
@@ -139,6 +143,7 @@ const ClientTabs = () => {
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: '600',
+          marginBottom: 4,
         },
       })}
     >
@@ -175,14 +180,19 @@ const PILL_TABS = [
   { name: 'Earnings',    icon: 'wallet-outline',       iconActive: 'wallet'        },
 ];
 
+// Pill nav bar total height used to push screen content up
+const PILL_BAR_HEIGHT = 70;
+const PILL_BAR_MARGIN = 12 + 8; // min inset + extra gap
+
 const AdvocatePillTabBar = ({ state, descriptors, navigation }) => {
   const insets = useSafeAreaInsets();
+  const bottomOffset = Math.max(insets.bottom, 12) + 8;
 
   return (
     <View
       style={[
         pillStyles.wrapper,
-        { bottom: Math.max(insets.bottom, 12) + 8 },
+        { bottom: bottomOffset },
       ]}
       pointerEvents="box-none"
     >
@@ -283,6 +293,8 @@ const AdvocateTabs = () => {
     <Tab.Navigator
       tabBar={(props) => <AdvocatePillTabBar {...props} />}
       screenOptions={{ headerShown: false }}
+      // No sceneContainerStyle — each screen manages its own bottom padding
+      // via useSafeAreaInsets() + PILL_BAR_HEIGHT in their contentContainerStyle
     >
       <Tab.Screen
         name="Dashboard"
@@ -453,6 +465,8 @@ const AppNavigator = () => {
               <Stack.Screen name="AdvocateAnalytics" component={AdvocateAnalyticsScreen} />
               <Stack.Screen name="AdvocateCalendar" component={AdvocateAppointmentCalendarScreen} />
               <Stack.Screen name="AdvocateSettings" component={AdvocateSettingsScreen} />
+              <Stack.Screen name="CallHistory" component={CallHistoryScreen} />
+              <Stack.Screen name="Support" component={SupportScreen} />
               <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
               <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
               <Stack.Screen name="DataDeletion" component={DataDeletionScreen} />
@@ -510,6 +524,8 @@ const AppNavigator = () => {
                 options={{ animation: 'slide_from_bottom', gestureEnabled: false }} />
 
               <Stack.Screen name="Settings" component={SettingsScreen} />
+              <Stack.Screen name="CallHistory" component={CallHistoryScreen} />
+              <Stack.Screen name="Support" component={SupportScreen} />
               <Stack.Screen name="Notifications" component={NotificationsScreen} />
               <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
               <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />

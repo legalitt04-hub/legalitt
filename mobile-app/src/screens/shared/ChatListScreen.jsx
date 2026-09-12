@@ -8,6 +8,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useChatList } from '../../hooks/useChat';
 import { useAuth } from '../../context/AuthContext';
 import { COLORS, SIZES } from '../../constants/theme';
+import api from '../../services/api';
+
 
 const ChatListScreen = ({ navigation }) => {
   const { user } = useAuth();
@@ -34,23 +36,36 @@ const ChatListScreen = ({ navigation }) => {
   };
 
   const handleDeleteConversation = (chatId) => {
+    if (!chatId) {
+      Alert.alert('Error', 'Invalid chat. Please refresh and try again.');
+      return;
+    }
     Alert.alert(
       'Delete Conversation',
-      'Are you sure you want to delete this chat history? This action cannot be undone.',
+      'Are you sure you want to delete this chat? This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
-          style: 'destructive', 
-          onPress: () => {
-            // Filter local state to reflect deletion
-            setLocalChats(prev => prev.filter(c => c._id !== chatId));
-            Alert.alert('Success', 'Conversation deleted successfully.');
-          } 
-        }
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            // Optimistic update — remove immediately from UI
+            setLocalChats(prev => prev.filter(c => (c._id || c.id) !== chatId));
+            try {
+              await api.delete(`/chats/${chatId}`);
+              // Success — keep it removed (don't refetch immediately to avoid flash)
+              setTimeout(() => refetch(), 1000); // refetch after 1s to sync with server
+            } catch (err) {
+              console.error('Delete chat failed:', err?.response?.data?.message || err.message);
+              refetch(); // roll back by reloading from server
+              Alert.alert('Error', err?.response?.data?.message || 'Could not delete. Please try again.');
+            }
+          },
+        },
       ]
     );
   };
+
 
   const filteredChats = localChats
     .filter(c => {
@@ -66,59 +81,67 @@ const ChatListScreen = ({ navigation }) => {
 
   const renderItem = ({ item }) => {
     const other = getOtherParticipant(item);
-    const unreadCount = item.unreadCount || 0; // Mock or backend dynamic count
+    const unreadCount = item.unreadCount || 0;
     const lastMsg = item.lastMessage?.content || 'Start chatting';
     const isUnread = unreadCount > 0;
     const otherIdStr = other._id || 'default';
     const otherAvatar = other.avatar || `https://i.pravatar.cc/150?u=${otherIdStr}`;
 
     return (
-      <TouchableOpacity
-        style={styles.chatItem}
-        onPress={() => navigation.navigate('Chat', { 
-          chatId: item._id, 
-          advocateName: other.name, 
-          advocateAvatar: otherAvatar,
-          advocateId: other._id // Adding advocateId for navigation to AdvocateProfile
-        })}
-        activeOpacity={0.8}
-      >
-        <View style={styles.avatarContainer}>
-          <View style={styles.chatAvatar}>
-            <Image source={{ uri: otherAvatar }} style={styles.avatarImage} />
+      <View style={styles.chatRow}>
+        {/* Main tappable area → opens chat */}
+        <TouchableOpacity
+          style={styles.chatItem}
+          onPress={() => navigation.navigate('Chat', { 
+            chatId: item._id, 
+            advocateName: other.name, 
+            advocateAvatar: otherAvatar,
+            advocateId: other._id
+          })}
+          activeOpacity={0.8}
+        >
+          <View style={styles.avatarContainer}>
+            <View style={styles.chatAvatar}>
+              <Image source={{ uri: otherAvatar }} style={styles.avatarImage} />
+            </View>
+            {other.isOnline && <View style={styles.onlineBadge} />}
           </View>
-          {other.isOnline && <View style={styles.onlineBadge} />}
-        </View>
 
-        <View style={styles.chatBody}>
-          <View style={styles.chatHeader}>
-            <Text style={styles.chatName}>{other.name || 'Legal Client'}</Text>
-            <Text style={styles.chatTime}>
-              {item.updatedAt ? new Date(item.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-            </Text>
-          </View>
-          <View style={styles.chatFooter}>
-            <Text style={[styles.chatLast, isUnread && styles.chatLastUnread]} numberOfLines={1}>
-              {lastMsg}
-            </Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <View style={styles.chatBody}>
+            <View style={styles.chatHeader}>
+              <Text style={styles.chatName}>{other.name || 'Legal Client'}</Text>
+              <Text style={styles.chatTime}>
+                {item.updatedAt ? new Date(item.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+              </Text>
+            </View>
+            <View style={styles.chatFooter}>
+              <Text style={[styles.chatLast, isUnread && styles.chatLastUnread]} numberOfLines={1}>
+                {lastMsg}
+              </Text>
               {isUnread && (
                 <View style={styles.unreadBadge}>
                   <Text style={styles.unreadBadgeText}>{unreadCount}</Text>
                 </View>
               )}
-              <TouchableOpacity onPress={() => handleDeleteConversation(item._id)} style={styles.deleteBtn}>
-                <Ionicons name="trash-outline" size={16} color="#EF4444" />
-              </TouchableOpacity>
             </View>
           </View>
-        </View>
-      </TouchableOpacity>
+        </TouchableOpacity>
+
+        {/* Delete button — sibling, not child, to avoid Android touch conflict */}
+        <TouchableOpacity
+          onPress={() => handleDeleteConversation(item._id || item.id)}
+          style={styles.deleteBtn}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="trash-outline" size={16} color="#EF4444" />
+        </TouchableOpacity>
+      </View>
     );
   };
 
+
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
       
       {/* Header */}
@@ -191,9 +214,18 @@ const styles = StyleSheet.create({
   clearBtn: { padding: 4 },
 
   list: { paddingBottom: 100 },
+  chatRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderColor: '#F3F4F6',
+    backgroundColor: '#FFFFFF',
+    paddingRight: 12,
+  },
   chatItem: { 
+    flex: 1,
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, 
-    paddingVertical: 14, borderBottomWidth: 1, borderColor: '#F3F4F6', backgroundColor: '#FFFFFF' 
+    paddingVertical: 14,
   },
   avatarContainer: { position: 'relative' },
   chatAvatar: { 
@@ -221,7 +253,7 @@ const styles = StyleSheet.create({
     borderRadius: 9, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 
   },
   unreadBadgeText: { color: '#FFFFFF', fontSize: 9, fontWeight: '800' },
-  deleteBtn: { padding: 4 },
+  deleteBtn: { padding: 10, alignSelf: 'center' },
 
   empty: { alignItems: 'center', paddingTop: 60, gap: 12 },
   emptyText: { fontSize: 13, color: '#9CA3AF', fontWeight: '600' }

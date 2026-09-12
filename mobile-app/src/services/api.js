@@ -250,6 +250,11 @@ export const chatAPI = {
   getMessages: (chatId, params) => api.get(`/chats/${chatId}/messages`, { params }),
 };
 
+export const callsAPI = {
+  logCall: (data) => api.post('/calls/log', data),
+  getHistory: (params) => api.get('/calls/history', { params }),
+};
+
 export const reviewAPI = {
   create: (data) => api.post('/reviews', data),
   getAdvocateReviews: (advocateId, params) => api.get('/reviews', { params: { advocateId, ...params } }),

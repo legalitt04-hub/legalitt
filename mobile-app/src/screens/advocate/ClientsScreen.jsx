@@ -38,22 +38,13 @@ const THEME = {
   inputBorder: '#E5E7EB',      // Search input border
 };
 
-// Dummy Client for UI testing purposes
-const DUMMY_CLIENT = {
-  _id: 'dummy-client-1',
-  name: 'Rahul Sharma',
-  email: 'rahul.sharma@example.com',
-  phone: '+91 98765 43210',
-  avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-  isVerified: true,
-  status: 'active',
-};
 
 const STATUS_FILTERS = ['All', 'Active', 'Pending', 'Closed'];
 
+
 export default function ClientsScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const [clients, setClients] = useState([DUMMY_CLIENT]);
+  const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -69,7 +60,7 @@ export default function ClientsScreen({ navigation }) {
       const bookingsList = data.data || [];
 
       if (bookingsList.length === 0) {
-        setClients([DUMMY_CLIENT]);
+        setClients([]);
         return;
       }
 
@@ -119,14 +110,10 @@ export default function ClientsScreen({ navigation }) {
       });
 
       const fetchedList = Array.from(clientMap.values());
-      // Ensure dummy client is included if not already present
-      const hasRahul = fetchedList.some(
-        (c) => c.name?.toLowerCase() === 'rahul sharma' || c.email === 'rahul.sharma@example.com'
-      );
-      setClients(hasRahul ? fetchedList : [DUMMY_CLIENT, ...fetchedList]);
+      setClients(fetchedList);
     } catch (err) {
       console.log('Error loading clients list:', err);
-      setClients([DUMMY_CLIENT]);
+      setClients([]);
     } finally {
       setLoading(false);
     }

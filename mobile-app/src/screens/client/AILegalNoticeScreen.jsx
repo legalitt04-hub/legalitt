@@ -20,6 +20,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { legalAdviceAPI, paymentAPI, api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import RazorpayCheckout from 'react-native-razorpay';
+import { usePricing } from '../../context/PricingContext';
 
 const { width } = Dimensions.get('window');
 
@@ -51,6 +52,7 @@ const INITIAL_DOC_TYPES = [
 
 export default function AILegalNoticeScreen({ navigation }) {
   const { user, isAuthenticated } = useAuth();
+  const { getPrice } = usePricing();
   const userData = user?.user || user || {};
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 5;
@@ -208,7 +210,7 @@ export default function AILegalNoticeScreen({ navigation }) {
 
     setIsSubmitting(true);
     try {
-      const amount = 1499; // Legal Notice base price
+      const amount = getPrice('legal_notice', 1499); // Legal Notice base price
 
       // Step 1: Create booking on backend
       const bookingRes = await legalAdviceAPI.createRequest({

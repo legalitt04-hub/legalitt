@@ -12,6 +12,7 @@ import { useAuth } from '../../context/AuthContext';
 import { getSocket } from '../../services/socket';
 import { COLORS } from '../../constants/theme';
 import { LEGAL_THEME } from '../../constants/legalAdviceTheme';
+import { usePricing } from '../../context/PricingContext';
 
 const STATUS_CONFIG = {
   pending_assignment: {
@@ -43,13 +44,13 @@ const STATUS_CONFIG = {
 const MODE_ICON = { chat: 'chatbubbles-outline', voice: 'call-outline', video: 'videocam-outline' };
 const MODE_LABEL = { chat: 'Chat Consultation', voice: 'Voice Call', video: 'Video Call' };
 
-// ─── Time slot generator ──────────────────────────────────────────────────────
+// ─── Time slot generator ─────────────────────────────────────────────────────
 const generateTimeSlots = () => {
   const slots = [];
   for (let h = 9; h <= 20; h++) {
     ['00', '30'].forEach(m => {
       if (h === 20 && m === '30') return;
-      const hour12 = h > 12 ? h - 12 : h;
+      const hour12 = h > 12 ? h - 12 : h === 0 ? 12 : h;
       const ampm = h >= 12 ? 'PM' : 'AM';
       slots.push({ label: `${hour12}:${m} ${ampm}`, hour: h, minute: parseInt(m) });
     });
@@ -57,46 +58,88 @@ const generateTimeSlots = () => {
   return slots;
 };
 
-// ─── Next 7 days generator ────────────────────────────────────────────────────
-const getNext7Days = () => {
-  const days = [];
-  const today = new Date();
-  const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(today);
-    d.setDate(today.getDate() + i);
-    days.push({
-      date: d,
-      dayName: i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : DAY_NAMES[d.getDay()],
-      dayNum: d.getDate(),
-      month: MONTH_NAMES[d.getMonth()],
-    });
+// ─── Calendar helpers ─────────────────────────────────────────────────────────
+const DAYS_SHORT  = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+const buildCalendarGrid = (year, month) => {
+  // month is 0-indexed
+  const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const grid = [];
+  let week = Array(firstDay).fill(null);
+  for (let d = 1; d <= daysInMonth; d++) {
+    week.push(d);
+    if (week.length === 7) { grid.push(week); week = []; }
   }
-  return days;
+  if (week.length) { while (week.length < 7) week.push(null); grid.push(week); }
+  return grid;
 };
 
-// ─── Schedule Slot Modal ──────────────────────────────────────────────────────
+// ─── Schedule Slot Modal (Full Calendar) ─────────────────────────────────────
 const ScheduleModal = ({ visible, booking, onClose, onConfirm }) => {
-  const days = getNext7Days();
-  const timeSlots = generateTimeSlots();
-  const [selectedDay, setSelectedDay] = useState(0);
+  const today = new Date();
+  const [viewYear,  setViewYear]  = useState(today.getFullYear());
+  const [viewMonth, setViewMonth] = useState(today.getMonth());
+  const [selectedDate, setSelectedDate] = useState(null); // { year, month, day }
   const [selectedTime, setSelectedTime] = useState(null);
   const [saving, setSaving] = useState(false);
+  const timeSlots = generateTimeSlots();
+
+  const grid = buildCalendarGrid(viewYear, viewMonth);
+  const todayY = today.getFullYear(), todayM = today.getMonth(), todayD = today.getDate();
+
+  const isPast = (day) => {
+    if (!day) return true;
+    if (viewYear < todayY) return true;
+    if (viewYear === todayY && viewMonth < todayM) return true;
+    if (viewYear === todayY && viewMonth === todayM && day < todayD) return true;
+    return false;
+  };
+
+  const isSelected = (day) =>
+    selectedDate &&
+    selectedDate.year  === viewYear  &&
+    selectedDate.month === viewMonth &&
+    selectedDate.day   === day;
+
+  const isToday = (day) =>
+    day === todayD && viewMonth === todayM && viewYear === todayY;
+
+  const goPrev = () => {
+    if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
+    else setViewMonth(m => m - 1);
+  };
+  const goNext = () => {
+    if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); }
+    else setViewMonth(m => m + 1);
+  };
+
+  const handleDayPress = (day) => {
+    if (!day || isPast(day)) return;
+    setSelectedDate({ year: viewYear, month: viewMonth, day });
+    setSelectedTime(null);
+  };
+
+  const canGoPrev = !(viewYear === todayY && viewMonth === todayM);
 
   const handleConfirm = async () => {
-    if (selectedTime === null) {
-      Alert.alert('Select Time', 'Please select a time slot.');
+    if (!selectedDate || selectedTime === null) {
+      Alert.alert('Select Date & Time', 'Please pick a date and time slot.');
       return;
     }
-    const chosenDate = new Date(days[selectedDay].date);
-    chosenDate.setHours(timeSlots[selectedTime].hour, timeSlots[selectedTime].minute, 0, 0);
-
+    const chosenDate = new Date(
+      selectedDate.year, selectedDate.month, selectedDate.day,
+      timeSlots[selectedTime].hour, timeSlots[selectedTime].minute, 0, 0
+    );
     setSaving(true);
     try {
       await api.patch(`/bookings/${booking._id}/schedule`, { scheduledAt: chosenDate.toISOString() });
       onConfirm(chosenDate);
-      Alert.alert('✅ Slot Confirmed!', `Your consultation is scheduled for ${chosenDate.toLocaleString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}.\n\nYour advocate will be notified.`);
+      Alert.alert(
+        '✅ Slot Confirmed!',
+        `Scheduled for ${chosenDate.toLocaleString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}.\n\nYour advocate will be notified.`
+      );
     } catch (err) {
       Alert.alert('Error', err?.response?.data?.message || 'Could not schedule. Try again.');
     } finally {
@@ -104,60 +147,132 @@ const ScheduleModal = ({ visible, booking, onClose, onConfirm }) => {
     }
   };
 
+  const selectedLabel = selectedDate
+    ? `${selectedDate.day} ${MONTH_NAMES[selectedDate.month].slice(0,3)} ${selectedDate.year}`
+    : null;
+  const timeLabel = selectedTime !== null ? timeSlots[selectedTime].label : null;
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={schedStyles.overlay}>
         <TouchableOpacity style={schedStyles.backdrop} onPress={onClose} activeOpacity={1} />
         <View style={schedStyles.sheet}>
-          {/* Header */}
+
+          {/* Handle + Title */}
           <View style={schedStyles.sheetHeader}>
-            <View style={schedStyles.sheetPill} />
+            <View style={schedStyles.pill} />
             <Text style={schedStyles.sheetTitle}>📅 Schedule Consultation</Text>
-            <Text style={schedStyles.sheetSubtitle}>Pick a date & time — your advocate will be notified</Text>
+            <Text style={schedStyles.sheetSubtitle}>Select a date & time — your advocate will be notified</Text>
           </View>
 
-          {/* Day Picker */}
-          <Text style={schedStyles.sectionLabel}>SELECT DATE</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={schedStyles.dayScroll}
-            contentContainerStyle={{ paddingHorizontal: 20, gap: 10 }}>
-            {days.map((d, i) => (
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 28 }}>
+
+            {/* Month Navigator */}
+            <View style={schedStyles.monthNav}>
               <TouchableOpacity
-                key={i}
-                style={[schedStyles.dayChip, selectedDay === i && schedStyles.dayChipActive]}
-                onPress={() => setSelectedDay(i)}
-              >
-                <Text style={[schedStyles.dayName, selectedDay === i && schedStyles.dayNameActive]}>{d.dayName}</Text>
-                <Text style={[schedStyles.dayNum, selectedDay === i && schedStyles.dayNumActive]}>{d.dayNum}</Text>
-                <Text style={[schedStyles.dayMonth, selectedDay === i && schedStyles.dayMonthActive]}>{d.month}</Text>
+                onPress={goPrev} disabled={!canGoPrev}
+                style={[schedStyles.navBtn, !canGoPrev && { opacity: 0.3 }]}>
+                <Ionicons name="chevron-back" size={20} color="#2E2A26" />
               </TouchableOpacity>
+              <Text style={schedStyles.monthLabel}>
+                {MONTH_NAMES[viewMonth]} {viewYear}
+              </Text>
+              <TouchableOpacity onPress={goNext} style={schedStyles.navBtn}>
+                <Ionicons name="chevron-forward" size={20} color="#2E2A26" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Day-of-week headers */}
+            <View style={schedStyles.weekRow}>
+              {DAYS_SHORT.map(d => (
+                <Text key={d} style={schedStyles.weekDayLabel}>{d}</Text>
+              ))}
+            </View>
+
+            {/* Calendar grid */}
+            {grid.map((week, wi) => (
+              <View key={wi} style={schedStyles.calRow}>
+                {week.map((day, di) => {
+                  const past = isPast(day);
+                  const sel  = isSelected(day);
+                  const tod  = isToday(day);
+                  return (
+                    <TouchableOpacity
+                      key={di}
+                      onPress={() => handleDayPress(day)}
+                      disabled={!day || past}
+                      activeOpacity={0.7}
+                      style={[
+                        schedStyles.calCell,
+                        sel  && schedStyles.calCellSelected,
+                        tod && !sel && schedStyles.calCellToday,
+                        (!day || past) && schedStyles.calCellDisabled,
+                      ]}
+                    >
+                      <Text style={[
+                        schedStyles.calDay,
+                        sel  && schedStyles.calDaySelected,
+                        tod && !sel && schedStyles.calDayToday,
+                        (!day || past) && schedStyles.calDayDisabled,
+                      ]}>
+                        {day || ''}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             ))}
+
+            {/* Selected date summary */}
+            {selectedLabel && (
+              <View style={schedStyles.selSummary}>
+                <Ionicons name="calendar" size={14} color="#B89A6A" />
+                <Text style={schedStyles.selSummaryText}>{selectedLabel}</Text>
+                {timeLabel && (
+                  <>
+                    <Text style={schedStyles.selDot}>·</Text>
+                    <Ionicons name="time" size={14} color="#B89A6A" />
+                    <Text style={schedStyles.selSummaryText}>{timeLabel}</Text>
+                  </>
+                )}
+              </View>
+            )}
+
+            {/* Time slots */}
+            {selectedDate && (
+              <>
+                <Text style={schedStyles.sectionLabel}>SELECT TIME</Text>
+                <View style={schedStyles.timeGrid}>
+                  {timeSlots.map((t, i) => (
+                    <TouchableOpacity
+                      key={i}
+                      style={[schedStyles.timeChip, selectedTime === i && schedStyles.timeChipActive]}
+                      onPress={() => setSelectedTime(i)}
+                    >
+                      <Text style={[schedStyles.timeLabel, selectedTime === i && schedStyles.timeLabelActive]}>
+                        {t.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </>
+            )}
+
+            {/* Confirm */}
+            <TouchableOpacity
+              style={[
+                schedStyles.confirmBtn,
+                (!selectedDate || selectedTime === null || saving) && schedStyles.confirmBtnDisabled,
+              ]}
+              onPress={handleConfirm}
+              disabled={!selectedDate || selectedTime === null || saving}
+            >
+              {saving
+                ? <ActivityIndicator color="#fff" size="small" />
+                : <Text style={schedStyles.confirmBtnText}>Confirm Slot</Text>
+              }
+            </TouchableOpacity>
           </ScrollView>
-
-          {/* Time Picker */}
-          <Text style={[schedStyles.sectionLabel, { marginTop: 16 }]}>SELECT TIME</Text>
-          <View style={schedStyles.timeGrid}>
-            {timeSlots.map((t, i) => (
-              <TouchableOpacity
-                key={i}
-                style={[schedStyles.timeChip, selectedTime === i && schedStyles.timeChipActive]}
-                onPress={() => setSelectedTime(i)}
-              >
-                <Text style={[schedStyles.timeLabel, selectedTime === i && schedStyles.timeLabelActive]}>{t.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Confirm Button */}
-          <TouchableOpacity
-            style={[schedStyles.confirmBtn, (saving || selectedTime === null) && schedStyles.confirmBtnDisabled]}
-            onPress={handleConfirm}
-            disabled={saving || selectedTime === null}
-          >
-            {saving
-              ? <ActivityIndicator color="#fff" size="small" />
-              : <Text style={schedStyles.confirmBtnText}>Confirm Slot</Text>
-            }
-          </TouchableOpacity>
         </View>
       </View>
     </Modal>
@@ -166,9 +281,10 @@ const ScheduleModal = ({ visible, booking, onClose, onConfirm }) => {
 
 export default function MyBookingsScreen({ navigation }) {
   const { user, isAuthenticated } = useAuth();
+  const { getPrice } = usePricing();
+  const [bookings, setBookings] = useState([]);
   const userData = user?.user || user || {};
 
-  const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [scheduleBooking, setScheduleBooking] = useState(null); // which booking is being scheduled
@@ -243,14 +359,29 @@ export default function MyBookingsScreen({ navigation }) {
       }
     };
 
+    // Also handle the event emitted from CasesScreen when adv accepts/declines
+    const handleStatusChanged = (data) => {
+      fetchBookings();
+      if (data?.status === 'confirmed') {
+        Alert.alert(
+          '✅ Booking Confirmed!',
+          'Your advocate has accepted your request. You can now proceed.',
+          [{ text: 'OK', onPress: () => fetchBookings() }]
+        );
+      }
+    };
+
     socket.on('booking_assigned', handleAssigned);
     socket.on('booking_status_updated', handleStatusUpdated);
+    socket.on('booking_status_changed', handleStatusChanged);
 
     return () => {
       socket.off('booking_assigned', handleAssigned);
       socket.off('booking_status_updated', handleStatusUpdated);
+      socket.off('booking_status_changed', handleStatusChanged);
     };
   }, [fetchBookings]);
+
 
   const handleOpenSession = (actionType, item, params) => {
     const rawSlot = item.notes?.replace('Preferred slot: ', '');
@@ -315,51 +446,62 @@ export default function MyBookingsScreen({ navigation }) {
           {item.chat && (
             <TouchableOpacity style={styles.chatBtn}
               onPress={() => handleOpenSession('chat', item, {
-                chatId: item.chat,
-                advocateName, advocateAvatar,
-                advocateId: advocate._id || item.advocate?._id,
-                zegoRoomId:  item.videoRoomId,
-                zegoToken:   item.videoRoomToken,
-                zegoAppId:   item.zegoAppId || 0,
-                zegoAppSign: '',
-                mode: item.consultationMode,
+                chatId:        item.chat,
+                advocateName,  advocateAvatar,
+                advocateId:    advocate._id || item.advocate?._id,
+                zegoRoomId:    item.videoRoomId  || `legalitt-${item._id}`,
+                zegoToken:     item.videoRoomToken || null,
+                zegoAppId:     item.zegoAppId || 0,
+                zegoAppSign:   '',
+                mode:          item.consultationMode,
                 scheduledSlot: slotText,
+                bookingId:     item._id,
+                advocateUserId: item.advocate?.user?._id || item.advocate?._id || null,
               })}>
               <Ionicons name="chatbubbles-outline" size={17} color="#FFFFFF" />
               <Text style={styles.chatBtnText}>Start Chat</Text>
             </TouchableOpacity>
           )}
 
-          {(mode === 'voice' || mode === 'video') && item.videoRoomId && (
+          {(mode === 'voice' || mode === 'video') && (
             <TouchableOpacity
-              style={[styles.callBtn, mode === 'video' ? styles.videoBtn : styles.voiceBtn]}
-              onPress={() => handleOpenSession('call', item, {
-                zegoRoomId:     item.videoRoomId,
-                zegoToken:      item.videoRoomToken,
-                zegoAppId:      item.zegoAppId || 0,
-                advocateName,
-                myUserId:       userData._id || '',
-                myUserName:     userData.name || 'Client',
-                mode,
-                bookingId:      item._id,
-                advocateUserId: item.advocate?.user?._id || item.advocate?._id || null,
-              })}>
-              <Ionicons name={mode === 'video' ? 'videocam-outline' : 'call-outline'} size={17} color="#FFFFFF" />
-              <Text style={styles.callBtnText}>{mode === 'video' ? 'Video Call' : 'Voice Call'}</Text>
+              style={[styles.callBtn, styles.videoBtn]}
+              onPress={() => {
+                const bid = item._id || item.id;
+                const roomId = item.videoRoomId || `legalitt-${bid}`;
+                const baseParams = {
+                  zegoRoomId:     roomId,
+                  zegoToken:      item.videoRoomToken || null,
+                  zegoAppId:      item.zegoAppId || 0,
+                  advocateName,
+                  myUserId:       userData._id || userData.id || '',
+                  myUserName:     userData.name || 'Client',
+                  bookingId:      bid,
+                  advocateUserId: item.advocate?.user?._id || item.advocate?._id || null,
+                };
+
+                // Ask user: Voice or Video?
+                Alert.alert(
+                  '📞 Start Call',
+                  'Kaise connect karna chahte ho?',
+                  [
+                    {
+                      text: '🎙️ Voice Call',
+                      onPress: () => handleOpenSession('call', item, { ...baseParams, mode: 'voice' }),
+                    },
+                    {
+                      text: '📹 Video Call',
+                      onPress: () => handleOpenSession('call', item, { ...baseParams, mode: 'video' }),
+                    },
+                    { text: 'Cancel', style: 'cancel' },
+                  ]
+                );
+              }}>
+              <Ionicons name="call-outline" size={17} color="#FFFFFF" />
+              <Text style={styles.callBtnText}>Start Call</Text>
             </TouchableOpacity>
           )}
         </View>
-
-        {/* Schedule Slot Button */}
-        <TouchableOpacity
-          style={styles.scheduleBtn}
-          onPress={() => setScheduleBooking(item)}
-        >
-          <Ionicons name="calendar-outline" size={16} color="#047857" />
-          <Text style={styles.scheduleBtnText}>
-            {item.date ? '\uD83D\uDCC5 Reschedule Slot' : '\uD83D\uDCC5 Schedule Slot'}
-          </Text>
-        </TouchableOpacity>
       </View>
     );
   };
@@ -437,7 +579,7 @@ export default function MyBookingsScreen({ navigation }) {
                   avatar: advocateAvatar,
                   specializations: advObj.specializations || [],
                   experience: advObj.experience || 5,
-                  consultationFee: advObj.consultationFee || 999,
+                  consultationFee: advObj.consultationFee || getPrice('chat_consultation', 999),
                   rating: advObj.rating?.average || 4.9,
                   location: advObj.location,
                 } : null,
@@ -483,7 +625,7 @@ export default function MyBookingsScreen({ navigation }) {
           <View style={styles.metaRow}>
             <View style={styles.metaItem}>
               <Ionicons name="card-outline" size={14} color="#B89A6A" />
-              <Text style={styles.metaValue}>₹{item.payment?.amount || 499}</Text>
+              <Text style={styles.metaValue}>₹{item.payment?.amount || getPrice(item.type === 'fir_draft' ? 'fir_draft' : 'chat_consultation', 499)}</Text>
             </View>
             {item.payment?.status === 'paid' && (
               <View style={styles.metaItem}>
@@ -720,72 +862,89 @@ const styles = StyleSheet.create({
 
 // ─── Schedule Modal Styles ────────────────────────────────────────────────────
 const schedStyles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-  },
+  overlay:   { flex: 1, justifyContent: 'flex-end' },
+  backdrop:  { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)' },
   sheet: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    paddingBottom: 36,
-    paddingTop: 12,
+    borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    maxHeight: '92%', paddingTop: 12,
   },
   sheetHeader: {
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    alignItems: 'center', paddingHorizontal: 24, paddingBottom: 16,
+    borderBottomWidth: 1, borderBottomColor: '#F1EDE6',
   },
-  sheetPill: {
-    width: 40, height: 4, borderRadius: 2,
-    backgroundColor: '#E2E8F0', marginBottom: 14,
+  pill: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#E2D8CC', marginBottom: 14 },
+  sheetTitle:    { fontSize: 18, fontWeight: '800', color: '#2E2A26', marginBottom: 4 },
+  sheetSubtitle: { fontSize: 12, color: '#8D7865', textAlign: 'center' },
+
+  // Month navigator
+  monthNav: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, paddingVertical: 16,
   },
-  sheetTitle: {
-    fontSize: 18, fontWeight: '800', color: '#0F172A', marginBottom: 4,
+  navBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: '#F8F4EC', alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: '#E8E2D8',
   },
-  sheetSubtitle: {
-    fontSize: 13, color: '#64748B', textAlign: 'center',
+  monthLabel: { fontSize: 16, fontWeight: '800', color: '#2E2A26' },
+
+  // Calendar grid
+  weekRow: {
+    flexDirection: 'row', paddingHorizontal: 12, marginBottom: 6,
   },
+  weekDayLabel: {
+    flex: 1, textAlign: 'center', fontSize: 11, fontWeight: '700',
+    color: '#A89484', textTransform: 'uppercase',
+  },
+  calRow: { flexDirection: 'row', paddingHorizontal: 12, marginBottom: 4 },
+  calCell: {
+    flex: 1, height: 42, alignItems: 'center', justifyContent: 'center',
+    borderRadius: 12, marginHorizontal: 2,
+  },
+  calCellSelected:  { backgroundColor: '#B89A6A' },
+  calCellToday:     { backgroundColor: '#F8F4EC', borderWidth: 1.5, borderColor: '#B89A6A' },
+  calCellDisabled:  { opacity: 0.25 },
+  calDay:         { fontSize: 15, fontWeight: '700', color: '#2E2A26' },
+  calDaySelected: { color: '#FFFFFF' },
+  calDayToday:    { color: '#B89A6A' },
+  calDayDisabled: { color: '#B0A899' },
+
+  // Selected summary pill
+  selSummary: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    marginHorizontal: 20, marginTop: 4, marginBottom: 4,
+    backgroundColor: '#FDF8F2', borderRadius: 12,
+    paddingHorizontal: 14, paddingVertical: 8,
+    borderWidth: 1, borderColor: '#E8E2D8',
+  },
+  selSummaryText: { fontSize: 12, fontWeight: '700', color: '#8D7865' },
+  selDot: { color: '#C4B5A5', fontSize: 12 },
+
+  // Time
   sectionLabel: {
     fontSize: 11, fontWeight: '700', color: '#94A3B8',
-    letterSpacing: 1.2, paddingHorizontal: 24, marginBottom: 10, marginTop: 16,
+    letterSpacing: 1.2, paddingHorizontal: 20, marginBottom: 10, marginTop: 14,
   },
-  dayScroll: { flexGrow: 0 },
-  dayChip: {
-    width: 66, alignItems: 'center', paddingVertical: 12,
-    borderRadius: 16, backgroundColor: '#F8FAFC',
-    borderWidth: 1.5, borderColor: '#E2E8F0',
-  },
-  dayChipActive: { backgroundColor: '#0F172A', borderColor: '#0F172A' },
-  dayName: { fontSize: 11, fontWeight: '600', color: '#64748B', marginBottom: 4 },
-  dayNameActive: { color: '#94A3B8' },
-  dayNum: { fontSize: 22, fontWeight: '800', color: '#0F172A' },
-  dayNumActive: { color: '#FFFFFF' },
-  dayMonth: { fontSize: 10, fontWeight: '600', color: '#94A3B8', marginTop: 2 },
-  dayMonthActive: { color: '#64748B' },
   timeGrid: {
     flexDirection: 'row', flexWrap: 'wrap',
-    paddingHorizontal: 20, gap: 8, marginBottom: 20,
+    paddingHorizontal: 16, gap: 8, marginBottom: 16,
   },
   timeChip: {
-    paddingHorizontal: 14, paddingVertical: 9,
-    borderRadius: 12, backgroundColor: '#F8FAFC',
-    borderWidth: 1.5, borderColor: '#E2E8F0',
+    paddingHorizontal: 13, paddingVertical: 8,
+    borderRadius: 10, backgroundColor: '#F8F4EC',
+    borderWidth: 1.5, borderColor: '#E8E2D8',
   },
-  timeChipActive: { backgroundColor: '#14B8A6', borderColor: '#14B8A6' },
-  timeLabel: { fontSize: 13, fontWeight: '600', color: '#374151' },
+  timeChipActive:  { backgroundColor: '#B89A6A', borderColor: '#B89A6A' },
+  timeLabel:       { fontSize: 13, fontWeight: '600', color: '#4B3F35' },
   timeLabelActive: { color: '#FFFFFF', fontWeight: '700' },
+
+  // Confirm button
   confirmBtn: {
     marginHorizontal: 20, height: 54, borderRadius: 16,
-    backgroundColor: '#0F172A', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#2E2A26', alignItems: 'center', justifyContent: 'center',
+    marginTop: 4,
   },
-  confirmBtnDisabled: { opacity: 0.4 },
+  confirmBtnDisabled: { backgroundColor: '#C4B5A5' },
   confirmBtnText: { fontSize: 16, fontWeight: '800', color: '#FFFFFF' },
 });
-

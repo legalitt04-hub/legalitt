@@ -29,7 +29,10 @@ config.transformer.minifierConfig = {
 
 // ─── Resolver ─────────────────────────────────────────────────────────────────
 config.resolver.assetExts = config.resolver.assetExts.filter(ext => ext !== 'svg');
-config.resolver.sourceExts = ['js', 'jsx', 'ts', 'tsx', 'cjs', 'svg', 'json'];
+config.resolver.sourceExts = [
+  ...config.resolver.sourceExts, // keep all Expo defaults (includes mjs, cjs, etc.)
+  'svg',                          // add svg as source (handled by transformer)
+];
 
 // ─── Platform-aware module resolver ──────────────────────────────────────────
 config.resolver.resolveRequest = (context, moduleName, platform) => {
@@ -43,12 +46,13 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
     if (moduleName === '@sayem314/react-native-keep-awake') {
       return { type: 'sourceFile', filePath: KEEP_AWAKE };
     }
+    // In EAS builds: use real Google Sign-In, real Razorpay, real Zego
     return context.resolveRequest(context, moduleName, platform);
   }
 
   // ─── Expo Go / Dev: stub native TurboModules not present in Expo Go ──────
 
-  // Google Sign-In
+  // Google Sign-In — only mock in Expo Go (NOT in EAS builds)
   if (moduleName.includes('@react-native-google-signin/google-signin')) {
     return { type: 'sourceFile', filePath: GOOGLE_SIGNIN };
   }
@@ -63,7 +67,7 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
     return { type: 'sourceFile', filePath: RAZORPAY };
   }
 
-  // Zego — native-only SDK
+  // Zego — native-only SDK (mock in Expo Go only)
   if (
     moduleName.includes('zego-express-engine') ||
     moduleName.includes('zego-zim') ||
@@ -75,5 +79,6 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
 
   return context.resolveRequest(context, moduleName, platform);
 };
+
 
 module.exports = config;

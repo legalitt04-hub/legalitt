@@ -123,6 +123,7 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/advocates', advocateRoutes);
 app.use('/api/v1/bookings', bookingRoutes);
 app.use('/api/v1/chats', chatRoutes);
+app.use('/api/v1/pricing', require('./routes/pricing'));
 app.use('/api/v1/reviews', reviewRoutes);
 app.use('/api/v1/payments', paymentRoutes);
 app.use('/api/v1/ai', aiRoutes);
@@ -137,6 +138,7 @@ app.use('/api/v1/cases', require('./routes/cases'));
 app.use('/api/v1/settings', require('./routes/settings'));
 app.use('/api/v1/legal-advice', require('./routes/legalAdvice')); // Legal Advice + Legal Notice flow
 app.use('/api/v1/ads', require('./routes/ads')); // Public ads fetch for mobile app
+app.use('/api/v1/calls', require('./routes/callLog')); // Call history (advocate + client)
 
 app.use(notFound);
 app.use(errorHandler);

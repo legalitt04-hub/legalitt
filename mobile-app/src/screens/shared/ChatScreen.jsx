@@ -25,18 +25,20 @@ if (Notifications) {
 }
 
 import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useChat } from '../../hooks/useChat';
 import { COLORS } from '../../constants/theme';
 import { formatDate } from '../../utils/helpers';
 import { useNetwork } from '../../context/NetworkContext';
+import { getSocket } from '../../services/socket';
 
 const ChatScreen = ({ navigation, route }) => {
   const {
     chatId, advocateName, advocateAvatar, advocateId,
     zegoRoomId, zegoToken, zegoAppId, zegoAppSign, mode: callMode,
-    scheduledSlot,
+    scheduledSlot, bookingId, advocateUserId,
   } = route.params || {};
   const { user } = useAuth();
   const { isConnected } = useNetwork();
@@ -50,6 +52,13 @@ const ChatScreen = ({ navigation, route }) => {
   const flatListRef = useRef(null);
   const [text, setText]       = useState('');
   const [sharing, setSharing] = useState(false);
+  // Delay showing offline banner — socket needs ~2s to connect on first mount
+  const [showOfflineBanner, setShowOfflineBanner] = useState(false);
+  useEffect(() => {
+    if (connected) { setShowOfflineBanner(false); return; }
+    const timer = setTimeout(() => setShowOfflineBanner(true), 3000);
+    return () => clearTimeout(timer);
+  }, [connected]);
 
   // ── Register push token on mount ──────────────────────────────
   useEffect(() => {
@@ -102,43 +111,95 @@ const ChatScreen = ({ navigation, route }) => {
 
   // ── Share image/document ──────────────────────────────────────
   const handleShareDocument = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission Denied', 'Photo library access is required to share files.');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.All,
-      allowsEditing: false,
-      quality: 0.8,
-    });
-
-    if (!result.canceled) {
-      setSharing(true);
-      try {
-        const formData = new FormData();
-        const uri = result.assets[0].uri;
-        const filename = uri.split('/').pop();
-        const match = /\.(\w+)$/.exec(filename);
-        const type = match ? `image/${match[1]}` : `image`;
-        formData.append('file', { uri, name: filename, type });
-
-        const response = await api.post('/uploads/document', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
-
-        if (response.data.success) {
-          const docUrl = response.data.data.url;
-          sendMessage(filename, 'document', docUrl, filename);
-          setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
-        }
-      } catch (err) {
-        Alert.alert('Upload Failed', 'Could not share the file. Please try again.');
-      } finally {
-        setSharing(false);
-      }
-    }
+    // Show choice: image or document
+    Alert.alert(
+      'Share File',
+      'What would you like to share?',
+      [
+        {
+          text: 'Image / Video',
+          onPress: async () => {
+            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (status !== 'granted') {
+              Alert.alert('Permission Denied', 'Photo library access required.');
+              return;
+            }
+            const result = await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ImagePicker.MediaTypeOptions.All,
+              allowsEditing: false,
+              quality: 0.8,
+            });
+            if (!result.canceled) {
+              setSharing(true);
+              try {
+                const asset = result.assets[0];
+                const uri = asset.uri;
+                const filename = uri.split('/').pop();
+                const ext = filename.split('.').pop()?.toLowerCase();
+                const mimeMap = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', mp4: 'video/mp4', mov: 'video/quicktime' };
+                const type = mimeMap[ext] || asset.mimeType || 'image/jpeg';
+                const formData = new FormData();
+                formData.append('file', { uri, name: filename, type });
+                const response = await api.post('/uploads/document', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+                const url = response.data?.data?.url || response.data?.url;
+                if (url) {
+                  sendMessage(filename, 'document', url, filename);
+                  setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+                } else {
+                  Alert.alert('Upload Failed', response.data?.message || 'Server did not return file URL.');
+                }
+              } catch (err) {
+                const msg = err?.response?.data?.message || err.message || 'Could not upload image.';
+                Alert.alert('Upload Failed', msg);
+              } finally {
+                setSharing(false);
+              }
+            }
+          },
+        },
+        {
+          text: 'Document / PDF',
+          onPress: async () => {
+            try {
+              const result = await DocumentPicker.getDocumentAsync({
+                type: ['application/pdf', 'application/msword',
+                       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                       'text/plain', '*/*'],
+                copyToCacheDirectory: true,
+              });
+              if (!result.canceled && result.assets?.[0]) {
+                setSharing(true);
+                try {
+                  const asset = result.assets[0];
+                  const formData = new FormData();
+                  formData.append('file', {
+                    uri: asset.uri,
+                    name: asset.name,
+                    type: asset.mimeType || 'application/octet-stream',
+                  });
+                  const response = await api.post('/uploads/document', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+                  const url = response.data?.data?.url || response.data?.url;
+                  if (url) {
+                    sendMessage(asset.name, 'document', url, asset.name);
+                    setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+                  } else {
+                    Alert.alert('Upload Failed', response.data?.message || 'Server did not return file URL.');
+                  }
+                } catch (err) {
+                  const msg = err?.response?.data?.message || err.message || 'Could not upload document.';
+                  Alert.alert('Upload Failed', msg);
+                } finally {
+                  setSharing(false);
+                }
+              }
+            } catch (err) {
+              Alert.alert('Error', 'Could not open document picker.');
+            }
+          },
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
   };
 
   // ── Render individual message bubble ─────────────────────────
@@ -232,7 +293,7 @@ const ChatScreen = ({ navigation, route }) => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       {/* Header */}
@@ -272,20 +333,43 @@ const ChatScreen = ({ navigation, route }) => {
         <TouchableOpacity
           style={styles.callBtn}
           onPress={() => {
-            if (zegoRoomId && zegoToken) {
-              navigation.navigate('VideoCall', {
-                zegoRoomId,
-                zegoToken,
-                zegoAppId: zegoAppId || 0,
-                zegoAppSign: zegoAppSign || '',
-                advocateName,
-                myUserId:   String(userData._id || ''),
-                myUserName: String(userData.name || 'User'),
-                mode: callMode || 'voice',
-              });
-            } else {
-              Alert.alert('Chat Only', 'This consultation is chat-based. Voice/video calls are not available for this booking.');
+            if (callMode === 'chat') {
+              Alert.alert('Chat Only', 'This consultation is chat-based. Voice/video calls are not included.');
+              return;
             }
+
+            // roomId: prefer explicit param, then bookingId-based, then chatId-based
+            const effectiveRoomId =
+              zegoRoomId ||
+              (bookingId  ? `legalitt-${bookingId}`  : null) ||
+              (chatId     ? `legalitt-${chatId}`     : null);
+
+            if (!effectiveRoomId) {
+              Alert.alert('Call Unavailable', 'Could not start call. Please re-open the chat from your booking.');
+              return;
+            }
+
+            // Notify advocate via backend (initiate_call → backend routes → incoming_call alert on advocate dashboard)
+            const socket = getSocket();
+            if (socket && bookingId) {
+              socket.emit('initiate_call', {
+                bookingId,
+                zegoRoomId: effectiveRoomId,
+                mode:       callMode || 'voice',
+              });
+            }
+
+            navigation.navigate('VideoCall', {
+              zegoRoomId:  effectiveRoomId,
+              zegoToken,
+              zegoAppId:   zegoAppId || 0,
+              advocateName,
+              myUserId:    String(userData._id  || ''),
+              myUserName:  String(userData.name || 'User'),
+              mode:        callMode || 'voice',
+              bookingId,
+              advocateUserId,
+            });
           }}
         >
           <Ionicons
@@ -307,7 +391,7 @@ const ChatScreen = ({ navigation, route }) => {
       )}
 
       {/* Error / Offline banner */}
-      {(!connected || !isConnected) && (
+      {(showOfflineBanner && (!connected || !isConnected)) && (
         <View style={styles.offlineBanner}>
           <Ionicons name="cloud-offline-outline" size={14} color="#FFFFFF" />
           <Text style={styles.offlineBannerText}>
@@ -363,6 +447,7 @@ const ChatScreen = ({ navigation, route }) => {
               onChangeText={handleTextChange}
               placeholder="Type your message..."
               placeholderTextColor="#9CA3AF"
+              color="#2E2A26"
               multiline
               maxHeight={80}
               returnKeyType="send"

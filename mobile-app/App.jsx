@@ -4,15 +4,50 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import * as SplashScreen from 'expo-splash-screen';
-import { AuthProvider } from './src/context/AuthContext';
+import * as Notifications from 'expo-notifications';
+import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { NetworkProvider } from './src/context/NetworkContext';
+import { PricingProvider } from './src/context/PricingContext';
 import AppNavigator from './src/navigation/AppNavigator';
+import api from './src/services/api';
 
 // Keep splash screen visible while we load (native only)
 if (Platform.OS !== 'web') {
   try {
     SplashScreen.preventAutoHideAsync();
   } catch (e) { }
+}
+
+// Configure how notifications appear when app is foregrounded
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
+
+async function registerPushToken() {
+  try {
+    if (Platform.OS === 'web') return;
+    const { status: existing } = await Notifications.getPermissionsAsync();
+    let finalStatus = existing;
+    if (existing !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+    if (finalStatus !== 'granted') {
+      console.log('[Push] Permission denied');
+      return;
+    }
+    const tokenData = await Notifications.getExpoPushTokenAsync();
+    const pushToken = tokenData.data;
+    console.log('[Push] Token registered:', pushToken);
+    // Send to backend (POST /api/v1/auth/fcm-token)
+    await api.post('/auth/fcm-token', { fcmToken: pushToken });
+  } catch (err) {
+    console.warn('[Push] Registration failed:', err.message);
+  }
 }
 
 class ErrorBoundary extends Component {
@@ -45,20 +80,35 @@ class ErrorBoundary extends Component {
   }
 }
 
-export default function App() {
-  useEffect(() => {
-    // Native splash screen hiding is managed smoothly when intro screen assets are ready
-  }, []);
+// Inner component that can access AuthContext
+function AppWithPush() {
+  const { isAuthenticated } = useAuth();
 
+  useEffect(() => {
+    if (isAuthenticated) {
+      registerPushToken();
+    }
+  }, [isAuthenticated]);
+
+  return (
+    <>
+      <AppNavigator />
+      <Toast />
+    </>
+  );
+}
+
+export default function App() {
   return (
     <ErrorBoundary>
       <GestureHandlerRootView style={{ flex: 1, minHeight: Platform.OS === 'web' ? '100vh' : '100%', backgroundColor: '#000000' }}>
         <SafeAreaProvider style={{ flex: 1, minHeight: Platform.OS === 'web' ? '100vh' : '100%' }}>
           <NetworkProvider>
-            <AuthProvider>
-              <AppNavigator />
-              <Toast />
-            </AuthProvider>
+            <PricingProvider>
+              <AuthProvider>
+                <AppWithPush />
+              </AuthProvider>
+            </PricingProvider>
           </NetworkProvider>
         </SafeAreaProvider>
       </GestureHandlerRootView>

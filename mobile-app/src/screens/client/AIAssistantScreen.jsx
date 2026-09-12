@@ -160,7 +160,12 @@ const AIAssistantScreen = ({ navigation }) => {
         es.addEventListener('error', (err) => {
           console.error('SSE Error:', err);
           es.close();
-          reject(err);
+          // Handle session expiry (401) explicitly
+          if (err?.xhrStatus === 401) {
+            reject(new Error('SESSION_EXPIRED'));
+          } else {
+            reject(err);
+          }
         });
 
       } catch (error) {
@@ -186,17 +191,26 @@ const AIAssistantScreen = ({ navigation }) => {
       await sendToAI(q, uploadedDoc?.content);
       setUploadedDoc(null);
     } catch (streamingError) {
-      console.warn('Streaming failed, trying standard API fallback:', streamingError?.message);
-      // Remove any partial streaming placeholder
+      console.warn('Streaming failed, fallback to HTTP:', streamingError?.message);
       setMessages(prev => prev.filter(m => !m.id?.startsWith('streaming_')));
 
+      // Session expired — prompt re-login instead of retrying
+      if (streamingError?.message === 'SESSION_EXPIRED') {
+        setLoading(false);
+        Alert.alert(
+          '⚠️ Session Expired',
+          'Your session has expired. Please log in again.',
+          [{ text: 'Log In', onPress: () => navigation.navigate('LoginRegister', { role: 'client' }) }]
+        );
+        return;
+      }
+
       try {
-        // 2. Fallback: Standard HTTP POST request
+        // 2. Fallback: Standard HTTP POST (goes through axios 401 interceptor)
         const res = await api.post('/ai/chat', {
           messages: [{ role: 'user', content: q }],
           conversationId: currentConversationId,
         });
-
         if (res.data?.success && res.data?.data?.reply) {
           const aiReply = res.data.data.reply;
           if (res.data.data.conversationId && !currentConversationId) {
@@ -217,7 +231,7 @@ const AIAssistantScreen = ({ navigation }) => {
         setMessages(prev => [...prev, {
           id: Date.now().toString() + '_err',
           role: 'model',
-          content: 'Sorry, I couldn\'t connect to the AI service. Please verify your connection and try again.',
+          content: '⚠️ Unable to connect to AI service. Please check your connection and try again.',
         }]);
       }
     } finally {
@@ -296,7 +310,7 @@ const AIAssistantScreen = ({ navigation }) => {
 
       {/* KeyboardAvoidingView adjusts view layout dynamically on iOS & Android */}
       <KeyboardAvoidingView 
-        style={{ flex: 1 }} 
+        style={{ flex: 1, backgroundColor: COLORS.background }} 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
@@ -324,7 +338,10 @@ const AIAssistantScreen = ({ navigation }) => {
           </View>
         )}
 
-        <View style={[styles.inputBar, { paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom, 12) : 12 }]}>
+        <View style={[
+          styles.inputBar,
+          { paddingBottom: Math.max(insets.bottom, Platform.OS === 'ios' ? 12 : 8) }
+        ]}>
           <TouchableOpacity onPress={pickDocument} activeOpacity={0.7}>
             <Ionicons name="attach" size={28} color={COLORS.textSecondary || '#6B7280'} />
           </TouchableOpacity>
@@ -394,7 +411,7 @@ const styles = StyleSheet.create({
   headerInner: { flexDirection: 'row', alignItems: 'center' },
   headerTitle: { fontSize: 18, fontWeight: '700', color: '#fff' },
   headerSub: { fontSize: 12, color: 'rgba(255,255,255,0.7)' },
-  msgList: { padding: 20, paddingBottom: 10 },
+  msgList: { padding: 20, paddingBottom: 20 },
   msgWrap: { flexDirection: 'row', marginBottom: 15, alignItems: 'flex-end' },
   msgWrapUser: { flexDirection: 'row-reverse' },
   aiAvatar: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#f0f0f0', alignItems: 'center', justifyContent: 'center', marginRight: 10 },
@@ -427,7 +444,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, 
     borderColor: '#E8E2D9', 
     fontSize: 14, 
-    color: '#1F2937', 
+    color: '#1F2937',       // explicit dark color — visible on all Android themes
     maxHeight: 110, 
     minHeight: 44,
   },

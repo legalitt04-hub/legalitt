@@ -1,7 +1,7 @@
 // screens/advocate/AdvocateCallScreen.jsx
 // Real ZEGOCLOUD video/voice call screen for Advocates
 // Uses the same ZegoUIKitPrebuiltCall as the client VideoCallScreen
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -16,15 +16,15 @@ import ZegoUIKitPrebuiltCallComponent, {
   ONE_ON_ONE_VOICE_CALL_CONFIG,
 } from '@zegocloud/zego-uikit-prebuilt-call-rn';
 import { getSocket } from '../../services/socket';
+import { callsAPI } from '../../services/api';
 
 const ZegoCall = ZegoUIKitPrebuiltCallComponent;
 const { ZEGO_APP_ID, ZEGO_APP_SIGN } = Constants.expoConfig?.extra || {};
 
 export default function AdvocateCallScreen({ navigation, route }) {
   const {
-    // From CasesScreen / AdvocateDashboard when opening a call
-    zegoRoomId,
-    zegoToken,        // advocateVideoToken from booking
+    zegoRoomId: paramRoomId,
+    zegoToken,
     zegoAppId,
     advocateName,
     clientName = 'Client',
@@ -36,22 +36,29 @@ export default function AdvocateCallScreen({ navigation, route }) {
     clientId,
   } = route?.params || {};
 
-  // Determine effective appId: prefer param > env constant
-  const effectiveAppId = Number(zegoAppId || ZEGO_APP_ID || 0);
+  const callStartRef = useRef(Date.now());
+
+  const effectiveAppId   = Number(zegoAppId || ZEGO_APP_ID || 0);
   const effectiveAppSign = ZEGO_APP_SIGN || '';
 
-  // If there's no room/token — tell advocate to wait for client to confirm booking
+  // Fallback roomId: use bookingId if zegoRoomId not provided
+  const zegoRoomId = paramRoomId || (bookingId ? `legalitt-${bookingId}` : null);
+
+  // In AppSign mode (appSign present), token is optional — ZEGO handles auth via appSign
+  // Only block if we have no roomId OR no appId
+  const isCallReady = !!zegoRoomId && !!effectiveAppId;
+
   useEffect(() => {
-    if (!zegoRoomId || !zegoToken || !effectiveAppId) {
+    if (!isCallReady) {
       Alert.alert(
         'Call Not Ready',
-        'The call room is not set up yet. This happens when the client has not completed payment yet. Please wait for the client to confirm the booking.',
+        'The call room is not set up yet. Please wait for the booking to be confirmed.',
         [{ text: 'Go Back', onPress: () => navigation.goBack() }]
       );
     }
   }, []);
 
-  // Listen for call_ended from socket (client hung up)
+  // Listen for call_ended from socket
   useEffect(() => {
     const socket = getSocket();
     if (!socket) return;
@@ -60,17 +67,19 @@ export default function AdvocateCallScreen({ navigation, route }) {
     return () => socket.off('call_ended', handler);
   }, []);
 
-  if (!zegoRoomId || !zegoToken || !effectiveAppId) {
+  if (!isCallReady) {
     return (
       <View style={styles.container}>
         <ActivityIndicator size="large" color="#14B8A6" />
         <Text style={styles.waitText}>Setting up call room...</Text>
         <Text style={styles.subText}>
-          This call room opens once the client confirms payment.
+          This call room opens once the booking is confirmed.
         </Text>
       </View>
     );
   }
+
+
 
   const callConfig =
     mode === 'video'
@@ -110,6 +119,19 @@ export default function AdvocateCallScreen({ navigation, route }) {
             if (socket && bookingId) {
               socket.emit('call_ended', { bookingId, clientId });
             }
+            // Log call to backend
+            const durationSec = Math.round((Date.now() - callStartRef.current) / 1000);
+            callsAPI.logCall({
+              bookingId,
+              clientUserId: clientId,
+              advocateUserId: myUserId,
+              mode,
+              status: durationSec > 5 ? 'completed' : 'missed',
+              duration: durationSec,
+              startedAt: new Date(callStartRef.current).toISOString(),
+              endedAt: new Date().toISOString(),
+              zegoRoomId,
+            }).catch(() => {}); // fire and forget
             navigation.goBack();
           },
         }}
