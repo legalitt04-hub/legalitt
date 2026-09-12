@@ -18,10 +18,24 @@ const MODE_CONFIG = {
 };
 
 const STATUS_CONFIG = {
-  completed: { icon: 'checkmark-circle', color: '#10B981', label: 'Completed' },
-  missed:    { icon: 'close-circle',     color: '#EF4444', label: 'Missed'    },
-  rejected:  { icon: 'ban',             color: '#F59E0B', label: 'Rejected'  },
-  failed:    { icon: 'alert-circle',    color: '#6B7280', label: 'Failed'    },
+  completed:            { icon: 'checkmark-circle', color: '#10B981', label: 'Completed' },
+  COMPLETED:            { icon: 'checkmark-circle', color: '#10B981', label: 'Completed' },
+  user_ended:           { icon: 'checkmark-circle', color: '#10B981', label: 'Completed' },
+  USER_ENDED:           { icon: 'checkmark-circle', color: '#10B981', label: 'Completed' },
+  missed:               { icon: 'close-circle',     color: '#EF4444', label: 'Missed'    },
+  MISSED:               { icon: 'close-circle',     color: '#EF4444', label: 'Missed'    },
+  rejected:             { icon: 'ban',              color: '#F59E0B', label: 'Rejected'  },
+  REJECTED:             { icon: 'ban',              color: '#F59E0B', label: 'Rejected'  },
+  cancelled:            { icon: 'ban',              color: '#F59E0B', label: 'Cancelled' },
+  CANCELLED:            { icon: 'ban',              color: '#F59E0B', label: 'Cancelled' },
+  timeout:              { icon: 'time',             color: '#6B7280', label: 'Timeout'   },
+  TIMEOUT:              { icon: 'time',             color: '#6B7280', label: 'Timeout'   },
+  failed:               { icon: 'alert-circle',     color: '#EF4444', label: 'Failed'    },
+  FAILED:               { icon: 'alert-circle',     color: '#EF4444', label: 'Failed'    },
+  network_disconnected: { icon: 'wifi-outline',     color: '#EC4899', label: 'Disconnected' },
+  NETWORK_DISCONNECTED: { icon: 'wifi-outline',     color: '#EC4899', label: 'Disconnected' },
+  appointment_expired:  { icon: 'hourglass-outline',color: '#8B5CF6', label: 'Expired'   },
+  APPOINTMENT_EXPIRED:  { icon: 'hourglass-outline',color: '#8B5CF6', label: 'Expired'   },
 };
 
 const formatDuration = (seconds) => {

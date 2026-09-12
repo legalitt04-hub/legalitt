@@ -30,10 +30,13 @@ export default function HomeScreen({ navigation }) {
   };
 
   useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
+    const unsubscribe = navigation?.addListener?.('focus', () => {
       refetch();
     });
-    return unsubscribe;
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+      else if (unsubscribe?.remove) unsubscribe.remove();
+    };
   }, [navigation, refetch]);
 
   const handleRefresh = async () => {

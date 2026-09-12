@@ -103,9 +103,19 @@ export const useNotifications = (isAuthenticated, navigationRef, user) => {
     });
 
     return () => {
-      if (Notifications) {
-        Notifications.removeNotificationSubscription(notificationListener.current);
-        Notifications.removeNotificationSubscription(responseListener.current);
+      if (notificationListener.current) {
+        if (typeof notificationListener.current.remove === 'function') {
+          notificationListener.current.remove();
+        } else if (Notifications?.removeNotificationSubscription) {
+          Notifications.removeNotificationSubscription(notificationListener.current);
+        }
+      }
+      if (responseListener.current) {
+        if (typeof responseListener.current.remove === 'function') {
+          responseListener.current.remove();
+        } else if (Notifications?.removeNotificationSubscription) {
+          Notifications.removeNotificationSubscription(responseListener.current);
+        }
       }
     };
   }, [isAuthenticated]);

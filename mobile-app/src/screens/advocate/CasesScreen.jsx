@@ -82,10 +82,13 @@ const CasesScreen = ({ navigation }) => {
   }, [activeRequestTab]);
 
   useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
+    const unsubscribe = navigation?.addListener?.('focus', () => {
       loadAllData();
     });
-    return unsubscribe;
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+      else if (unsubscribe?.remove) unsubscribe.remove();
+    };
   }, [navigation, loadAllData]);
 
   useEffect(() => {
@@ -105,8 +108,8 @@ const CasesScreen = ({ navigation }) => {
     socket.on('new_booking_assigned', handleNewRequest);
 
     return () => {
-      socket.off('new_case_request', handleNewRequest);
-      socket.off('new_booking_assigned', handleNewRequest);
+      socket?.off?.('new_case_request', handleNewRequest);
+      socket?.off?.('new_booking_assigned', handleNewRequest);
     };
   }, [loadAllData]);
 

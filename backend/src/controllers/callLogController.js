@@ -13,8 +13,9 @@ exports.logCall = async (req, res, next) => {
   try {
     const {
       bookingId, advocateUserId, clientUserId,
-      mode, status = 'completed',
+      mode, status = 'completed', endReason,
       startedAt, endedAt, duration, zegoRoomId,
+      recordingConsent = false,
     } = req.body;
 
     if (!mode || !['video', 'voice'].includes(mode)) {
@@ -22,11 +23,10 @@ exports.logCall = async (req, res, next) => {
     }
 
     // Determine client & advocate from request + body
-    // Caller can be either role — use body fields to resolve
     const callerId = req.user._id.toString();
     const isAdvocate = req.user.role === 'advocate';
 
-    const clientId  = clientUserId   || (!isAdvocate ? callerId : null);
+    const clientId   = clientUserId   || (!isAdvocate ? callerId : null);
     const advocateId = advocateUserId || ( isAdvocate ? callerId : null);
 
     if (!clientId || !advocateId) {
@@ -39,20 +39,24 @@ exports.logCall = async (req, res, next) => {
       callDuration = Math.max(0, Math.round((new Date(endedAt) - new Date(startedAt)) / 1000));
     }
 
+    const resolvedEndReason = endReason || (status ? status.toUpperCase() : 'COMPLETED');
+
     const callLog = await CallLog.create({
       booking: bookingId || undefined,
       client: clientId,
       advocateUser: advocateId,
       mode,
       status,
+      endReason: resolvedEndReason,
       duration: callDuration,
       startedAt: startedAt ? new Date(startedAt) : undefined,
       endedAt:   endedAt   ? new Date(endedAt)   : undefined,
-      initiatedBy: clientId,  // client always initiates
+      initiatedBy: callerId,
       zegoRoomId: zegoRoomId || undefined,
+      recordingConsent: Boolean(recordingConsent),
     });
 
-    logger.info(`[CallLog] ${mode} call saved: ${clientId} ↔ ${advocateId} | ${callDuration}s | ${status}`);
+    logger.info(`[CallLog] ${mode} call saved: ${clientId} ↔ ${advocateId} | ${callDuration}s | status: ${status} | reason: ${resolvedEndReason}`);
     res.status(201).json({ success: true, data: callLog });
   } catch (err) { next(err); }
 };
@@ -198,5 +202,70 @@ exports.getAdminChatMessages = async (req, res, next) => {
       .skip(skip).limit(Number(limit)).lean();
 
     res.json({ success: true, data: messages.reverse() });
+  } catch (err) { next(err); }
+};
+
+// ─── POST /api/v1/calls/:id/notes ──────────────────────────────────────────────
+// Advocate adds consultation notes, next steps & requested documents
+exports.addCallNotes = async (req, res, next) => {
+  try {
+    const { summary, nextSteps, documentsRequired } = req.body;
+    const callLog = await CallLog.findById(req.params.id);
+
+    if (!callLog) return next(new AppError('Call log not found.', 404));
+    if (callLog.advocateUser.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return next(new AppError('Not authorized to add notes for this call.', 403));
+    }
+
+    callLog.postConsultationNotes = {
+      summary: summary || '',
+      nextSteps: nextSteps || '',
+      documentsRequired: Array.isArray(documentsRequired) ? documentsRequired : [],
+      addedAt: new Date(),
+    };
+
+    await callLog.save();
+    res.json({ success: true, data: callLog, message: 'Consultation notes saved successfully.' });
+  } catch (err) { next(err); }
+};
+
+// ─── POST /api/v1/calls/:id/report ─────────────────────────────────────────────
+// User or Advocate reports a technical issue or conduct complaint
+exports.reportCallIssue = async (req, res, next) => {
+  try {
+    const { category, description } = req.body;
+    const callLog = await CallLog.findById(req.params.id);
+
+    if (!callLog) return next(new AppError('Call log not found.', 404));
+
+    callLog.reportIssue = {
+      reportedBy: req.user._id,
+      category: category || 'Technical Issue',
+      description: description || 'No description provided.',
+      createdAt: new Date(),
+    };
+
+    await callLog.save();
+    res.json({ success: true, data: callLog, message: 'Issue reported to support team.' });
+  } catch (err) { next(err); }
+};
+
+// ─── POST /api/v1/calls/:id/events ─────────────────────────────────────────────
+// Append technical state event (initiated -> ringing -> connected -> ended)
+exports.logCallEvent = async (req, res, next) => {
+  try {
+    const { state, details } = req.body;
+    const callLog = await CallLog.findById(req.params.id);
+
+    if (!callLog) return next(new AppError('Call log not found.', 404));
+
+    callLog.events.push({
+      state,
+      timestamp: new Date(),
+      details: details || '',
+    });
+
+    await callLog.save();
+    res.json({ success: true, message: 'Technical state event logged.' });
   } catch (err) { next(err); }
 };

@@ -35,10 +35,21 @@ const upload = multer({
   },
 });
 
-const uploadToCloudinary = (buffer, folder, resourceType = 'auto') =>
+const uploadToCloudinary = (buffer, folder, resourceType = 'auto', originalName = '') =>
   new Promise((resolve, reject) => {
+    const isPdfOrDoc = /\.(pdf|doc|docx|txt|rtf)$/i.test(originalName);
+    // Use 'raw' or 'auto' for documents with explicit public access mode
+    const finalResourceType = isPdfOrDoc ? 'auto' : resourceType;
+
     const stream = cloudinary.uploader.upload_stream(
-      { folder: `legalitt/${folder}`, resource_type: resourceType },
+      {
+        folder: `legalitt/${folder}`,
+        resource_type: finalResourceType,
+        access_mode: 'public',
+        type: 'upload',
+        use_filename: true,
+        unique_filename: true,
+      },
       (err, result) => err ? reject(err) : resolve(result)
     );
     stream.end(buffer);
@@ -47,7 +58,7 @@ const uploadToCloudinary = (buffer, folder, resourceType = 'auto') =>
 router.post('/avatar', protect, upload.single('file'), async (req, res, next) => {
   try {
     if (!req.file) return next(new AppError('No file uploaded.', 400));
-    const result = await uploadToCloudinary(req.file.buffer, 'avatars', 'image');
+    const result = await uploadToCloudinary(req.file.buffer, 'avatars', 'image', req.file.originalname);
     const User = require('../models/User');
     await User.findByIdAndUpdate(req.user._id, { avatar: result.secure_url });
     res.json({ success: true, data: { url: result.secure_url } });
@@ -57,7 +68,7 @@ router.post('/avatar', protect, upload.single('file'), async (req, res, next) =>
 router.post('/document', protect, upload.single('file'), async (req, res, next) => {
   try {
     if (!req.file) return next(new AppError('No file uploaded.', 400));
-    const result = await uploadToCloudinary(req.file.buffer, 'documents');
+    const result = await uploadToCloudinary(req.file.buffer, 'documents', 'auto', req.file.originalname);
     res.json({ success: true, data: { url: result.secure_url, name: req.file.originalname, size: req.file.size } });
   } catch (err) { next(err); }
 });

@@ -3,13 +3,13 @@ const { AppError } = require('../middlewares/errorHandler');
 
 // Default services to seed if database is empty
 const defaultServices = [
-  { serviceId: 'chat_consultation', name: 'Chat Consultation', basePrice: 499 },
-  { serviceId: 'voice_consultation', name: 'Voice Consultation', basePrice: 499 },
-  { serviceId: 'video_consultation', name: 'Video Consultation', basePrice: 1199 },
-  { serviceId: 'fir_draft', name: 'FIR Draft', basePrice: 499 },
-  { serviceId: 'property_research', name: 'Property Research', basePrice: 2999 },
-  { serviceId: 'document_forensic', name: 'Document Forensic', basePrice: 2999 },
+  { serviceId: 'chat_consultation', name: 'Legal Advice (Chat Consultation)', basePrice: 499 },
+  { serviceId: 'voice_consultation', name: 'Legal Advice (Voice Consultation)', basePrice: 799 },
+  { serviceId: 'video_consultation', name: 'Legal Advice (Video Consultation)', basePrice: 1199 },
   { serviceId: 'legal_notice', name: 'Legal Notice', basePrice: 1199 },
+  { serviceId: 'property_research', name: 'Property Research', basePrice: 2999 },
+  { serviceId: 'document_forensic', name: 'Document Forensic Analysis', basePrice: 2999 },
+  { serviceId: 'fir_draft', name: 'FIR Draft & Filing', basePrice: 499 },
 ];
 
 /**

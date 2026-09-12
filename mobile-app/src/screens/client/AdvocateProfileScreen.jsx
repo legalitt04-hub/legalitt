@@ -121,14 +121,17 @@ const AdvocateProfileScreen = ({ navigation, route }) => {
     }
 
     // Set up focus listener to re-verify chat status upon return from Booking
-    const unsubscribe = navigation.addListener('focus', () => {
+    const unsubscribe = navigation?.addListener?.('focus', () => {
       const targetUserIdFocus = advocate?.userId || advocate?.user?._id || advocate?.user;
       if (targetUserIdFocus) {
         checkActiveChat(targetUserIdFocus);
       }
     });
 
-    return unsubscribe;
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+      else if (unsubscribe?.remove) unsubscribe.remove();
+    };
   }, [advocate, navigation]);
 
   const toggleSave = async () => {

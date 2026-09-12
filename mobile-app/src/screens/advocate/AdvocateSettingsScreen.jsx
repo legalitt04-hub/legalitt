@@ -99,10 +99,13 @@ export default function AdvocateSettingsScreen({ navigation }) {
 
   // Refresh data on screen focus
   useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
+    const unsubscribe = navigation?.addListener?.('focus', () => {
       loadInitialData();
     });
-    return unsubscribe;
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+      else if (unsubscribe?.remove) unsubscribe.remove();
+    };
   }, [navigation, loadInitialData]);
 
   // Update a single preference toggle

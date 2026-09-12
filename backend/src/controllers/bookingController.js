@@ -130,6 +130,22 @@ exports.confirmPayment = async (req, res, next) => {
     booking.payment.paidAt = new Date();
     booking.chat = chat._id;
 
+    // ─── Credit Advocate Wallet automatically on payment confirmation ─────────
+    if (booking.advocate && !booking.walletCredited) {
+      try {
+        const { creditAdvocateWallet } = require('./walletController');
+        const bookingAmount = booking.payment?.amount || booking.amount || 500;
+        await creditAdvocateWallet({
+          advocateId: booking.advocate,
+          bookingAmount,
+          bookingId: booking._id,
+        });
+        booking.walletCredited = true;
+      } catch (wErr) {
+        logger.error('[Wallet] Failed to credit wallet in confirmPayment:', wErr.message);
+      }
+    }
+
     // ─── Generate ZEGOCLOUD tokens for video/voice calls ────────────────────
     try {
       const advocate = await Advocate.findById(booking.advocate);
@@ -375,6 +391,75 @@ exports.scheduleSlot = async (req, res, next) => {
     });
 
     res.json({ success: true, data: booking, message: 'Slot scheduled successfully.' });
+  } catch (err) { next(err); }
+};
+
+// ─── GET /api/bookings/:id/can-join-call ───────────────────────────────────────
+// Validates if appointment time window is valid for call joining
+exports.canJoinCall = async (req, res, next) => {
+  try {
+    const booking = await Booking.findById(req.params.id)
+      .populate({ path: 'advocate', populate: { path: 'user', select: 'name avatar' } })
+      .populate('client', 'name avatar');
+
+    if (!booking) return next(new AppError('Booking not found.', 404));
+
+    const userIdStr = req.user._id.toString();
+    const clientIdStr = booking.client?._id?.toString() || booking.client?.toString();
+    const advUserIdStr = booking.advocate?.user?._id?.toString() || booking.advocate?.user?.toString();
+
+    if (userIdStr !== clientIdStr && userIdStr !== advUserIdStr && req.user.role !== 'admin') {
+      return next(new AppError('Not authorized to join this call.', 403));
+    }
+
+    if (['cancelled', 'rejected'].includes(booking.status)) {
+      return res.json({
+        success: false,
+        canJoin: false,
+        reason: 'APPOINTMENT_CANCELLED',
+        message: 'This consultation has been cancelled.',
+      });
+    }
+
+    // Appointment time window check (5-minute pre-buffer, 60-minute post-buffer)
+    const now = Date.now();
+    const scheduledStart = booking.date ? new Date(booking.date).getTime() : null;
+    const scheduledEnd = scheduledStart ? scheduledStart + (60 * 60 * 1000) : null;
+
+    let canJoin = true;
+    let reason = 'ALLOWED';
+
+    if (scheduledStart && scheduledEnd) {
+      const preBuffer = 15 * 60 * 1000; // 15 mins before
+      const postBuffer = 60 * 60 * 1000; // 60 mins after
+
+      if (now < scheduledStart - preBuffer) {
+        canJoin = false;
+        reason = 'TOO_EARLY';
+      } else if (now > scheduledEnd + postBuffer) {
+        canJoin = false;
+        reason = 'APPOINTMENT_EXPIRED';
+      }
+    }
+
+    const isAdvocate = userIdStr === advUserIdStr;
+    const token = isAdvocate ? booking.advocateVideoToken : booking.videoRoomToken;
+
+    res.json({
+      success: true,
+      canJoin,
+      reason,
+      message: canJoin ? 'Call allowed' : reason === 'TOO_EARLY' ? 'Call window not open yet' : 'Appointment time window expired',
+      data: {
+        bookingId: booking._id,
+        zegoRoomId: booking.videoRoomId || `legalitt-${booking._id}`,
+        zegoToken: token || null,
+        zegoAppId: booking.zegoAppId || 0,
+        clientName: booking.client?.name || 'Client',
+        advocateName: booking.advocate?.user?.name || 'Advocate',
+        scheduledStart: booking.date || null,
+      },
+    });
   } catch (err) { next(err); }
 };
 

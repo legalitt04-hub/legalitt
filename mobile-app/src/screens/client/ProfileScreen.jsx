@@ -24,13 +24,16 @@ const ProfileScreen = ({ navigation }) => {
   const [stats, setStats] = useState({ consultations: 0, drafts: 0, chats: 0 });
 
   useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
+    const unsubscribe = navigation?.addListener?.('focus', () => {
       if (isAuthenticated) {
         handleRefresh();
         fetchRealStats();
       }
     });
-    return unsubscribe;
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+      else if (unsubscribe?.remove) unsubscribe.remove();
+    };
   }, [navigation, isAuthenticated]);
 
   useEffect(() => {

@@ -22,7 +22,7 @@ export const PricingProvider = ({ children }) => {
       // Fallback prices in case API fails
       setPrices({
         chat_consultation: 499,
-        voice_consultation: 499,
+        voice_consultation: 799,
         video_consultation: 1199,
         fir_draft: 499,
         property_research: 2999,

@@ -8,7 +8,7 @@ const logger = require('../utils/logger');
 
 const ZEGO_APP_ID  = parseInt(process.env.ZEGO_APP_ID  || '0', 10);
 const ZEGO_APP_SIGN = process.env.ZEGO_APP_SIGN || '';
-const ZEGO_SERVER_SECRET = process.env.ZEGO_SERVER_SECRET || '';
+const ZEGO_SERVER_SECRET = process.env.ZEGO_SERVER_SECRET || ZEGO_APP_SIGN;
 
 /**
  * Generate ZEGOCLOUD Token04 (Server-side token for secure auth)

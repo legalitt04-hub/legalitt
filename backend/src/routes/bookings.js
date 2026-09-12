@@ -10,6 +10,7 @@ router.get('/', authorize('client', 'admin'), ctrl.getMyBookings);
 router.get('/my', authorize('client', 'admin'), ctrl.getMyBookings);
 router.get('/advocate', authorize('advocate'), ctrl.getAdvocateBookings);
 router.get('/:id', ctrl.getBooking);
+router.get('/:id/can-join-call', ctrl.canJoinCall);
 router.patch('/:id/status', authorize('advocate', 'admin', 'client'), ctrl.updateStatus);
 router.patch('/:id/schedule', authorize('client'), ctrl.scheduleSlot); // Client picks a time slot
 

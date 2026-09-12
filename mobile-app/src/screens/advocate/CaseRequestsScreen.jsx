@@ -146,8 +146,11 @@ const CaseRequestsScreen = ({ navigation }) => {
 
   useEffect(() => {
     fetchRequests();
-    const unsubFocus = navigation.addListener('focus', () => fetchRequests(true));
-    return unsubFocus;
+    const unsubFocus = navigation?.addListener?.('focus', () => fetchRequests(true));
+    return () => {
+      if (typeof unsubFocus === 'function') unsubFocus();
+      else if (unsubFocus?.remove) unsubFocus.remove();
+    };
   }, [fetchRequests, navigation]);
 
   // Real-time: new booking assigned
@@ -156,7 +159,7 @@ const CaseRequestsScreen = ({ navigation }) => {
     if (!socket) return;
     const handler = () => fetchRequests(true);
     socket.on('new_booking_assigned', handler);
-    return () => socket.off('new_booking_assigned', handler);
+    return () => socket?.off?.('new_booking_assigned', handler);
   }, [fetchRequests]);
 
   const handleAccept = useCallback((booking) => {

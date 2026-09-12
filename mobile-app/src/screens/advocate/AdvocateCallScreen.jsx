@@ -20,8 +20,8 @@ import { callsAPI } from '../../services/api';
 
 const ZegoCall = ZegoUIKitPrebuiltCallComponent;
 const { ZEGO_APP_ID, ZEGO_APP_SIGN } = Constants.expoConfig?.extra || {};
-const FALLBACK_APP_ID = 857039283;
-const FALLBACK_APP_SIGN = '1f22ef2cbe816ceb20857afd99972d0253cc2d0bc752a38b78ae179a264fc1a1';
+const FALLBACK_APP_ID = 954831467;
+const FALLBACK_APP_SIGN = '6aaa4f1b530a5ddff76b050d56a56974101548cf30d10b1c547feb7da07b16ad';
 
 export default function AdvocateCallScreen({ navigation, route }) {
   const {
@@ -70,7 +70,7 @@ export default function AdvocateCallScreen({ navigation, route }) {
     if (!socket) return;
     const handler = () => navigation.goBack();
     socket.on('call_ended', handler);
-    return () => socket.off('call_ended', handler);
+    return () => socket?.off?.('call_ended', handler);
   }, []);
 
   if (!isCallReady) {

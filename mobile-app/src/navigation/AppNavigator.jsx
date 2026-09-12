@@ -334,7 +334,7 @@ const AppNavigator = () => {
   const navigationRef = useRef(null);
 
   // Hook up global socket listeners for foreground calls & messages
-  useNotifications(isAuthenticated, navigationRef);
+  useNotifications(isAuthenticated, navigationRef, user);
 
   const refreshOnboardState = async () => {
     const val = await AsyncStorage.getItem('legalitt_onboarded');
