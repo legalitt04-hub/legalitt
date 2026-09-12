@@ -335,16 +335,97 @@ exports.uploadDocForBooking = async (req, res, next) => {
 };
 
 // ─── Support Tickets ──────────────────────────────────────────────────────────
+// Admin: fetch all tickets with optional role/category filter
 exports.getSupportTickets = async (req, res, next) => {
   try {
-    const tickets = await SupportTicket.find()
-      .populate('user', 'name email avatar')
+    const { role, category, status, search } = req.query;
+    const filter = {};
+    if (status)   filter.status   = status;
+    if (category) filter.category = category;
+
+    let tickets = await SupportTicket.find(filter)
+      .populate('user', 'name email avatar role')
       .populate('assignedTo', 'name email avatar')
       .sort('-createdAt');
-    res.json({ success: true, data: tickets });
+
+    // Filter by user role (client/advocate)
+    if (role && role !== 'all') {
+      tickets = tickets.filter(t => t.user?.role === role);
+    }
+
+    // Search
+    if (search) {
+      const q = search.toLowerCase();
+      tickets = tickets.filter(t =>
+        t.subject?.toLowerCase().includes(q) ||
+        t.user?.name?.toLowerCase().includes(q) ||
+        t.user?.email?.toLowerCase().includes(q)
+      );
+    }
+
+    // Stats
+    const [openCount, bugCount, resolvedToday] = await Promise.all([
+      SupportTicket.countDocuments({ status: 'open' }),
+      SupportTicket.countDocuments({ category: 'bug' }),
+      SupportTicket.countDocuments({
+        status: 'resolved',
+        updatedAt: { $gte: new Date(new Date().setHours(0,0,0,0)) },
+      }),
+    ]);
+
+    res.json({
+      success: true,
+      data: tickets,
+      stats: { openCount, bugCount, resolvedToday },
+    });
   } catch (err) {
     next(err);
   }
+};
+
+// Mobile: create a new ticket (any authenticated user)
+exports.createSupportTicket = async (req, res, next) => {
+  try {
+    const { subject, description, category = 'general', priority = 'medium' } = req.body;
+    if (!subject || !description) {
+      return next(new AppError('Subject and description are required.', 400));
+    }
+    const ticket = await SupportTicket.create({
+      subject, description, category, priority,
+      user: req.user._id,
+      status: 'open',
+    });
+    res.status(201).json({ success: true, data: ticket });
+  } catch (err) { next(err); }
+};
+
+// Mobile: get my own tickets
+exports.getMyTickets = async (req, res, next) => {
+  try {
+    const tickets = await SupportTicket.find({ user: req.user._id })
+      .sort('-createdAt').lean();
+    res.json({ success: true, data: tickets });
+  } catch (err) { next(err); }
+};
+
+// Admin: reply to ticket (pushes message into ticket.messages)
+exports.replyToTicket = async (req, res, next) => {
+  try {
+    const { message } = req.body;
+    if (!message) return next(new AppError('Message is required.', 400));
+
+    const ticket = await SupportTicket.findByIdAndUpdate(
+      req.params.id,
+      {
+        $push: { messages: { sender: req.user._id, message, isStaff: true, createdAt: new Date() } },
+        $set:  { status: 'in-progress' },
+      },
+      { new: true }
+    ).populate('user', 'name email avatar');
+
+    if (!ticket) return next(new AppError('Ticket not found', 404));
+    res.json({ success: true, data: ticket });
+  } catch (err) { next(err); }
 };
 
 exports.updateSupportTicket = async (req, res, next) => {
@@ -565,6 +646,18 @@ exports.uploadFIRDraftDocument = async (req, res, next) => {
     res.json({ success: true, data: { url: result.secure_url, name: req.file.originalname } });
   } catch (err) {
     if (req.file?.path) { try { require('fs').unlinkSync(req.file.path); } catch (e) {} }
+    next(err);
+  }
+};
+
+// ─── Delete FIR Draft ─────────────────────────────────────────────────────────
+exports.deleteFIRDraft = async (req, res, next) => {
+  try {
+    const FIRDraft = require('../models/FIRDraft');
+    const draft = await FIRDraft.findByIdAndDelete(req.params.id);
+    if (!draft) return res.status(404).json({ success: false, message: 'FIR Draft not found.' });
+    res.json({ success: true, message: 'FIR Draft deleted successfully.' });
+  } catch (err) {
     next(err);
   }
 };

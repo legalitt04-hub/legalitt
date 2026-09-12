@@ -62,8 +62,11 @@ router.get('/services',               adminModuleController.getServices);
 router.put('/services/:id',           adminModuleController.updateService);
 router.get('/documents',              adminModuleController.getDocuments);
 router.post('/documents/upload-for-booking', upload.single('file'), adminModuleController.uploadDocForBooking);
-router.get('/support-tickets',        adminModuleController.getSupportTickets);
-router.put('/support-tickets/:id',    adminModuleController.updateSupportTicket);
+router.get('/support-tickets',              adminModuleController.getSupportTickets);
+router.post('/support-tickets',             adminModuleController.createSupportTicket);
+router.get('/support-tickets/mine',         adminModuleController.getMyTickets);
+router.put('/support-tickets/:id',          adminModuleController.updateSupportTicket);
+router.post('/support-tickets/:id/reply',   adminModuleController.replyToTicket);
 router.get('/ai-drafts',              adminModuleController.getAIDrafts);
 router.get('/notifications/templates',adminModuleController.getNotificationTemplates);
 
@@ -104,6 +107,14 @@ router.patch('/advocates/:id/rating',           adminAdvocateController.updateAd
 // ─── Withdrawal Management ────────────────────────────────────────────────────
 router.get('/withdrawals',                      adminAdvocateController.getWithdrawals);
 router.patch('/withdrawals/:id/process',        adminAdvocateController.processWithdrawal);
+
+// ─── Call History (Admin) ─────────────────────────────────────────────────────
+const callLogCtrl = require('../controllers/callLogController');
+router.get('/call-history',                     callLogCtrl.getAdminCallHistory);
+
+// ─── Chat History (Admin) ─────────────────────────────────────────────────────
+router.get('/chat-history',                     callLogCtrl.getAdminChatHistory);
+router.get('/chat-history/:chatId/messages',    callLogCtrl.getAdminChatMessages);
 
 // ─── Ads Management ───────────────────────────────────────────────────────────
 router.get('/ads',                 adsController.getAds);
@@ -156,6 +167,7 @@ router.get('/fir-drafts',                       adminModuleController.getFIRDraf
 router.get('/fir-drafts/:id',                   adminModuleController.getFIRDraft);
 router.put('/fir-drafts/:id/status',            adminModuleController.updateFIRDraftStatus);
 router.post('/fir-drafts/:id/upload',           upload.single('document'), adminModuleController.uploadFIRDraftDocument);
+router.delete('/fir-drafts/:id',                adminModuleController.deleteFIRDraft);
 
 // ─── Property Research (Admin) ────────────────────────────────────────────────
 router.get('/property-research',                adminModuleController.getPropertyResearch);
