@@ -18,7 +18,7 @@ import { COLORS } from '../../constants/theme';
 import { authAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { sanitizeInput } from '../../utils/security';
-import { GoogleSignin, statusCodes } from '../../utils/GoogleSigninMock';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 
 const LoginRegisterScreen = ({ navigation, route }) => {
   const selectedRole = route?.params?.role || 'client';
@@ -36,6 +36,16 @@ const LoginRegisterScreen = ({ navigation, route }) => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [termsError, setTermsError] = useState(false);
+
+  React.useEffect(() => {
+    try {
+      GoogleSignin.configure({
+        webClientId: '', // Configure this when Web Client ID is available
+      });
+    } catch (e) {
+      console.log('GoogleSignin configure error', e);
+    }
+  }, []);
 
   // Email validation
   const validateEmail = (email) => {
