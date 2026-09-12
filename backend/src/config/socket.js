@@ -207,8 +207,7 @@ const initSocket = async (server) => {
     });
 
     // ── CALL SIGNALING ─────────────────────────────────────────────────
-    // Client emits this when they tap "Video Call" / "Voice Call"
-    // Backend finds advocate from booking, emits incoming_call to them
+    // Either client or advocate emits this when they tap "Video Call" / "Voice Call"
     socket.on("initiate_call", async ({ bookingId, zegoRoomId, mode }) => {
       try {
         if (!bookingId) return;
@@ -217,38 +216,42 @@ const initSocket = async (server) => {
           .lean();
         if (!booking) return;
 
-        // Verify caller is the booking's client
-        if (booking.client.toString() !== socket.userId) return;
-
         const advocate = await Advocate.findById(booking.advocate)
           .populate('user', 'name expoPushToken fcmToken')
           .lean();
         if (!advocate?.user) return;
-
         const advocateUserId = advocate.user._id.toString();
-        const callerUser = await User.findById(socket.userId).select('name avatar').lean();
 
-        // Notify advocate — they will open AdvocateCallScreen
-        io.to(`user:${advocateUserId}`).emit("incoming_call", {
+        const isClientCalling = booking.client.toString() === socket.userId;
+        const isAdvocateCalling = advocateUserId === socket.userId;
+
+        if (!isClientCalling && !isAdvocateCalling) return; // unauthorized
+
+        const targetUserId = isClientCalling ? advocateUserId : booking.client.toString();
+        const callerUser = await User.findById(socket.userId).select('name avatar').lean();
+        const targetUser = await User.findById(targetUserId).select('expoPushToken').lean();
+
+        // Notify target — they will open VideoCallScreen or AdvocateCallScreen
+        io.to(`user:${targetUserId}`).emit("incoming_call", {
           bookingId,
           zegoRoomId:    booking.videoRoomId    || zegoRoomId,
           advocateToken: booking.advocateVideoToken,
           zegoAppId:     booking.zegoAppId || 0,
-          clientName:    callerUser?.name || 'Client',
+          clientName:    callerUser?.name || (isClientCalling ? 'Client' : 'Advocate'),
           clientAvatar:  callerUser?.avatar || null,
-          clientId:      socket.userId,
+          clientId:      isClientCalling ? socket.userId : booking.client.toString(), // The booking's client ID
           mode:          mode || 'video',
         });
 
-        logger.info(`[CALL] initiate_call: client=${socket.userId} → advocate=${advocateUserId} | booking=${bookingId}`);
+        logger.info(`[CALL] initiate_call: ${isClientCalling ? 'client' : 'advocate'}=${socket.userId} → target=${targetUserId} | booking=${bookingId}`);
 
-        // Push notification if advocate is offline
-        const isAdvocateOnline = onlineUsers.has(advocateUserId) && onlineUsers.get(advocateUserId).size > 0;
-        if (!isAdvocateOnline && advocate.user.expoPushToken) {
+        // Push notification if target is offline
+        const isTargetOnline = onlineUsers.has(targetUserId) && onlineUsers.get(targetUserId).size > 0;
+        if (!isTargetOnline && targetUser?.expoPushToken) {
           await sendPushNotification(
-            advocate.user.expoPushToken,
+            targetUser.expoPushToken,
             `\uD83D\uDCDE Incoming ${mode === 'video' ? 'Video' : 'Voice'} Call`,
-            `${callerUser?.name || 'Your client'} is calling. Tap to join.`,
+            `${callerUser?.name || 'Someone'} is calling. Tap to join.`,
             { bookingId, type: 'incoming_call', zegoRoomId: booking.videoRoomId }
           );
         }

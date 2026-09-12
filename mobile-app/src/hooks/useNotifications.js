@@ -134,6 +134,36 @@ export const useNotifications = (isAuthenticated, navigationRef) => {
       const modeLabel = data.mode === 'video' ? '📹 Video' : '📞 Voice';
       const callerName = data.clientName || data.advocateName || 'Someone';
 
+      // Show interactive Alert so user can Accept or Decline (essential for clients)
+      Alert.alert(
+        `${modeLabel} Call Incoming!`,
+        `${callerName} is calling you right now.`,
+        [
+          { text: 'Decline', style: 'destructive' },
+          {
+            text: '✅ Accept',
+            onPress: () => {
+              const nav = navigationRef?.current;
+              if (nav?.isReady?.()) {
+                // Determine if user is advocate or client to route correctly
+                // The socket payload contains clientName vs advocateName, but the route params for the call screen are unified mostly
+                const targetRoute = data.advocateToken ? 'AdvocateCall' : 'VideoCall';
+                
+                nav.navigate(targetRoute, {
+                  zegoRoomId:   data.zegoRoomId,
+                  zegoToken:    data.advocateToken || data.clientToken || null,
+                  zegoAppId:    data.zegoAppId || 0,
+                  mode:         data.mode,
+                  bookingId:    data.bookingId,
+                  clientName:   callerName,
+                  myUserName:   'Me',
+                });
+              }
+            }
+          }
+        ]
+      );
+
       // Fire local push so it appears on lock screen if device is locked
       scheduleLocalPush(
         `${modeLabel} Call Incoming!`,

@@ -109,8 +109,8 @@ export default function AdvocateCallScreen({ navigation, route }) {
       <ZegoCall
         appID={effectiveAppId}
         appSign={effectiveAppSign}
-        userID={String(myUserId)}
-        userName={String(myUserName)}
+        userID={String(myUserId || 'adv_' + Date.now())}
+        userName={String(myUserName || 'Advocate')}
         callID={String(zegoRoomId)}
         token={zegoToken}
         config={{

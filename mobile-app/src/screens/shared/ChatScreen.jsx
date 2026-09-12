@@ -348,7 +348,7 @@ const ChatScreen = ({ navigation, route }) => {
               return;
             }
 
-            // Notify advocate via backend (initiate_call → backend routes → incoming_call alert on advocate dashboard)
+            // Notify target via backend (initiate_call → backend routes → incoming_call alert on target's app)
             const socket = getSocket();
             if (socket && bookingId) {
               socket.emit('initiate_call', {
@@ -358,7 +358,10 @@ const ChatScreen = ({ navigation, route }) => {
               });
             }
 
-            navigation.navigate('VideoCall', {
+            const userRole = userData?.role || 'client';
+            const callScreenRoute = userRole === 'advocate' ? 'AdvocateCall' : 'VideoCall';
+
+            navigation.navigate(callScreenRoute, {
               zegoRoomId:  effectiveRoomId,
               zegoToken,
               zegoAppId:   zegoAppId || 0,
@@ -368,6 +371,7 @@ const ChatScreen = ({ navigation, route }) => {
               mode:        callMode || 'voice',
               bookingId,
               advocateUserId,
+              clientId:    userData._id, // Helpful for advocate screen
             });
           }}
         >

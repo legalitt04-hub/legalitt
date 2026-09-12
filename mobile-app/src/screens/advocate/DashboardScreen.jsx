@@ -234,38 +234,6 @@ const AdvocateDashboardScreen = ({ navigation }) => {
       fetchDashboardData();
     };
 
-    const handleIncomingCall = (callData) => {
-      // Show Alert so advocate can accept or decline — don't navigate blindly
-      const modeLabel = callData?.mode === 'video' ? '📹 Video' : '📞 Voice';
-      const clientName = callData?.clientName || callData?.client?.name || 'Client';
-
-      Alert.alert(
-        `${modeLabel} Call Incoming!`,
-        `${clientName} is calling you right now.\nTap Accept to join the call.`,
-        [
-          { text: 'Decline', style: 'destructive' },
-          {
-            text: '✅ Accept',
-            onPress: () => {
-              navigation.navigate('AdvocateCall', {
-                clientName,
-                clientAvatar: callData?.clientAvatar || callData?.client?.avatar || null,
-                mode:         callData?.mode || 'video',
-                bookingId:    callData?.bookingId,
-                clientId:     callData?.clientId || callData?.client?._id,
-                zegoRoomId:   callData?.zegoRoomId   || callData?.videoRoomId   || null,
-                zegoToken:    callData?.advocateToken || callData?.advocateVideoToken || null,
-                zegoAppId:    callData?.zegoAppId    || 0,
-                myUserId:     advocateUser._id || advocateUser.id || '',
-                myUserName:   advocateUser.name || 'Advocate',
-              });
-            },
-          },
-        ],
-        { cancelable: false }
-      );
-    };
-
     const handleSlotScheduled = (data) => {
       Alert.alert(
         '\uD83D\uDCC5 Consultation Scheduled',
@@ -275,11 +243,9 @@ const AdvocateDashboardScreen = ({ navigation }) => {
     };
 
     socket.on('new_booking_assigned', handleNewBooking);
-    socket.on('incoming_call', handleIncomingCall);
     socket.on('slot_scheduled', handleSlotScheduled);
     return () => {
       socket.off('new_booking_assigned', handleNewBooking);
-      socket.off('incoming_call', handleIncomingCall);
       socket.off('slot_scheduled', handleSlotScheduled);
     };
   }, [navigation, user]);
