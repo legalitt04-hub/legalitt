@@ -20,6 +20,8 @@ import { callsAPI } from '../../services/api';
 
 const ZegoCall = ZegoUIKitPrebuiltCallComponent;
 const { ZEGO_APP_ID, ZEGO_APP_SIGN } = Constants.expoConfig?.extra || {};
+const FALLBACK_APP_ID = 857039283;
+const FALLBACK_APP_SIGN = '1f22ef2cbe816ceb20857afd99972d0253cc2d0bc752a38b78ae179a264fc1a1';
 
 export default function AdvocateCallScreen({ navigation, route }) {
   const {
@@ -38,8 +40,8 @@ export default function AdvocateCallScreen({ navigation, route }) {
 
   const callStartRef = useRef(Date.now());
 
-  const effectiveAppId   = Number(zegoAppId || ZEGO_APP_ID || 0);
-  const effectiveAppSign = ZEGO_APP_SIGN || '';
+  const effectiveAppId   = Number(zegoAppId || ZEGO_APP_ID || FALLBACK_APP_ID);
+  const effectiveAppSign = ZEGO_APP_SIGN || FALLBACK_APP_SIGN;
 
   // Fallback roomId: use bookingId if zegoRoomId not provided
   const zegoRoomId = paramRoomId || (bookingId ? `legalitt-${bookingId}` : null);
