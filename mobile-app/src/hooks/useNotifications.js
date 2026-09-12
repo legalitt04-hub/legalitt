@@ -29,7 +29,7 @@ if (Notifications) {
  *
  * Call this hook once after the user logs in.
  */
-export const useNotifications = (isAuthenticated, navigationRef) => {
+export const useNotifications = (isAuthenticated, navigationRef, user) => {
   const notificationListener = useRef();
   const responseListener     = useRef();
 
@@ -145,9 +145,9 @@ export const useNotifications = (isAuthenticated, navigationRef) => {
             onPress: () => {
               const nav = navigationRef?.current;
               if (nav?.isReady?.()) {
-                // Determine if user is advocate or client to route correctly
-                // The socket payload contains clientName vs advocateName, but the route params for the call screen are unified mostly
-                const targetRoute = data.advocateToken ? 'AdvocateCall' : 'VideoCall';
+                // Route to correct screen based on logged-in user role
+                const currentUserRole = user?.role || user?.user?.role || 'client';
+                const targetRoute = currentUserRole === 'advocate' ? 'AdvocateCall' : 'VideoCall';
                 
                 nav.navigate(targetRoute, {
                   zegoRoomId:   data.zegoRoomId,
