@@ -7,12 +7,14 @@ import ZegoUIKitPrebuiltCallComponent, {
 } from '@zegocloud/zego-uikit-prebuilt-call-rn';
 import { getSocket } from '../services/socket';
 
-// Guard: In Metro dev client, Zego native module is not linked → returns a plain object
-// typeof check prevents "Element type is invalid: got object" crash
+// Guard: In Expo Go, Zego native module is not linked
+// In standalone APKs, appOwnership is null or 'standalone', so it will render the real component
 const ZegoUIKitPrebuiltCall: any = ZegoUIKitPrebuiltCallComponent;
-const isZegoComponent = typeof ZegoUIKitPrebuiltCall === 'function';
+const isZegoComponent = Constants.appOwnership !== 'expo';
 
 const { ZEGO_APP_ID, ZEGO_APP_SIGN } = Constants.expoConfig?.extra || {};
+const FALLBACK_APP_ID = 857039283;
+const FALLBACK_APP_SIGN = '1f22ef2cbe816ceb20857afd99972d0253cc2d0bc752a38b78ae179a264fc1a1';
 
 export default function VideoCallScreen({ navigation, route }: any) {
   const {
@@ -24,18 +26,19 @@ export default function VideoCallScreen({ navigation, route }: any) {
     mode = 'video',
     bookingId,
     advocateUserId,
+    zegoAppId,
   } = route?.params || {};
 
-  // In AppSign mode, zegoToken is OPTIONAL — appSign in app.json handles auth
-  // Only require zegoRoomId and ZEGO_APP_ID
   const effectiveRoomId = zegoRoomId || (bookingId ? `legalitt-${bookingId}` : null);
-  const isCallReady = !!effectiveRoomId && !!ZEGO_APP_ID;
+  const effectiveAppId = ZEGO_APP_ID || zegoAppId || FALLBACK_APP_ID; // Fallback to hardcoded app id if Constants fails in APK
+  const effectiveAppSign = ZEGO_APP_SIGN || FALLBACK_APP_SIGN;
+  const isCallReady = !!effectiveRoomId && !!effectiveAppId;
 
   useEffect(() => {
     if (!isCallReady) {
       Alert.alert(
         'Call Not Ready',
-        'Missing booking ID. Please go back and try again.',
+        'Missing booking or room ID. Please go back and try again.',
         [{ text: 'Go Back', onPress: () => navigation.goBack() }]
       );
     }
@@ -105,7 +108,11 @@ export default function VideoCallScreen({ navigation, route }: any) {
     : {
         ...ONE_ON_ONE_VOICE_CALL_CONFIG,
         bottomMenuBarConfig: {
-          buttons: ['toggleMicrophoneButton', 'hangUpButton'],
+          buttons: [
+            'toggleMicrophoneButton',
+            'hangUpButton',
+            'showSpeakerButton',
+          ],
         },
       };
 
@@ -113,8 +120,8 @@ export default function VideoCallScreen({ navigation, route }: any) {
     <View style={styles.container}>
       <StatusBar hidden />
       <ZegoUIKitPrebuiltCall
-        appID={Number(ZEGO_APP_ID)}
-        appSign={ZEGO_APP_SIGN || ''}
+        appID={effectiveAppId}
+        appSign={effectiveAppSign || ''}
         userID={String(myUserId || 'user_' + Date.now())}
         userName={String(myUserName)}
         callID={String(effectiveRoomId)}
