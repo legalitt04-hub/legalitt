@@ -261,13 +261,30 @@ const initSocket = async (server) => {
     });
 
     // Either party can emit this to notify the other that call ended
-    socket.on("call_ended", ({ bookingId, clientId, advocateUserId }) => {
+    socket.on("call_ended", async ({ bookingId, clientId, advocateUserId }) => {
       try {
-        if (clientId && clientId !== socket.userId) {
-          io.to(`user:${clientId}`).emit("call_ended", { bookingId });
+        let finalClientId = clientId;
+        let finalAdvocateUserId = advocateUserId;
+
+        // If IDs are missing, fetch from booking
+        if (!finalClientId || !finalAdvocateUserId) {
+          if (bookingId) {
+            const booking = await Booking.findById(bookingId).lean();
+            if (booking) {
+              finalClientId = booking.client?.toString();
+              if (booking.advocate) {
+                const advocate = await Advocate.findById(booking.advocate).lean();
+                finalAdvocateUserId = advocate?.user?.toString();
+              }
+            }
+          }
         }
-        if (advocateUserId && advocateUserId !== socket.userId) {
-          io.to(`user:${advocateUserId}`).emit("call_ended", { bookingId });
+
+        if (finalClientId && finalClientId !== socket.userId) {
+          io.to(`user:${finalClientId}`).emit("call_ended", { bookingId });
+        }
+        if (finalAdvocateUserId && finalAdvocateUserId !== socket.userId) {
+          io.to(`user:${finalAdvocateUserId}`).emit("call_ended", { bookingId });
         }
         logger.info(`[CALL] call_ended: emitter=${socket.userId} booking=${bookingId}`);
       } catch (err) {
