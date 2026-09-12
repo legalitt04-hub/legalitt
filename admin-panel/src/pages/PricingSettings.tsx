@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../lib/api';
 import { Settings, Save, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
-import Button from '../components/common/Button';
-import Input from '../components/common/Input';
-import { useAuth } from '../context/AuthContext';
-import config from '../config';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { useAuth } from '../contexts/AuthContext';
 
 interface Pricing {
   _id: string;
@@ -29,7 +28,7 @@ export default function PricingSettings() {
 
   const fetchPrices = async () => {
     try {
-      const response = await axios.get(`${config.API_URL}/pricing`);
+      const response = await api.get(`/pricing`);
       setPrices(response.data.data);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch pricing settings');
@@ -51,10 +50,9 @@ export default function PricingSettings() {
     try {
       setSaving(price._id);
       setError('');
-      await axios.put(
-        `${config.API_URL}/admin/pricing/${price._id}`,
-        { basePrice: price.basePrice },
-        { headers: { Authorization: `Bearer ${token}` } }
+      await api.put(
+        `/admin/pricing/${price._id}`,
+        { basePrice: price.basePrice }
       );
       // Show brief success (optional)
     } catch (err: any) {
@@ -109,7 +107,7 @@ export default function PricingSettings() {
                   <Input
                     type="number"
                     value={price.basePrice}
-                    onChange={(e) => handlePriceChange(price._id, e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handlePriceChange(price._id, e.target.value)}
                     className="pl-8"
                   />
                 </div>
