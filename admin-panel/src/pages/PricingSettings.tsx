@@ -16,7 +16,6 @@ interface Pricing {
 }
 
 export default function PricingSettings() {
-  const { token } = useAuth();
   const [prices, setPrices] = useState<Pricing[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
