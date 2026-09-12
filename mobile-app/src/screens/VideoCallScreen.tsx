@@ -30,8 +30,13 @@ export default function VideoCallScreen({ navigation, route }: any) {
   } = route?.params || {};
 
   const effectiveRoomId = zegoRoomId || (bookingId ? `legalitt-${bookingId}` : null);
-  const effectiveAppId = Number(ZEGO_APP_ID || zegoAppId || FALLBACK_APP_ID); // Fallback to hardcoded app id if Constants fails in APK
-  const effectiveAppSign = ZEGO_APP_SIGN || FALLBACK_APP_SIGN;
+  
+  let rawAppId = ZEGO_APP_ID;
+  if (!rawAppId || rawAppId === 'undefined') rawAppId = zegoAppId;
+  if (!rawAppId || rawAppId === 'undefined') rawAppId = FALLBACK_APP_ID;
+  const effectiveAppId = Number(rawAppId) || FALLBACK_APP_ID;
+
+  const effectiveAppSign = ZEGO_APP_SIGN && ZEGO_APP_SIGN !== 'undefined' ? ZEGO_APP_SIGN : FALLBACK_APP_SIGN;
   const isCallReady = !!effectiveRoomId && !!effectiveAppId;
 
   useEffect(() => {

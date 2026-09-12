@@ -40,8 +40,12 @@ export default function AdvocateCallScreen({ navigation, route }) {
 
   const callStartRef = useRef(Date.now());
 
-  const effectiveAppId   = Number(zegoAppId || ZEGO_APP_ID || FALLBACK_APP_ID);
-  const effectiveAppSign = ZEGO_APP_SIGN || FALLBACK_APP_SIGN;
+  let rawAppId = zegoAppId;
+  if (!rawAppId || rawAppId === 'undefined') rawAppId = ZEGO_APP_ID;
+  if (!rawAppId || rawAppId === 'undefined') rawAppId = FALLBACK_APP_ID;
+  const effectiveAppId = Number(rawAppId) || FALLBACK_APP_ID;
+
+  const effectiveAppSign = ZEGO_APP_SIGN && ZEGO_APP_SIGN !== 'undefined' ? ZEGO_APP_SIGN : FALLBACK_APP_SIGN;
 
   // Fallback roomId: use bookingId if zegoRoomId not provided
   const zegoRoomId = paramRoomId || (bookingId ? `legalitt-${bookingId}` : null);
