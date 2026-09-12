@@ -465,6 +465,8 @@ const AppNavigator = () => {
                 options={{ animation: 'slide_from_bottom', gestureEnabled: false, headerShown: false }} />
               <Stack.Screen name="VideoCall" component={AdvocateCallScreen}
                 options={{ animation: 'slide_from_bottom', gestureEnabled: false, headerShown: false }} />
+              <Stack.Screen name="VoiceCall" component={AdvocateCallScreen}
+                options={{ animation: 'slide_from_bottom', gestureEnabled: false, headerShown: false }} />
               <Stack.Screen name="Notifications" component={NotificationsScreen} />
               {/* ── NEW SCREENS FROM ASTITVA REPO ── */}
               <Stack.Screen name="AdvocateAnalytics" component={AdvocateAnalyticsScreen} />
@@ -526,6 +528,8 @@ const AppNavigator = () => {
 
               {/* VIDEO & VOICE CALL */}
               <Stack.Screen name="VideoCall" component={VideoCallScreen}
+                options={{ animation: 'slide_from_bottom', gestureEnabled: false }} />
+              <Stack.Screen name="VoiceCall" component={VideoCallScreen}
                 options={{ animation: 'slide_from_bottom', gestureEnabled: false }} />
 
               <Stack.Screen name="Settings" component={SettingsScreen} />
