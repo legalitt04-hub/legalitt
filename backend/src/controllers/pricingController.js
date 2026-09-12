@@ -1,6 +1,5 @@
 const ServicePricing = require('../models/ServicePricing');
-const AppError = require('../utils/appError');
-const catchAsync = require('../utils/catchAsync');
+const { AppError } = require('../middlewares/errorHandler');
 
 // Default services to seed if database is empty
 const defaultServices = [
@@ -33,41 +32,49 @@ const initPrices = async () => {
  * @route   GET /api/v1/pricing
  * @access  Public
  */
-exports.getAllPrices = catchAsync(async (req, res, next) => {
-  // Ensure defaults are created if missing
-  await initPrices();
+exports.getAllPrices = async (req, res, next) => {
+  try {
+    // Ensure defaults are created if missing
+    await initPrices();
 
-  const query = req.user?.role === 'admin' ? {} : { isActive: true };
-  const prices = await ServicePricing.find(query).sort({ name: 1 });
+    const query = req.user?.role === 'admin' ? {} : { isActive: true };
+    const prices = await ServicePricing.find(query).sort({ name: 1 });
 
-  res.status(200).json({
-    success: true,
-    count: prices.length,
-    data: prices
-  });
-});
+    res.status(200).json({
+      success: true,
+      count: prices.length,
+      data: prices
+    });
+  } catch (err) {
+    next(err);
+  }
+};
 
 /**
  * @desc    Update a service price
  * @route   PUT /api/v1/admin/pricing/:id
  * @access  Private/Admin
  */
-exports.updatePrice = catchAsync(async (req, res, next) => {
-  const { basePrice, isActive, name } = req.body;
-  
-  const pricing = await ServicePricing.findById(req.params.id);
-  if (!pricing) {
-    return next(new AppError('Service pricing not found', 404));
+exports.updatePrice = async (req, res, next) => {
+  try {
+    const { basePrice, isActive, name } = req.body;
+    
+    const pricing = await ServicePricing.findById(req.params.id);
+    if (!pricing) {
+      return next(new AppError('Service pricing not found', 404));
+    }
+
+    if (basePrice !== undefined) pricing.basePrice = basePrice;
+    if (isActive !== undefined) pricing.isActive = isActive;
+    if (name !== undefined) pricing.name = name;
+
+    await pricing.save();
+
+    res.status(200).json({
+      success: true,
+      data: pricing
+    });
+  } catch (err) {
+    next(err);
   }
-
-  if (basePrice !== undefined) pricing.basePrice = basePrice;
-  if (isActive !== undefined) pricing.isActive = isActive;
-  if (name !== undefined) pricing.name = name;
-
-  await pricing.save();
-
-  res.status(200).json({
-    success: true,
-    data: pricing
-  });
-});
+};
