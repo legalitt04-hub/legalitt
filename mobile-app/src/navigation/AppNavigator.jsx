@@ -325,11 +325,16 @@ const AdvocateTabs = () => {
   );
 };
 
+import { useNotifications } from '../hooks/useNotifications';
+
 const AppNavigator = () => {
   const { isAuthenticated, user, isRestoring, consentAccepted } = useAuth();
   const [splashFinished, setSplashFinished] = useState(false);
   const [hasOnboarded, setHasOnboarded] = useState(null); // null = loading
   const navigationRef = useRef(null);
+
+  // Hook up global socket listeners for foreground calls & messages
+  useNotifications(isAuthenticated, navigationRef);
 
   const refreshOnboardState = async () => {
     const val = await AsyncStorage.getItem('legalitt_onboarded');

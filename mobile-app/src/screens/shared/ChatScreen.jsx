@@ -143,7 +143,7 @@ const ChatScreen = ({ navigation, route }) => {
                 const response = await uploadAPI.uploadFile(uri, filename, type);
                 const url = response.data?.data?.url || response.data?.url;
                 if (url) {
-                  sendMessage(filename, 'document', url, filename);
+                  sendMessage(filename, 'file', url, filename);
                   setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
                 } else {
                   Alert.alert('Upload Failed', response.data?.message || 'Server did not return file URL.');
@@ -179,7 +179,7 @@ const ChatScreen = ({ navigation, route }) => {
                   );
                   const url = response.data?.data?.url || response.data?.url;
                   if (url) {
-                    sendMessage(asset.name, 'document', url, asset.name);
+                    sendMessage(asset.name, 'file', url, asset.name);
                     setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
                   } else {
                     Alert.alert('Upload Failed', response.data?.message || 'Server did not return file URL.');
@@ -204,7 +204,7 @@ const ChatScreen = ({ navigation, route }) => {
   // ── Render individual message bubble ─────────────────────────
   const renderMessage = useCallback(({ item: msg }) => {
     const isMe = msg.sender === user?._id || msg.sender?._id === user?._id;
-    const isDoc = msg.messageType === 'document' || msg.fileUrl;
+    const isDoc = msg.messageType === 'file' || msg.messageType === 'document' || (msg.fileUrl && !msg.fileUrl.match(/\.(jpeg|jpg|gif|png)$/i));
     const isPending = msg.pending;
 
     return (
@@ -403,7 +403,11 @@ const ChatScreen = ({ navigation, route }) => {
         </View>
       )}
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }} 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 20}
+      >
         <FlatList
           ref={flatListRef}
           data={messages}
@@ -451,10 +455,11 @@ const ChatScreen = ({ navigation, route }) => {
               placeholder="Type your message..."
               placeholderTextColor="#9CA3AF"
               multiline
-              maxHeight={80}
+              maxHeight={100}
               returnKeyType="send"
               onSubmitEditing={handleSend}
               blurOnSubmit={false}
+              textAlignVertical="center"
             />
 
             <TouchableOpacity
@@ -568,8 +573,9 @@ const styles = StyleSheet.create({
   attachmentBtn: { padding: 8, marginRight: 4 },
   textInput: {
     flex: 1, backgroundColor: '#F8F4EC', borderRadius: 20,
-    paddingHorizontal: 14, paddingVertical: 8, fontSize: 13,
+    paddingHorizontal: 14, paddingVertical: Platform.OS === 'ios' ? 10 : 8, fontSize: 13,
     color: '#2E2A26', marginRight: 8, borderWidth: 1, borderColor: '#E8E2D8',
+    minHeight: 40,
   },
   sendBtn: {
     width: 38, height: 38, borderRadius: 19,
