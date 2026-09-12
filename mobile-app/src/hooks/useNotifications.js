@@ -91,7 +91,12 @@ export const useNotifications = (isAuthenticated, navigationRef, user) => {
       if (data.type === 'new_message' && data.chatId) {
         nav.navigate('Chat', { chatId: data.chatId });
       } else if (data.type === 'incoming_call') {
-        // Already handled via socket Alert — nothing to do here
+        const currentUserRole = user?.role || user?.user?.role || 'client';
+        const targetRoute = currentUserRole === 'advocate' ? 'AdvocateCall' : 'VideoCall';
+        nav.navigate(targetRoute, {
+          bookingId: data.bookingId,
+          zegoRoomId: data.zegoRoomId,
+        });
       } else if (data.bookingId) {
         nav.navigate('MyBookings');
       }
