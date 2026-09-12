@@ -40,7 +40,7 @@ const LoginRegisterScreen = ({ navigation, route }) => {
   React.useEffect(() => {
     try {
       GoogleSignin.configure({
-        webClientId: '', // Configure this when Web Client ID is available
+        webClientId: '145094326598-95qo14kskqa4ddr6k57rrs9ebp1so35t.apps.googleusercontent.com',
       });
     } catch (e) {
       console.log('GoogleSignin configure error', e);
