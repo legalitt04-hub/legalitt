@@ -3,7 +3,7 @@ import * as SecureStore from '../utils/secureStorage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { Alert } from 'react-native';
-import { GoogleSignin } from '../utils/GoogleSigninMock';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import Constants from 'expo-constants';
 import { authAPI, TOKEN_KEY, REFRESH_KEY } from '../services/api';
 import { connectSocket, disconnectSocket } from '../services/socket';
