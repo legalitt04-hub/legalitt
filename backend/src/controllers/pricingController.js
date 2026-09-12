@@ -3,13 +3,13 @@ const { AppError } = require('../middlewares/errorHandler');
 
 // Default services to seed if database is empty
 const defaultServices = [
-  { serviceId: 'chat_consultation', name: 'Legal Advice (Chat Consultation)', basePrice: 499 },
-  { serviceId: 'voice_consultation', name: 'Legal Advice (Voice Consultation)', basePrice: 799 },
-  { serviceId: 'video_consultation', name: 'Legal Advice (Video Consultation)', basePrice: 1199 },
-  { serviceId: 'legal_notice', name: 'Legal Notice', basePrice: 1199 },
-  { serviceId: 'property_research', name: 'Property Research', basePrice: 2999 },
-  { serviceId: 'document_forensic', name: 'Document Forensic Analysis', basePrice: 2999 },
-  { serviceId: 'fir_draft', name: 'FIR Draft & Filing', basePrice: 499 },
+  { serviceId: 'chat_consultation', name: 'Legal Advice (Chat Consultation)', basePrice: 499, sortOrder: 1 },
+  { serviceId: 'voice_consultation', name: 'Legal Advice (Voice Consultation)', basePrice: 799, sortOrder: 2 },
+  { serviceId: 'video_consultation', name: 'Legal Advice (Video Consultation)', basePrice: 1199, sortOrder: 3 },
+  { serviceId: 'legal_notice', name: 'Legal Notice', basePrice: 1199, sortOrder: 4 },
+  { serviceId: 'property_research', name: 'Property Research', basePrice: 2999, sortOrder: 5 },
+  { serviceId: 'document_forensic', name: 'Document Forensic Analysis', basePrice: 2999, sortOrder: 6 },
+  { serviceId: 'fir_draft', name: 'FIR Draft & Filing', basePrice: 499, sortOrder: 7 },
 ];
 
 /**
@@ -38,7 +38,7 @@ exports.getAllPrices = async (req, res, next) => {
     await initPrices();
 
     const query = req.user?.role === 'admin' ? {} : { isActive: true };
-    const prices = await ServicePricing.find(query).sort({ name: 1 });
+    const prices = await ServicePricing.find(query).sort({ sortOrder: 1, name: 1 });
 
     res.status(200).json({
       success: true,

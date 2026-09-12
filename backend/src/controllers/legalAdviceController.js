@@ -61,13 +61,15 @@ exports.createLegalRequest = async (req, res, next) => {
       return next(new AppError('Please provide at least 10 characters describing your legal concern.', 400));
     }
 
-    // Determine amount based on mode
-    const priceMap = {
-      chat: 499,
-      voice: 799,
-      video: 1199,
-    };
-    const bookingAmount = amount || priceMap[consultationMode] || 499;
+    // Determine amount based on live Admin ServicePricing or fallback
+    let bookingAmount = amount;
+    if (!bookingAmount) {
+      const ServicePricing = require('../models/ServicePricing');
+      const serviceKey = `${consultationMode}_consultation`;
+      const sp = await ServicePricing.findOne({ serviceId: serviceKey, isActive: true });
+      const fallbackMap = { chat: 499, voice: 799, video: 1199 };
+      bookingAmount = sp?.basePrice || fallbackMap[consultationMode] || 499;
+    }
 
     const formattedDocs = Array.isArray(documents)
       ? documents.map((doc, idx) => {
