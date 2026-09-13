@@ -4,7 +4,7 @@ import {
   UserCheck, Plus, Search, Edit2, Trash2, X, RefreshCw,
   CheckCircle2, XCircle, PauseCircle, Eye, Download,
   Star, Briefcase, Phone, Mail, MapPin, ChevronLeft, ChevronRight,
-  Filter, EyeOff, ToggleLeft, ToggleRight, Camera, Upload
+  Filter, EyeOff, ToggleLeft, ToggleRight, Camera, Upload, AlertTriangle, Loader2
 } from 'lucide-react';
 import api from '../lib/api';
 
@@ -71,6 +71,7 @@ export default function Advocates() {
   const editAvatarRef = useRef<HTMLInputElement>(null);
   const bulkUploadRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadResult, setUploadResult] = useState<{ successCount: number; skippedCount: number; errors: string[] } | null>(null);
   const LIMIT = 15;
 
   const fetchAdvocates = useCallback(async () => {
@@ -227,10 +228,11 @@ export default function Advocates() {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       const data = res.data?.data;
-      alert(`✅ Bulk Upload Complete!\n\nUploaded: ${data.successCount}\nSkipped: ${data.skippedCount}`);
-      if (data.errors && data.errors.length > 0) {
-        console.warn("Upload Errors:", data.errors);
-      }
+      setUploadResult({
+        successCount: data.successCount || 0,
+        skippedCount: data.skippedCount || 0,
+        errors: data.errors || []
+      });
       fetchAdvocates();
     } catch (err: any) {
       alert(err?.response?.data?.message || 'Bulk upload failed.');
@@ -820,6 +822,66 @@ export default function Advocates() {
                   <button onClick={handleEditAdvocate} disabled={editSaving}
                     className="flex-1 py-2.5 bg-teal-600 text-white text-sm font-semibold rounded-xl hover:bg-teal-700 disabled:opacity-50">
                     {editSaving ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Upload Loaders and Results Modal */}
+      <AnimatePresence>
+        {uploading && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl flex flex-col items-center text-center">
+              <Loader2 className="w-12 h-12 text-teal-600 animate-spin mb-4" />
+              <h3 className="text-lg font-bold text-gray-900">Uploading Advocates...</h3>
+              <p className="text-sm text-gray-500 mt-2">Please wait while we process the file and create profiles.</p>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {uploadResult && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} className="bg-white rounded-3xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between p-5 border-b border-gray-100">
+                <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <CheckCircle2 className="w-6 h-6 text-emerald-500" /> Bulk Upload Complete
+                </h2>
+                <button onClick={() => setUploadResult(null)}><X className="w-5 h-5 text-gray-400" /></button>
+              </div>
+              <div className="p-5 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 text-center">
+                    <p className="text-3xl font-extrabold text-emerald-600">{uploadResult.successCount}</p>
+                    <p className="text-xs font-bold text-emerald-800 uppercase tracking-wider mt-1">Successfully Uploaded</p>
+                  </div>
+                  <div className={`border rounded-2xl p-4 text-center ${uploadResult.skippedCount > 0 ? 'bg-amber-50 border-amber-100' : 'bg-gray-50 border-gray-100'}`}>
+                    <p className={`text-3xl font-extrabold ${uploadResult.skippedCount > 0 ? 'text-amber-600' : 'text-gray-500'}`}>{uploadResult.skippedCount}</p>
+                    <p className={`text-xs font-bold uppercase tracking-wider mt-1 ${uploadResult.skippedCount > 0 ? 'text-amber-800' : 'text-gray-500'}`}>Skipped</p>
+                  </div>
+                </div>
+
+                {uploadResult.skippedCount > 0 && uploadResult.errors.length > 0 && (
+                  <div className="mt-6">
+                    <h4 className="text-sm font-bold text-gray-900 flex items-center gap-2 mb-3">
+                      <AlertTriangle className="w-4 h-4 text-amber-500" /> Why were they skipped?
+                    </h4>
+                    <div className="bg-amber-50/50 border border-amber-100 rounded-xl max-h-48 overflow-y-auto p-3 space-y-2">
+                      {uploadResult.errors.map((err, i) => (
+                        <div key={i} className="flex gap-2 items-start text-xs text-amber-900 bg-white p-2 rounded-lg shadow-sm border border-amber-50">
+                          <XCircle className="w-3.5 h-3.5 text-red-400 flex-shrink-0 mt-0.5" />
+                          <span className="leading-relaxed">{err}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="pt-4">
+                  <button onClick={() => setUploadResult(null)} className="w-full py-3 bg-gray-900 text-white font-bold rounded-xl hover:bg-gray-800 shadow-md">
+                    Close
                   </button>
                 </div>
               </div>
