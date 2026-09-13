@@ -133,7 +133,8 @@ export default function AdvocateCallScreen({ navigation, route }) {
       const videoConf = mod?.ONE_ON_ONE_VIDEO_CALL_CONFIG ?? {};
       const voiceConf = mod?.ONE_ON_ONE_VOICE_CALL_CONFIG ?? {};
 
-      if (!Component || typeof Component !== 'function') {
+      // React.forwardRef/React.memo return objects, not functions — check for null only
+      if (Component == null) {
         setZegoState(s => ({ ...s, loaded: true, error: 'invalid_module' }));
         return;
       }

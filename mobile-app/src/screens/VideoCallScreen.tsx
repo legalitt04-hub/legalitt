@@ -129,7 +129,9 @@ export default function VideoCallScreen({ navigation, route }: any) {
       const videoConf  = mod?.ONE_ON_ONE_VIDEO_CALL_CONFIG ?? {};
       const voiceConf  = mod?.ONE_ON_ONE_VOICE_CALL_CONFIG ?? {};
 
-      if (!Component || typeof Component !== 'function') {
+      // React.forwardRef / React.memo return OBJECTS, not functions.
+      // Correct check: is it renderable as JSX? null/undefined = invalid.
+      if (Component == null) {
         setZegoState(s => ({ ...s, loaded: true, error: 'invalid_module' }));
         return;
       }
