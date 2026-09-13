@@ -18,6 +18,7 @@ import StatsCard from '../../components/advocate/StatsCard';
 import AppointmentCard from '../../components/advocate/AppointmentCard';
 import EarningsSummary from '../../components/advocate/EarningsSummary';
 import RecentReviewsSection from '../../components/advocate/RecentReviewsSection';
+import SkeletonLoader from '../../components/common/SkeletonLoader';
 import Svg, { Polyline, Circle } from 'react-native-svg';
 
 // Mini line chart using SVG Polyline and Circle
@@ -186,6 +187,7 @@ const AdvocateDashboardScreen = ({ navigation }) => {
 
   const fetchDashboardData = async () => {
     try {
+      if (!dashboardData.ratingStats) setLoading(true);
       const response = await api.get('/advocate-dashboard/stats');
       if (response.data?.success) {
         setDashboardData(response.data.data);
@@ -330,27 +332,8 @@ const AdvocateDashboardScreen = ({ navigation }) => {
     }
   };
 
-  const handleRejectAppointment = async (id) => {
-    Alert.alert('Decline Booking', 'Are you sure?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Decline', style: 'destructive', onPress: async () => {
-        try {
-          await api.patch(`/bookings/${id}/status`, { status: 'cancelled', cancellationReason: 'Declined by advocate' });
-          fetchDashboardData();
-        } catch {
-          Alert.alert('Error', 'Failed to decline booking.');
-        }
-      }},
     ]);
   };
-
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
-  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
@@ -395,8 +378,21 @@ const AdvocateDashboardScreen = ({ navigation }) => {
           paddingBottom: Math.max(insets.bottom, 12) + 115,
         }}
       >
-        {/* Profile Card & Completion Status */}
-        <View style={styles.profileCard}>
+        {loading ? (
+          <View>
+             {/* Skeletons for Profile & Stats */}
+             <SkeletonLoader type="card" count={1} />
+             <View style={{ marginTop: 24 }}>
+               <SkeletonLoader type="statsGroup" />
+             </View>
+             <View style={{ marginTop: 8 }}>
+               <SkeletonLoader type="earnings" />
+             </View>
+          </View>
+        ) : (
+          <>
+            {/* Profile Card & Completion Status */}
+            <View style={styles.profileCard}>
           <View style={styles.profileCardTop}>
             <TouchableOpacity 
               style={styles.profileClickableArea}
@@ -638,6 +634,10 @@ const AdvocateDashboardScreen = ({ navigation }) => {
             }
           }}
         />
+                      </View>
+            )}
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

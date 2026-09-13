@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { bookingAPI } from '../../services/api';
 import { COLORS } from '../../constants/theme';
 import { formatIndianPhone } from '../../utils/helpers';
+import SkeletonLoader from '../../components/common/SkeletonLoader';
 
 // Design Theme Colors matching the Advocate Panel
 const THEME = {
@@ -55,6 +56,7 @@ export default function ClientsScreen({ navigation }) {
 
   const fetchClients = async () => {
     try {
+      if (clients.length === 0) setLoading(true);
       // Fetch bookings for this advocate to gather all associated clients
       const { data } = await bookingAPI.getAdvocateBookings({});
       const bookingsList = data.data || [];
@@ -406,8 +408,8 @@ export default function ClientsScreen({ navigation }) {
 
       {/* ─── CLIENTS LIST ────────────────────────────────────────────────── */}
       {loading ? (
-        <View style={styles.centerBox}>
-          <ActivityIndicator size="large" color={THEME.primary} />
+        <View style={{ padding: 16 }}>
+          <SkeletonLoader type="clientRow" count={4} />
         </View>
       ) : (
         <FlatList

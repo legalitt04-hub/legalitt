@@ -17,6 +17,7 @@ import { bookingAPI } from '../../services/api';
 import { COLORS } from '../../constants/theme';
 import { formatDate } from '../../utils/helpers';
 import { MOCK_ADVOCATE_CASES } from '../../data/advocateCasesMock';
+import SkeletonLoader from '../../components/common/SkeletonLoader';
 
 import { getSocket } from '../../services/socket';
 
@@ -39,7 +40,7 @@ const CasesScreen = ({ navigation }) => {
   // ─── Data Fetching with Development Mock Fallback ──────────────────────────
   const fetchTodayCases = async () => {
     try {
-      setLoadingToday(true);
+      if (todayCases.length === 0) setLoadingToday(true);
       const response = await bookingAPI.getAdvocateBookings({ today: 'true', status: 'confirmed' });
       if (response.data?.success) {
         setTodayCases(response.data.data || []);
@@ -56,7 +57,7 @@ const CasesScreen = ({ navigation }) => {
 
   const fetchCaseRequests = async (tab = activeRequestTab) => {
     try {
-      setLoadingRequests(true);
+      if (caseRequests.length === 0) setLoadingRequests(true);
       const statusMap = {
         All: undefined,
         Pending: 'pending',
@@ -202,8 +203,8 @@ const CasesScreen = ({ navigation }) => {
         </View>
 
         {loadingToday ? (
-          <View style={styles.loadingBox}>
-            <ActivityIndicator size="small" color={COLORS.primary} />
+          <View style={{ paddingVertical: 10 }}>
+            <SkeletonLoader type="card" count={1} />
           </View>
         ) : todayCases.length === 0 ? (
           <View style={styles.emptyCard}>
@@ -296,8 +297,8 @@ const CasesScreen = ({ navigation }) => {
 
         {/* Case Requests List / Empty State */}
         {loadingRequests ? (
-          <View style={styles.loadingBox}>
-            <ActivityIndicator size="small" color={COLORS.primary} />
+          <View style={{ paddingVertical: 10 }}>
+            <SkeletonLoader type="card" count={2} />
           </View>
         ) : caseRequests.length === 0 ? (
           <View style={styles.emptyCard}>
