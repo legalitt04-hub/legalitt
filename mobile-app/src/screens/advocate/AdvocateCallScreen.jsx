@@ -153,6 +153,24 @@ export default function AdvocateCallScreen({ navigation, route }) {
       </View>
     );
   }
+
+  // ── Failsafe: If Zego module failed to load natively ────────────────
+  if (!ZegoCall) {
+    return (
+      <View style={styles.container}>
+        <StatusBar hidden />
+        <Text style={styles.devIcon}>⚠️</Text>
+        <Text style={styles.devTitle}>Module Error</Text>
+        <Text style={styles.devNote}>
+          Failed to load the native calling module. Please ensure you are using the correct production build.
+        </Text>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <Text style={styles.backBtnText}>← Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   const callConfig =
     mode === 'video'
       ? {
