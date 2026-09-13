@@ -86,19 +86,21 @@ export default function HomeScreen({ navigation }) {
             </View>
           </TouchableOpacity>
 
-          <View style={styles.headerIcons}>
-            <IconButton onPress={() => navigation.navigate('ChatList')}>
-              <View style={{ position: 'relative' }}>
-                <Ionicons name="chatbubble-outline" size={18} color="#6B7280" />
-                {unreadCount > 0 && (
-                  <View style={styles.badgeDot} />
-                )}
-              </View>
-            </IconButton>
-            <IconButton onPress={() => navigation.navigate('Notifications')}>
-              <Ionicons name="notifications-outline" size={18} color="#6B7280" />
-            </IconButton>
-          </View>
+          {isAuthenticated && (
+            <View style={styles.headerIcons}>
+              <IconButton onPress={() => navigation.navigate('ChatList')}>
+                <View style={{ position: 'relative' }}>
+                  <Ionicons name="chatbubble-outline" size={18} color="#6B7280" />
+                  {unreadCount > 0 && (
+                    <View style={styles.badgeDot} />
+                  )}
+                </View>
+              </IconButton>
+              <IconButton onPress={() => navigation.navigate('Notifications')}>
+                <Ionicons name="notifications-outline" size={18} color="#6B7280" />
+              </IconButton>
+            </View>
+          )}
         </View>
 
         {/* Hero Card */}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import {
   Wallet, Clock, CheckCircle, XCircle, Search,
   RefreshCw, IndianRupee, TrendingUp, AlertCircle, Copy, Check
@@ -153,7 +154,9 @@ export default function Withdrawals() {
                   <motion.tr key={w._id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                     className="hover:bg-slate-50/70 transition-colors">
                     <td className="px-4 py-3">
-                      <p className="font-semibold text-slate-900 text-sm">{w.advocateUser?.name}</p>
+                      <Link to={`/advocates/${w.advocate?._id}`} className="font-semibold text-slate-900 text-sm hover:text-amber-600 transition-colors">
+                        {w.advocateUser?.name}
+                      </Link>
                       <p className="text-xs text-slate-400">{w.advocateUser?.email}</p>
                     </td>
                     <td className="px-4 py-3">
@@ -178,12 +181,14 @@ export default function Withdrawals() {
                       {new Date(w.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
                     </td>
                     <td className="px-4 py-3">
-                      {w.status === 'pending' && (
-                        <button onClick={() => { setSelected(w); setTxnId(''); setAdminNote(''); }}
-                          className="text-xs px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 transition-colors font-medium">
-                          Process
-                        </button>
-                      )}
+                      <button onClick={() => { setSelected(w); setTxnId(w.transactionId || ''); setAdminNote(w.adminNote || ''); }}
+                        className={`text-xs px-3 py-1.5 rounded-lg border transition-colors font-medium ${
+                          w.status === 'pending'
+                            ? 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100'
+                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                        }`}>
+                        {w.status === 'pending' ? 'Process' : 'View Details'}
+                      </button>
                     </td>
                   </motion.tr>
                 );
@@ -193,7 +198,7 @@ export default function Withdrawals() {
         </div>
       </div>
 
-      {/* Process Modal */}
+      {/* Process/View Modal */}
       <AnimatePresence>
         {selected && (
           <motion.div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
@@ -202,17 +207,37 @@ export default function Withdrawals() {
             <motion.div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg"
               initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}>
 
-              <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-6 rounded-t-2xl">
+              <div className={`p-6 rounded-t-2xl ${
+                selected.status === 'pending' ? 'bg-gradient-to-r from-amber-500 to-orange-500' :
+                selected.status === 'rejected' ? 'bg-gradient-to-r from-red-500 to-rose-500' :
+                'bg-gradient-to-r from-emerald-500 to-teal-500'
+              }`}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-xl font-bold text-white">Process Withdrawal</h2>
-                    <p className="text-amber-100 text-sm">{selected.advocateUser?.name} · ₹{selected.amount.toLocaleString('en-IN')}</p>
+                    <h2 className="text-xl font-bold text-white">
+                      {selected.status === 'pending' ? 'Process Withdrawal' : 'Withdrawal Details'}
+                    </h2>
+                    <p className="text-white/80 text-sm">{selected.advocateUser?.name} · ₹{selected.amount.toLocaleString('en-IN')}</p>
                   </div>
                   <button onClick={() => setSelected(null)} className="text-white/70 hover:text-white text-2xl">×</button>
                 </div>
               </div>
 
               <div className="p-6 space-y-4">
+                {/* Wallet Summary */}
+                {selected.advocate?.wallet && (
+                  <div className="flex gap-3">
+                    <div className="flex-1 bg-amber-50 rounded-xl p-3 border border-amber-100">
+                      <p className="text-[10px] font-bold text-amber-600 uppercase">Current Balance</p>
+                      <p className="text-lg font-bold text-amber-900">₹{(selected.advocate.wallet.balance || 0).toLocaleString('en-IN')}</p>
+                    </div>
+                    <div className="flex-1 bg-slate-50 rounded-xl p-3 border border-slate-100">
+                      <p className="text-[10px] font-bold text-slate-500 uppercase">Total Earned</p>
+                      <p className="text-lg font-bold text-slate-900">₹{(selected.advocate.wallet.totalEarned || 0).toLocaleString('en-IN')}</p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Bank Details */}
                 <div className="bg-slate-50 rounded-xl p-4 space-y-2">
                   <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Bank Details</p>
@@ -236,56 +261,93 @@ export default function Withdrawals() {
                   ))}
                 </div>
 
-                {/* Transaction ID (required for approve) */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">
-                    Transaction ID <span className="text-red-400">*</span>
-                    <span className="text-slate-400 font-normal ml-1">(Bank ref / UTR number — required to approve)</span>
-                  </label>
-                  <input
-                    value={txnId}
-                    onChange={e => setTxnId(e.target.value)}
-                    placeholder="e.g. UTR123456789 or TXN12345"
-                    className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 font-mono"
-                  />
-                </div>
+                {selected.status === 'pending' ? (
+                  <>
+                    {/* Transaction ID (required for approve) */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                        Transaction ID <span className="text-red-400">*</span>
+                        <span className="text-slate-400 font-normal ml-1">(Bank ref / UTR number — required to approve)</span>
+                      </label>
+                      <input
+                        value={txnId}
+                        onChange={e => setTxnId(e.target.value)}
+                        placeholder="e.g. UTR123456789 or TXN12345"
+                        className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 font-mono"
+                      />
+                    </div>
 
-                {/* Admin note */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">
-                    Note to Advocate <span className="text-slate-400 font-normal">(optional)</span>
-                  </label>
-                  <textarea
-                    value={adminNote}
-                    onChange={e => setAdminNote(e.target.value)}
-                    placeholder="e.g. Transferred via NEFT on 8 Aug 2026..."
-                    rows={2}
-                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400"
-                  />
-                </div>
+                    {/* Admin note */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                        Note to Advocate <span className="text-slate-400 font-normal">(optional)</span>
+                      </label>
+                      <textarea
+                        value={adminNote}
+                        onChange={e => setAdminNote(e.target.value)}
+                        placeholder="e.g. Transferred via NEFT on 8 Aug 2026..."
+                        rows={2}
+                        className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400"
+                      />
+                    </div>
 
-                {/* Action Buttons */}
-                <div className="flex gap-3 pt-1">
-                  <button
-                    onClick={() => handleProcess('approve')}
-                    disabled={actionLoading || !txnId.trim()}
-                    className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-semibold text-sm transition-colors disabled:opacity-50"
-                  >
-                    <CheckCircle className="w-4 h-4" />
-                    {actionLoading ? 'Processing...' : 'Approve & Mark Paid'}
-                  </button>
-                  <button
-                    onClick={() => handleProcess('reject')}
-                    disabled={actionLoading}
-                    className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl font-semibold text-sm transition-colors disabled:opacity-50"
-                  >
-                    <XCircle className="w-4 h-4" />
-                    Reject
-                  </button>
-                </div>
-                <p className="text-xs text-slate-400 text-center">
-                  On approve: amount marked as paid, advocate notified. On reject: amount returned to wallet.
-                </p>
+                    {/* Action Buttons */}
+                    <div className="flex gap-3 pt-1">
+                      <button
+                        onClick={() => handleProcess('approve')}
+                        disabled={actionLoading || !txnId.trim()}
+                        className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-semibold text-sm transition-colors disabled:opacity-50"
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                        {actionLoading ? 'Processing...' : 'Approve & Mark Paid'}
+                      </button>
+                      <button
+                        onClick={() => handleProcess('reject')}
+                        disabled={actionLoading}
+                        className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl font-semibold text-sm transition-colors disabled:opacity-50"
+                      >
+                        <XCircle className="w-4 h-4" />
+                        Reject
+                      </button>
+                    </div>
+                    <p className="text-xs text-slate-400 text-center">
+                      On approve: amount marked as paid, advocate notified. On reject: amount returned to wallet.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">Status</p>
+                        <p className={`text-sm font-semibold mt-1 capitalize ${
+                          selected.status === 'rejected' ? 'text-red-600' : 'text-emerald-600'
+                        }`}>{selected.status}</p>
+                      </div>
+                      <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">Processed On</p>
+                        <p className="text-sm font-semibold text-slate-700 mt-1">
+                          {selected.processedAt ? new Date(selected.processedAt).toLocaleDateString() : 'N/A'}
+                        </p>
+                      </div>
+                    </div>
+                    {selected.transactionId && (
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-500 mb-1">Transaction ID / UTR</label>
+                        <div className="px-3 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl font-mono text-slate-700">
+                          {selected.transactionId}
+                        </div>
+                      </div>
+                    )}
+                    {selected.adminNote && (
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-500 mb-1">Admin Note</label>
+                        <div className="px-3 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl text-slate-700 whitespace-pre-wrap">
+                          {selected.adminNote}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             </motion.div>
           </motion.div>

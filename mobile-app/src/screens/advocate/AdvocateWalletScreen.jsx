@@ -130,7 +130,13 @@ export default function AdvocateWalletScreen({ navigation }) {
     const amount = Number(withdrawAmount);
     if (!amount || amount < 500) return Alert.alert('Minimum ₹500', 'Minimum withdrawal amount is ₹500.');
     if (amount > wallet.balance)  return Alert.alert('Insufficient Balance', `Available balance: ${fmt(wallet.balance)}`);
-    if (!bankDetails?.accountNumber) return Alert.alert('Bank Details Required', 'Please save your bank details first.');
+    if (!bankDetails?.accountNumber) {
+      return Alert.alert(
+        'Bank Details Required',
+        'Please save your bank details first.',
+        [{ text: 'OK', onPress: () => setActiveTab('bank') }]
+      );
+    }
 
     Alert.alert(
       'Confirm Withdrawal',
@@ -185,15 +191,17 @@ export default function AdvocateWalletScreen({ navigation }) {
       </View>
 
       {/* Tabs */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.tabsBar} contentContainerStyle={{ gap: 6, paddingHorizontal: 16, paddingVertical: 10 }}>
-        {TABS.map(t => (
-          <TouchableOpacity key={t.key} onPress={() => setActiveTab(t.key)}
-            style={[s.tabBtn, activeTab === t.key && s.tabBtnActive]}>
-            <Ionicons name={t.icon} size={14} color={activeTab === t.key ? '#FFFFFF' : MUTED} />
-            <Text style={[s.tabBtnText, activeTab === t.key && s.tabBtnTextActive]}>{t.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      <View style={s.tabsWrapper}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.tabsBar} contentContainerStyle={{ gap: 8, paddingHorizontal: 16, paddingVertical: 14, alignItems: 'center' }}>
+          {TABS.map(t => (
+            <TouchableOpacity key={t.key} onPress={() => setActiveTab(t.key)}
+              style={[s.tabBtn, activeTab === t.key && s.tabBtnActive]}>
+              <Ionicons name={t.icon} size={14} color={activeTab === t.key ? '#FFFFFF' : MUTED} />
+              <Text style={[s.tabBtnText, activeTab === t.key && s.tabBtnTextActive]}>{t.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
 
       <ScrollView
         contentContainerStyle={{ paddingBottom: 120, paddingTop: 4 }}

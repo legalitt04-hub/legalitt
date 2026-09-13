@@ -69,7 +69,8 @@ const ProfileScreen = ({ navigation }) => {
     { id: '1', icon: 'chatbubble-outline',   title: 'My Chats',         subtitle: 'All conversations with advocates',      screen: 'ChatList',      requiresAuth: true  },
     { id: '2', icon: 'document-text-outline',title: 'My Requests',      subtitle: 'Status and Report',                     screen: 'MyBookings',    requiresAuth: true  },
     { id: '4', icon: 'settings-outline',     title: 'Settings',         subtitle: 'Language, notification & Privacy',      screen: 'Settings',      requiresAuth: false },
-    { id: '5', icon: 'card-outline',         title: 'Payments',         subtitle: 'Consultation Payments & invoice',       screen: 'MyBookings',    requiresAuth: true  },
+    { id: '5', icon: 'headset-outline',      title: 'Help & Support',   subtitle: 'Contact us for assistance',             screen: 'Support',       requiresAuth: false },
+    { id: '6', icon: 'card-outline',         title: 'Payments',         subtitle: 'Consultation Payments & invoice',       screen: 'MyBookings',    requiresAuth: true  },
   ];
 
   const handleMenuPress = (item) => {

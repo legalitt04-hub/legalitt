@@ -509,9 +509,9 @@ const AdvocateDashboardScreen = ({ navigation }) => {
           />
         </View>
 
-        {/* Quick actions panel */}
+        {/* Quick actions panel 1 */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Quick Practice Actions</Text>
+          <Text style={styles.cardTitle}>Practice Tools</Text>
           <View style={styles.actionsGrid}>
             <TouchableOpacity style={styles.actionBtn} onPress={handleProfilePress}>
               <View style={[styles.actionIconBg, { backgroundColor: 'rgba(20, 184, 166, 0.1)' }]}>
@@ -540,7 +540,13 @@ const AdvocateDashboardScreen = ({ navigation }) => {
               </View>
               <Text style={styles.actionLabel}>Calendar</Text>
             </TouchableOpacity>
+          </View>
+        </View>
 
+        {/* Quick actions panel 2 */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Settings & Support</Text>
+          <View style={styles.actionsGrid}>
             <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate('AdvocateSettings')}>
               <View style={[styles.actionIconBg, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
                 <Ionicons name="settings-outline" size={20} color="#EF4444" />

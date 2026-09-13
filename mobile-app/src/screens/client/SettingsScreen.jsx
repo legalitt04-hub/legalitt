@@ -145,7 +145,7 @@ const SettingsScreen = ({ navigation }) => {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Support</Text>
-          {renderSettingItem('help-circle-outline', 'Help Center', 'FAQ & Contact Support', () => Linking.openURL('mailto:support@legalitt.com'))}
+          {renderSettingItem('help-circle-outline', 'Help Center', 'FAQ & Contact Support', () => navigation.navigate('Support'))}
           {renderSettingItem('document-text-outline', 'Terms of Service', 'Read our usage agreement', () => navigation.navigate('TermsConditions'))}
           {renderSettingItem('shield-checkmark-outline', 'Privacy Policy', 'Read our privacy practices', () => navigation.navigate('PrivacyPolicy'))}
           {renderSettingItem('trash-outline', 'Data Deletion Request', 'Permanently delete your account', () => navigation.navigate('DataDeletion'))}

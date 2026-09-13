@@ -232,7 +232,7 @@ const CaseDetailScreen = ({ route, navigation }) => {
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
+      allowsEditing: false,
       quality: 0.8,
     });
 
@@ -509,14 +509,15 @@ const CaseDetailScreen = ({ route, navigation }) => {
                   style={styles.legalNoticePromoBtn}
                   activeOpacity={0.8}
                   onPress={() => {
+                    const doc = legalCase.documents?.[0] || clientDocs?.[0] || null;
                     navigation.navigate('LegalNoticeResponse', {
-                      caseId: legalCase._id || 'CASE-DEMO-001',
-                      clientId: legalCase.client?._id || 'CLIENT-DEMO-001',
-                      clientName: legalCase.client?.name || 'Rahul Sharma',
-                      clientEmail: legalCase.client?.email || 'rahul.sharma@example.com',
-                      clientPhone: legalCase.client?.phone || '+91 98765 43210',
-                      caseTitle: legalCase.issue || legalCase.title || 'Divorce Matter',
-                      legalNoticeId: 'NOTICE-DEMO-001',
+                      caseId: legalCase._id,
+                      clientId: legalCase.client?._id,
+                      clientName: legalCase.client?.name || 'Client',
+                      caseTitle: legalCase.issue || legalCase.title || 'Legal Notice',
+                      documentUrl: doc?.url,
+                      documentName: doc?.name || 'Original_Notice.pdf',
+                      advocateDocs: legalCase.advocateDocuments || [],
                     });
                   }}
                 >
