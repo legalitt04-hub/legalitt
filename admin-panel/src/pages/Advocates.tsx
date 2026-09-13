@@ -4,7 +4,7 @@ import {
   UserCheck, Plus, Search, Edit2, Trash2, X, RefreshCw,
   CheckCircle2, XCircle, PauseCircle, Eye, Download,
   Star, Briefcase, Phone, Mail, MapPin, ChevronLeft, ChevronRight,
-  Filter, EyeOff, ToggleLeft, ToggleRight, Camera
+  Filter, EyeOff, ToggleLeft, ToggleRight, Camera, Upload
 } from 'lucide-react';
 import api from '../lib/api';
 
@@ -69,6 +69,8 @@ export default function Advocates() {
   const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null);
   const [editAvatarPreview, setEditAvatarPreview] = useState<string | null>(null);
   const editAvatarRef = useRef<HTMLInputElement>(null);
+  const bulkUploadRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
   const LIMIT = 15;
 
   const fetchAdvocates = useCallback(async () => {
@@ -212,6 +214,32 @@ export default function Advocates() {
     finally { setEditSaving(false); }
   };
 
+  const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const fd = new FormData();
+    fd.append('file', file);
+
+    setUploading(true);
+    try {
+      const res = await api.post('/admin/advocates/bulk-upload', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      const data = res.data?.data;
+      alert(`✅ Bulk Upload Complete!\n\nUploaded: ${data.successCount}\nSkipped: ${data.skippedCount}`);
+      if (data.errors && data.errors.length > 0) {
+        console.warn("Upload Errors:", data.errors);
+      }
+      fetchAdvocates();
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'Bulk upload failed.');
+    } finally {
+      setUploading(false);
+      if (bulkUploadRef.current) bulkUploadRef.current.value = '';
+    }
+  };
+
   const exportCSV = () => {
     const rows = [['Name', 'Email', 'Bar Council', 'Status', 'City', 'Fee', 'Rating']];
     advocates.forEach(a => rows.push([
@@ -234,6 +262,16 @@ export default function Advocates() {
           <p className="text-sm text-gray-500 mt-0.5">{total} total advocates on platform</p>
         </div>
         <div className="flex items-center gap-3">
+          <input
+            type="file"
+            accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+            className="hidden"
+            ref={bulkUploadRef}
+            onChange={handleBulkUpload}
+          />
+          <button onClick={() => bulkUploadRef.current?.click()} disabled={uploading} className="flex items-center gap-2 px-3 py-2 border border-gray-200 text-gray-600 text-sm rounded-xl hover:bg-gray-50 disabled:opacity-50">
+            <Upload className="w-4 h-4" /> {uploading ? 'Uploading...' : 'Bulk Upload'}
+          </button>
           <button onClick={exportCSV} className="flex items-center gap-2 px-3 py-2 border border-gray-200 text-gray-600 text-sm rounded-xl hover:bg-gray-50"><Download className="w-4 h-4" /> Export</button>
           <button onClick={fetchAdvocates} className="p-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50"><RefreshCw className="w-4 h-4" /></button>
           <button onClick={() => { setShowForm(true); setForm(EMPTY_FORM); }} className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white text-sm font-semibold rounded-xl hover:bg-teal-700">
