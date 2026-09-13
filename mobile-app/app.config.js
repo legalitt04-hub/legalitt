@@ -72,8 +72,13 @@ export default ({ config }) => ({
         "android.permission.ACCESS_WIFI_STATE",
         "android.permission.READ_PHONE_STATE",
         "android.permission.BLUETOOTH",
+        "android.permission.BLUETOOTH_CONNECT",
         "android.permission.SYSTEM_ALERT_WINDOW",
-        "android.permission.WAKE_LOCK"
+        "android.permission.WAKE_LOCK",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MICROPHONE",
+        "android.permission.FOREGROUND_SERVICE_CAMERA",
+        "android.permission.FOREGROUND_SERVICE_PHONE_CALL"
       ],
       ...(fs.existsSync(path.resolve(__dirname, 'google-services.json'))
         ? { googleServicesFile: './google-services.json' }
