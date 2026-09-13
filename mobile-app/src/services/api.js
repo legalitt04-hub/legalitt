@@ -7,7 +7,7 @@ import { getCacheKey, getCachedData, setCachedData } from '../utils/offlineCache
 import { addToOfflineQueue } from '../utils/offlineQueue';
 
 // Local backend URL for testing local changes
-export const BASE_URL = 'http://172.20.10.3:5001/api/v1';
+export const BASE_URL = Constants.expoConfig?.extra?.API_URL || 'https://legalitt-growth.onrender.com/api/v1';
 console.log('🌐 API Base URL:', BASE_URL);
 
 export const TOKEN_KEY = 'authToken';
