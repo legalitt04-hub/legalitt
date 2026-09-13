@@ -6,7 +6,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import api, { caseAPI, bookingAPI, chatAPI, legalAdviceAPI } from '../../services/api';
+import * as DocumentPicker from 'expo-document-picker';
+import api, { caseAPI, bookingAPI, chatAPI, legalAdviceAPI, uploadAPI } from '../../services/api';
 import { COLORS } from '../../constants/theme';
 import { formatDate, formatINR } from '../../utils/helpers';
 import { MOCK_ADVOCATE_CASES } from '../../data/advocateCasesMock';
@@ -224,52 +225,82 @@ const CaseDetailScreen = ({ route, navigation }) => {
   };
 
   const handleAddDocument = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission Denied', 'We need photo library access to upload documents.');
-      return;
-    }
+    // Let advocate choose: Image/Photo OR PDF/Document
+    Alert.alert(
+      '📎 Share Document with Client',
+      'Select what to upload. It will also be sent to the client chat automatically.',
+      [
+        {
+          text: '🖼️ Image / Photo',
+          onPress: async () => {
+            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (status !== 'granted') {
+              Alert.alert('Permission Denied', 'Photo library access is required.');
+              return;
+            }
+            const result = await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ImagePicker.MediaTypeOptions.Images,
+              allowsEditing: false,
+              quality: 0.85,
+            });
+            if (!result.canceled && result.assets?.[0]) {
+              await _uploadAndAttach(result.assets[0].uri, result.assets[0].uri.split('/').pop(), 'image/jpeg');
+            }
+          },
+        },
+        {
+          text: '📄 PDF / Document',
+          onPress: async () => {
+            try {
+              const result = await DocumentPicker.getDocumentAsync({
+                type: ['application/pdf', 'application/msword',
+                       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                       'text/plain', '*/*'],
+                copyToCacheDirectory: true,
+              });
+              if (!result.canceled && result.assets?.[0]) {
+                const asset = result.assets[0];
+                await _uploadAndAttach(asset.uri, asset.name, asset.mimeType || 'application/octet-stream');
+              }
+            } catch {
+              Alert.alert('Error', 'Could not open document picker.');
+            }
+          },
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: false,
-      quality: 0.8,
-    });
+  // Shared upload+attach helper used by image and document branches
+  const _uploadAndAttach = async (uri, filename, mimeType) => {
+    setUploading(true);
+    try {
+      const response = await uploadAPI.uploadFile(uri, filename, mimeType);
+      const docUrl = response?.data?.data?.url || response?.data?.url;
 
-    if (!result.canceled) {
-      setUploading(true);
-      try {
-        const formData = new FormData();
-        const uri = result.assets[0].uri;
-        const filename = uri.split('/').pop();
-        const match = /\.(\w+)$/.exec(filename);
-        const type = match ? `image/${match[1]}` : `image`;
-
-        formData.append('file', { uri, name: filename, type });
-
-        // Upload
-        const response = await api.post('/uploads/document', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
-
-        if (response.data.success) {
-          const docUrl = response.data.data.url;
-          // Associate
-          const docRes = await caseAPI.addDoc(caseId, {
-            name: filename,
-            url: docUrl
-          });
-
-          if (docRes.data.success) {
-            setLegalCase(docRes.data.data);
-            Alert.alert('Success', 'Document uploaded and attached successfully!');
-          }
-        }
-      } catch (err) {
-        Alert.alert('Error', 'Failed to upload document.');
-      } finally {
-        setUploading(false);
+      if (!docUrl) {
+        Alert.alert('Upload Failed', 'Server did not return a file URL. Please try again.');
+        return;
       }
+
+      // Save document to the case (backend will also auto-send to client chat)
+      const docRes = await caseAPI.addDoc(caseId, { name: filename, url: docUrl });
+
+      if (docRes.data?.success) {
+        setLegalCase(docRes.data.data);
+        Alert.alert(
+          '✅ Document Uploaded',
+          `"${filename}" has been added to the case and sent to the client in chat automatically.`
+        );
+      } else {
+        Alert.alert('Error', 'Document saved but case update returned unexpected response.');
+      }
+    } catch (err) {
+      const msg = err?.response?.data?.message || err?.message || 'Upload failed.';
+      Alert.alert('Upload Error', msg);
+    } finally {
+      setUploading(false);
     }
   };
 
