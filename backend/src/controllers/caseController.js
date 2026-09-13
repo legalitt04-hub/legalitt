@@ -1,6 +1,7 @@
 const Case = require('../models/Case');
 const Advocate = require('../models/Advocate');
 const User = require('../models/User');
+const { Chat, Message } = require('../models/Chat');
 const { AppError } = require('../middlewares/errorHandler');
 
 // POST /api/cases
@@ -165,8 +166,56 @@ exports.addCaseDocument = async (req, res, next) => {
     if (!legalCase) return next(new AppError('Case not found.', 404));
 
     legalCase.documents.push({ name, url });
-
     await legalCase.save();
+
+    // ── Auto-send document to client chat ────────────────────────────────────
+    // When advocate uploads a case document, automatically send it as a file
+    // message in the shared chat so the client receives it immediately.
+    try {
+      const advocate = await Advocate.findById(legalCase.advocate).lean();
+      const advocateUserId = advocate?.user;
+
+      if (advocateUserId && legalCase.client) {
+        // Find the active chat between advocate and client
+        const chat = await Chat.findOne({
+          participants: { $all: [legalCase.client, advocateUserId] },
+          isActive: true,
+        });
+
+        if (chat) {
+          // Create the document message
+          const docMessage = await Message.create({
+            chat: chat._id,
+            sender: req.user._id,         // advocate's user id
+            content: name || 'Document',   // file name as content fallback
+            messageType: 'file',
+            fileUrl: url,
+            fileName: name,
+          });
+
+          // Update chat's lastMessage pointer
+          await Chat.findByIdAndUpdate(chat._id, { lastMessage: docMessage._id });
+
+          // Broadcast to chat room via socket so both parties see it live
+          try {
+            const populated = await docMessage.populate('sender', 'name avatar');
+            const { getIO } = require('../config/socket');
+            const io = getIO();
+            io.to(`chat:${chat._id}`).emit('new_message', {
+              chatId: String(chat._id),
+              message: populated,
+            });
+          } catch (socketErr) {
+            // Socket may not be initialized in test environments — safe to ignore
+            console.warn('[addCaseDocument] Socket emit skipped:', socketErr.message);
+          }
+        }
+      }
+    } catch (autoSendErr) {
+      // Auto-send is best-effort — never block the primary document upload
+      console.error('[addCaseDocument] Auto chat send error:', autoSendErr.message);
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
     res.json({
       success: true,
