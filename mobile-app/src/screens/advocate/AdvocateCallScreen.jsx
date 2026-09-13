@@ -1,7 +1,7 @@
 // screens/advocate/AdvocateCallScreen.jsx
 // Real ZEGOCLOUD video/voice call screen for Advocates
 // Uses the same ZegoUIKitPrebuiltCall as the client VideoCallScreen
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,8 @@ import {
   Alert,
   ActivityIndicator,
   TouchableOpacity,
+  PermissionsAndroid,
+  Platform,
 } from 'react-native';
 import Constants from 'expo-constants';
 import {
@@ -27,6 +29,8 @@ const FALLBACK_APP_ID = 954831467;
 const FALLBACK_APP_SIGN = '6aaa4f1b530a5ddff76b050d56a56974101548cf30d10b1c547feb7da07b16ad';
 
 export default function AdvocateCallScreen({ navigation, route }) {
+  const [permissionsGranted, setPermissionsGranted] = useState(Platform.OS === 'ios');
+
   const {
     zegoRoomId: paramRoomId,
     zegoToken,
@@ -76,11 +80,43 @@ export default function AdvocateCallScreen({ navigation, route }) {
     return () => socket?.off?.('call_ended', handler);
   }, []);
 
-  if (!isCallReady) {
+  // Request Permissions on Android before rendering Zego
+  useEffect(() => {
+    const requestPermissions = async () => {
+      if (Platform.OS === 'android') {
+        try {
+          const granted = await PermissionsAndroid.requestMultiple([
+            PermissionsAndroid.PERMISSIONS.CAMERA,
+            PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+          ]);
+          if (
+            granted['android.permission.CAMERA'] === PermissionsAndroid.RESULTS.GRANTED &&
+            granted['android.permission.RECORD_AUDIO'] === PermissionsAndroid.RESULTS.GRANTED
+          ) {
+            setPermissionsGranted(true);
+          } else {
+            Alert.alert('Permissions Required', 'Camera and Microphone permissions are needed to start the call.', [
+              { text: 'OK', onPress: () => navigation.goBack() }
+            ]);
+          }
+        } catch (err) {
+          console.warn(err);
+          setPermissionsGranted(true);
+        }
+      }
+    };
+    if (isCallReady) {
+      requestPermissions();
+    }
+  }, [isCallReady]);
+
+  if (!isCallReady || !permissionsGranted) {
     return (
       <View style={styles.container}>
         <ActivityIndicator size="large" color="#14B8A6" />
-        <Text style={styles.waitText}>Setting up call room...</Text>
+        <Text style={styles.waitText}>
+          {!permissionsGranted ? 'Requesting permissions...' : 'Setting up call room...'}
+        </Text>
         <Text style={styles.subText}>
           This call room opens once the booking is confirmed.
         </Text>
@@ -122,7 +158,7 @@ export default function AdvocateCallScreen({ navigation, route }) {
       : {
           ...ONE_ON_ONE_VOICE_CALL_CONFIG,
           bottomMenuBarConfig: {
-            buttons: ['toggleMicrophoneButton', 'hangUpButton'],
+            buttons: ['toggleMicrophoneButton', 'hangUpButton', 'switchAudioOutputButton'],
           },
         };
 

@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { View, StyleSheet, StatusBar, Alert, Text, ActivityIndicator, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, StyleSheet, StatusBar, Alert, Text, ActivityIndicator, TouchableOpacity, PermissionsAndroid, Platform } from 'react-native';
 import Constants from 'expo-constants';
 import {
   ZegoUIKitPrebuiltCall as ZegoUIKitPrebuiltCallComponent,
@@ -18,6 +18,8 @@ const FALLBACK_APP_ID = 954831467;
 const FALLBACK_APP_SIGN = '6aaa4f1b530a5ddff76b050d56a56974101548cf30d10b1c547feb7da07b16ad';
 
 export default function VideoCallScreen({ navigation, route }: any) {
+  const [permissionsGranted, setPermissionsGranted] = useState(Platform.OS === 'ios');
+
   const {
     zegoRoomId,
     zegoToken,
@@ -59,11 +61,43 @@ export default function VideoCallScreen({ navigation, route }: any) {
     return () => socket?.off?.('call_ended', handler);
   }, []);
 
-  if (!isCallReady) {
+  // Request Permissions on Android before rendering Zego
+  useEffect(() => {
+    const requestPermissions = async () => {
+      if (Platform.OS === 'android') {
+        try {
+          const granted = await PermissionsAndroid.requestMultiple([
+            PermissionsAndroid.PERMISSIONS.CAMERA,
+            PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+          ]);
+          if (
+            granted['android.permission.CAMERA'] === PermissionsAndroid.RESULTS.GRANTED &&
+            granted['android.permission.RECORD_AUDIO'] === PermissionsAndroid.RESULTS.GRANTED
+          ) {
+            setPermissionsGranted(true);
+          } else {
+            Alert.alert('Permissions Required', 'Camera and Microphone permissions are needed to start the call.', [
+              { text: 'OK', onPress: () => navigation.goBack() }
+            ]);
+          }
+        } catch (err) {
+          console.warn(err);
+          setPermissionsGranted(true); // Attempt to proceed anyway if error
+        }
+      }
+    };
+    if (isCallReady) {
+      requestPermissions();
+    }
+  }, [isCallReady]);
+
+  if (!isCallReady || !permissionsGranted) {
     return (
       <View style={styles.container}>
         <ActivityIndicator size="large" color="#14B8A6" />
-        <Text style={styles.waitText}>Setting up call room...</Text>
+        <Text style={styles.waitText}>
+          {!permissionsGranted ? 'Requesting permissions...' : 'Setting up call room...'}
+        </Text>
       </View>
     );
   }
@@ -118,7 +152,7 @@ export default function VideoCallScreen({ navigation, route }: any) {
           buttons: [
             'toggleMicrophoneButton',
             'hangUpButton',
-            'showSpeakerButton',
+            'switchAudioOutputButton',
           ],
         },
       };
@@ -130,7 +164,7 @@ export default function VideoCallScreen({ navigation, route }: any) {
         appID={effectiveAppId}
         appSign={effectiveAppSign || ''}
         userID={String(myUserId || 'user_' + Date.now())}
-        userName={String(myUserName)}
+        userName={String(myUserName || 'User')}
         callID={String(effectiveRoomId)}
         config={{
           ...callConfig,
