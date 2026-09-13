@@ -99,7 +99,14 @@ export default ({ config }) => ({
           color: "#0d9488"
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "@zegocloud/zego-uikit-prebuilt-call-rn",
+        {
+          "appID": 954831467,
+          "appSign": "6aaa4f1b530a5ddff76b050d56a56974101548cf30d10b1c547feb7da07b16ad"
+        }
+      ]
     ],
     extra: {
       API_URL: process.env.API_URL || 'https://legalitt-growth.onrender.com/api/v1',
