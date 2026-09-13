@@ -69,6 +69,18 @@ const firDraftSchema = new mongoose.Schema({
     url: String,
     name: String,
     uploadedAt: { type: Date, default: Date.now }
+  }],
+  // Advocate assigned to this draft
+  advocate: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Advocate'
+  },
+  // Documents uploaded by the assigned advocate
+  advocateDocuments: [{
+    url: String,
+    name: String,
+    type: String,
+    uploadedAt: { type: Date, default: Date.now }
   }]
 }, { timestamps: true });
 

@@ -243,9 +243,9 @@ const EarningsScreen = ({ navigation }) => {
             </View>
           ) : (
             transactions.map((tx, i) => (
-              <TouchableOpacity key={tx._id || i} style={s.txRow} onPress={() => setSelectedTx(tx)} activeOpacity={0.7}>
-                <View style={s.txIconBg}>
-                  <Ionicons name="checkmark" size={16} color={COLORS.success} />
+              <TouchableOpacity key={tx._id || tx.bookingId || i} style={s.txRow} onPress={() => setSelectedTx(tx)} activeOpacity={0.7}>
+                <View style={[s.txIconBg, tx.isExpected && { backgroundColor: '#FEF3C7' }]}>
+                  <Ionicons name={tx.isExpected ? "time" : "checkmark"} size={16} color={tx.isExpected ? "#D97706" : COLORS.success} />
                 </View>
                 <View style={{ flex: 1, marginLeft: 12 }}>
                   <Text style={s.txName}>
@@ -254,11 +254,18 @@ const EarningsScreen = ({ navigation }) => {
                   <Text style={s.txDate}>{formatDate(tx.creditedAt || tx.date)}</Text>
                 </View>
                 <View style={{ alignItems: 'flex-end', gap: 4 }}>
-                  <Text style={s.txAmount}>₹{(tx.netAmount || tx.amount || 0).toLocaleString('en-IN')}</Text>
-                  <View style={s.invoiceBadge}>
-                    <Ionicons name="document-text-outline" size={9} color={COLORS.primary} />
-                    <Text style={s.invoiceBadgeText}>Invoice</Text>
-                  </View>
+                  <Text style={[s.txAmount, tx.isExpected && { color: "#D97706" }]}>₹{(tx.netAmount || tx.amount || 0).toLocaleString('en-IN')}</Text>
+                  {tx.isExpected ? (
+                    <View style={[s.invoiceBadge, { backgroundColor: '#FEF3C7' }]}>
+                      <Ionicons name="time-outline" size={9} color="#D97706" />
+                      <Text style={[s.invoiceBadgeText, { color: '#D97706' }]}>Expected</Text>
+                    </View>
+                  ) : (
+                    <View style={s.invoiceBadge}>
+                      <Ionicons name="document-text-outline" size={9} color={COLORS.primary} />
+                      <Text style={s.invoiceBadgeText}>Invoice</Text>
+                    </View>
+                  )}
                 </View>
               </TouchableOpacity>
             ))
@@ -298,7 +305,11 @@ const EarningsScreen = ({ navigation }) => {
             <ScrollView contentContainerStyle={s.modalBody} showsVerticalScrollIndicator={false}>
               <View style={s.invoiceBranding}>
                 <Text style={s.brandLogo}>⚖️ LEGALITT</Text>
-                <View style={s.paidBadge}><Text style={s.paidBadgeText}>PAID</Text></View>
+                {selectedTx?.isExpected ? (
+                  <View style={[s.paidBadge, { backgroundColor: '#FEF3C7' }]}><Text style={[s.paidBadgeText, { color: '#D97706' }]}>EXPECTED</Text></View>
+                ) : (
+                  <View style={s.paidBadge}><Text style={s.paidBadgeText}>PAID</Text></View>
+                )}
               </View>
               <View style={s.invoiceMeta}>
                 <View>
@@ -332,11 +343,18 @@ const EarningsScreen = ({ navigation }) => {
                 <Text style={s.totalLabel}>You Received</Text>
                 <Text style={s.totalVal}>₹{(selectedTx?.netAmount || 0).toLocaleString('en-IN')}</Text>
               </View>
-              <TouchableOpacity style={s.downloadBtn}
-                onPress={() => { Alert.alert('Downloaded', 'Invoice PDF saved to your device! ✅'); setSelectedTx(null); }}>
-                <Ionicons name="download-outline" size={17} color="#FFFFFF" />
-                <Text style={s.downloadBtnText}>Download PDF</Text>
-              </TouchableOpacity>
+              {selectedTx?.isExpected ? (
+                <TouchableOpacity style={[s.downloadBtn, { backgroundColor: '#9CA3AF' }]} disabled>
+                  <Ionicons name="lock-closed-outline" size={17} color="#FFFFFF" />
+                  <Text style={s.downloadBtnText}>Invoice will generate after completion</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity style={s.downloadBtn}
+                  onPress={() => { Alert.alert('Downloaded', 'Invoice PDF saved to your device! ✅'); setSelectedTx(null); }}>
+                  <Ionicons name="download-outline" size={17} color="#FFFFFF" />
+                  <Text style={s.downloadBtnText}>Download PDF</Text>
+                </TouchableOpacity>
+              )}
             </ScrollView>
           </View>
         </View>

@@ -322,6 +322,7 @@ const CasesScreen = ({ navigation }) => {
               }[item.serviceType] || 'Consultation';
 
               const docName = item.documents?.[0]?.name || item.documentName || (item.documents?.length > 0 ? 'Uploaded Document' : 'No document attached');
+              const docUrl = item.documents?.[0]?.url || item.documentUrl || null;
 
               return (
                 <View key={item._id} style={styles.caseRequestCard}>
@@ -374,12 +375,24 @@ const CasesScreen = ({ navigation }) => {
 
                   {/* Document & Dates Row */}
                   <View style={styles.reqDetailsBox}>
-                    <View style={styles.detailRow}>
-                      <Ionicons name="document-text-outline" size={14} color={COLORS.primary} />
-                      <Text style={styles.detailDocName} numberOfLines={1}>
+                    <TouchableOpacity 
+                      style={styles.detailRow}
+                      activeOpacity={0.7}
+                      disabled={!docUrl}
+                      onPress={() => {
+                        navigation.navigate('DocumentViewer', {
+                          documentUrl: docUrl,
+                          fileName: docName,
+                          clientName: client.name || 'Client',
+                          caseTitle: item.issue || svcLabel,
+                        });
+                      }}
+                    >
+                      <Ionicons name="document-text-outline" size={14} color={docUrl ? COLORS.primary : '#999'} />
+                      <Text style={[styles.detailDocName, !docUrl && { color: '#999' }]} numberOfLines={1}>
                         {docName}
                       </Text>
-                    </View>
+                    </TouchableOpacity>
 
                     <View style={styles.dateMetaGrid}>
                       <View style={styles.dateCol}>

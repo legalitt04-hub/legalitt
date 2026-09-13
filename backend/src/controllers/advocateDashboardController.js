@@ -77,19 +77,22 @@ exports.getDashboardStats = async (req, res) => {
       : 0;
     const recentReviews      = allAdvocateReviews.slice(0, 5);
 
-    // 6. Real earnings from wallet.earningTransactions
-    const transactions = advocate.wallet?.earningTransactions || [];
+    // 6. Earnings from active Bookings (confirmed/completed)
+    const activeBookings = await Booking.find({
+      advocate: advocateId,
+      status: { $in: ['confirmed', 'completed'] }
+    }).select('payment createdAt').lean();
 
     let dailyEarnings   = 0;
     let weeklyEarnings  = 0;
     let monthlyEarnings = 0;
 
-    transactions.forEach(txn => {
-      const txnDate = new Date(txn.creditedAt);
-      const net     = txn.netAmount || 0;
-      if (txnDate >= startOfToday && txnDate <= endOfToday) dailyEarnings   += net;
-      if (txnDate >= startOfWeek)                           weeklyEarnings  += net;
-      if (txnDate >= startOfMonth)                          monthlyEarnings += net;
+    activeBookings.forEach(booking => {
+      const bDate = new Date(booking.createdAt || booking.date);
+      const net = booking.payment?.amount || 0;
+      if (bDate >= startOfToday && bDate <= endOfToday) dailyEarnings   += net;
+      if (bDate >= startOfWeek)                         weeklyEarnings  += net;
+      if (bDate >= startOfMonth)                        monthlyEarnings += net;
     });
 
     // 7. Profile completion %
@@ -101,7 +104,7 @@ exports.getDashboardStats = async (req, res) => {
     if (advocate.specializations?.length > 0)         completion += 15;
     if (advocate.user?.avatar)                        completion += 20;
 
-    // 8. Last 7 days trend (from real transactions)
+    // 8. Last 7 days trend (from bookings)
     const last7Days     = [];
     const caseTrend     = [];
     const earningsTrend = [];
@@ -114,15 +117,15 @@ exports.getDashboardStats = async (req, res) => {
       const dStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
       const dEnd   = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
 
-      const dayTxns = transactions.filter(t => {
-        const td = new Date(t.creditedAt);
+      const dayBookings = activeBookings.filter(b => {
+        const td = new Date(b.createdAt || b.date);
         return td >= dStart && td <= dEnd;
       });
-      caseTrend.push(dayTxns.length);
-      earningsTrend.push(dayTxns.reduce((s, t) => s + (t.netAmount || 0), 0));
+      caseTrend.push(dayBookings.length);
+      earningsTrend.push(dayBookings.reduce((s, b) => s + (b.payment?.amount || 0), 0));
     }
 
-    // 9. Last 6 months trend (from real transactions)
+    // 9. Last 6 months trend (from bookings)
     const last6Months          = [];
     const monthlyEarningsTrend = [];
 
@@ -135,11 +138,11 @@ exports.getDashboardStats = async (req, res) => {
       const mStart = new Date(d.getFullYear(), d.getMonth(), 1);
       const mEnd   = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
 
-      const monthTxns = transactions.filter(t => {
-        const td = new Date(t.creditedAt);
+      const monthBookings = activeBookings.filter(b => {
+        const td = new Date(b.createdAt || b.date);
         return td >= mStart && td <= mEnd;
       });
-      monthlyEarningsTrend.push(monthTxns.reduce((s, t) => s + (t.netAmount || 0), 0));
+      monthlyEarningsTrend.push(monthBookings.reduce((s, b) => s + (b.payment?.amount || 0), 0));
     }
 
     res.status(200).json({

@@ -703,7 +703,7 @@ exports.updateSettings = async (req, res, next) => {
   try {
     const allowedUpdates = [
       'commissionRate', 'minFee', 'maxAdvanceBookingDays',
-      'features', 'maintenanceMode', 'announcement'
+      'features', 'maintenanceMode', 'announcement', 'postConsultationBufferHours'
     ];
     const updateData = {};
     for (const key of allowedUpdates) {
@@ -722,7 +722,7 @@ exports.updateSettings = async (req, res, next) => {
 exports.getPublicSettings = async (req, res, next) => {
   try {
     let settings = await Settings.findOne({ singletonId: 'global' })
-      .select('maintenanceMode announcement features minFee maxAdvanceBookingDays commissionRate')
+      .select('maintenanceMode announcement features minFee maxAdvanceBookingDays commissionRate postConsultationBufferHours')
       .lean();
     if (!settings) {
       const s = await Settings.create({});
@@ -733,6 +733,7 @@ exports.getPublicSettings = async (req, res, next) => {
         minFee: s.minFee,
         maxAdvanceBookingDays: s.maxAdvanceBookingDays,
         commissionRate: s.commissionRate,
+        postConsultationBufferHours: s.postConsultationBufferHours,
       };
     }
     res.json({ success: true, data: settings });

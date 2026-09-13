@@ -215,6 +215,16 @@ const AdvocateDashboardScreen = ({ navigation }) => {
                   advocateId: data.client?._id,
                 });
               } else if (data.consultationMode === 'voice' || data.consultationMode === 'video') {
+                const effectiveRoomId = data.zegoRoomId || data.videoRoomId || null;
+                const socket = getSocket();
+                if (socket && data.bookingId) {
+                  socket.emit('initiate_call', {
+                    bookingId: data.bookingId,
+                    zegoRoomId: effectiveRoomId,
+                    mode: data.consultationMode,
+                  });
+                }
+                
                 navigation.navigate('AdvocateCall', {
                   clientName:   data.client?.name || 'Client',
                   clientAvatar: data.client?.avatar,
@@ -222,7 +232,7 @@ const AdvocateDashboardScreen = ({ navigation }) => {
                   bookingId:    data.bookingId,
                   clientId:     data.client?._id,
                   // Zego credentials from admin assignment notification
-                  zegoRoomId:   data.zegoRoomId    || data.videoRoomId    || null,
+                  zegoRoomId:   effectiveRoomId,
                   zegoToken:    data.advocateToken || data.advocateVideoToken || null,
                   zegoAppId:    data.zegoAppId     || 0,
                   myUserId:     advocateUser._id   || advocateUser.id || '',

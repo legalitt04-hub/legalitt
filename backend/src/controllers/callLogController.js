@@ -56,6 +56,15 @@ exports.logCall = async (req, res, next) => {
       recordingConsent: Boolean(recordingConsent),
     });
 
+    // Auto-complete the booking if the call was successful and lasted more than 10 seconds
+    if (bookingId && status === 'completed' && callDuration > 10) {
+      const Booking = require('../models/Booking');
+      await Booking.findByIdAndUpdate(bookingId, { status: 'completed' }).catch(err => {
+        logger.error(`[CallLog] Failed to auto-complete booking ${bookingId}: ${err.message}`);
+      });
+      logger.info(`[CallLog] Auto-completed booking ${bookingId} after successful ${mode} call.`);
+    }
+
     logger.info(`[CallLog] ${mode} call saved: ${clientId} ↔ ${advocateId} | ${callDuration}s | status: ${status} | reason: ${resolvedEndReason}`);
     res.status(201).json({ success: true, data: callLog });
   } catch (err) { next(err); }

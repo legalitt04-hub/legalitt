@@ -580,8 +580,36 @@ exports.getFIRDrafts = async (req, res, next) => {
     const FIRDraft = require('../models/FIRDraft');
     const drafts = await FIRDraft.find()
       .populate('user', 'name email phone')
+      .populate({ path: 'advocate', populate: { path: 'user', select: 'name email avatar' } })
       .sort({ createdAt: -1 });
-    res.json({ success: true, data: drafts });
+      
+    // Map to Case-like interface
+    const mapped = drafts.map(d => ({
+      _id: d._id,
+      caseNumber: `FIR-${d._id.toString().slice(-6).toUpperCase()}`,
+      title: d.type ? d.type.toUpperCase() + ' FIR' : 'General FIR',
+      client: d.user || {},
+      user: d.user, // for backward compat
+      advocate: d.advocate,
+      status: d.status || 'draft',
+      serviceType: 'fir_draft',
+      priority: 'medium',
+      payment: null,
+      description: d.incident?.description || d.additionalInfo || '',
+      notes: d.additionalInfo || '',
+      documents: d.evidence || [],
+      adminDocuments: d.adminDocuments || [],
+      advocateDocuments: d.advocateDocuments || [],
+      createdAt: d.createdAt,
+      updatedAt: d.updatedAt,
+      // Custom FIR fields
+      firType: d.type,
+      incidentLocation: d.incident?.location || '',
+      complainantName: d.complainant?.name || '',
+      incidentDate: d.incident?.date || ''
+    }));
+
+    res.json({ success: true, data: mapped });
   } catch (err) { next(err); }
 };
 
@@ -597,9 +625,13 @@ exports.getFIRDraft = async (req, res, next) => {
 exports.updateFIRDraftStatus = async (req, res, next) => {
   try {
     const FIRDraft = require('../models/FIRDraft');
+    const updateData = { status: req.body.status };
+    if (req.body.advocateId !== undefined) {
+      updateData.advocate = req.body.advocateId === null ? null : req.body.advocateId;
+    }
     const draft = await FIRDraft.findByIdAndUpdate(
       req.params.id,
-      { status: req.body.status },
+      updateData,
       { new: true }
     );
     if (!draft) return res.status(404).json({ success: false, message: 'FIR Draft not found' });
@@ -639,9 +671,17 @@ exports.uploadFIRDraftDocument = async (req, res, next) => {
       });
     }
 
-    await FIRDraft.findByIdAndUpdate(req.params.id, {
-      $push: { adminDocuments: { url: result.secure_url, name: req.file.originalname, uploadedAt: new Date() } }
-    });
+    const url = result.secure_url;
+    
+    // Support saving to either adminDocuments or advocateDocuments
+    const side = req.body.side || 'admin';
+    const docEntry = { url, name: req.file.originalname };
+    
+    if (side === 'advocate') {
+      await FIRDraft.findByIdAndUpdate(req.params.id, { $push: { advocateDocuments: docEntry } });
+    } else {
+      await FIRDraft.findByIdAndUpdate(req.params.id, { $push: { adminDocuments: docEntry } });
+    }
 
     res.json({ success: true, data: { url: result.secure_url, name: req.file.originalname } });
   } catch (err) {
@@ -668,6 +708,7 @@ exports.getPropertyResearch = async (req, res, next) => {
     const Booking = require('../models/Booking');
     const requests = await Booking.find({ serviceType: 'property_research' })
       .populate('client', 'name email phone')
+      .populate({ path: 'advocate', populate: { path: 'user', select: 'name email avatar' } })
       .sort({ createdAt: -1 });
 
     // Map Booking fields → PropertyResearch interface expected by admin panel
@@ -685,6 +726,7 @@ exports.getPropertyResearch = async (req, res, next) => {
         district: meta.district || b.district || '—',
         state: meta.state || b.state || '—',
         purpose: meta.purpose || b.purpose || b.issueDescription || '—',
+        advocate: b.advocate,
         status: b.status === 'pending_assignment' ? 'pending' : b.status === 'confirmed' ? 'processing' : b.status === 'completed' ? 'completed' : b.status === 'cancelled' ? 'rejected' : b.status || 'pending',
         payment: b.payment || (b.amount ? { amount: b.amount, status: b.paymentStatus === 'completed' ? 'paid' : 'pending' } : null),
         documents: b.documents || [],
@@ -703,9 +745,13 @@ exports.getPropertyResearch = async (req, res, next) => {
 exports.updatePropertyResearchStatus = async (req, res, next) => {
   try {
     const Booking = require('../models/Booking');
+    const updateData = { status: req.body.status };
+    if (req.body.advocateId !== undefined) {
+      updateData.advocate = req.body.advocateId === null ? null : req.body.advocateId;
+    }
     const updated = await Booking.findByIdAndUpdate(
       req.params.id,
-      { status: req.body.status },
+      updateData,
       { new: true }
     ).populate('client', 'name email phone');
     if (!updated) return res.status(404).json({ success: false, message: 'Request not found' });
@@ -745,11 +791,19 @@ exports.uploadPropertyResearchDocument = async (req, res, next) => {
       });
     }
 
-    await Booking.findByIdAndUpdate(req.params.id, {
-      $push: { advocateDocuments: { url: result.secure_url, name: req.file.originalname, type: isPdf ? 'pdf' : 'image', uploadedAt: new Date() } }
-    });
+    const url = result.secure_url;
+    
+    // Support saving to either adminDocuments or advocateDocuments
+    const side = req.body.side || 'admin';
+    const docEntry = { url, name: req.file.originalname, type: isPdf ? 'pdf' : 'image', uploadedAt: new Date() };
+    
+    if (side === 'advocate') {
+      await Booking.findByIdAndUpdate(req.params.id, { $push: { advocateDocuments: docEntry } });
+    } else {
+      await Booking.findByIdAndUpdate(req.params.id, { $push: { adminDocuments: docEntry } });
+    }
 
-    res.json({ success: true, data: { url: result.secure_url, name: req.file.originalname } });
+    res.json({ success: true, data: { url, name: req.file.originalname } });
   } catch (err) {
     if (req.file?.path) { try { require('fs').unlinkSync(req.file.path); } catch (e) {} }
     next(err);
@@ -768,6 +822,7 @@ exports.getDocumentForensic = async (req, res, next) => {
       ]
     })
       .populate('client', 'name email phone')
+      .populate({ path: 'advocate', populate: { path: 'user', select: 'name email avatar' } })
       .sort({ createdAt: -1 });
     res.json({ success: true, data: requests });
   } catch (err) { next(err); }
@@ -776,9 +831,13 @@ exports.getDocumentForensic = async (req, res, next) => {
 exports.updateDocumentForensicStatus = async (req, res, next) => {
   try {
     const Booking = require('../models/Booking');
+    const updateData = { status: req.body.status };
+    if (req.body.advocateId !== undefined) {
+      updateData.advocate = req.body.advocateId === null ? null : req.body.advocateId;
+    }
     const updated = await Booking.findByIdAndUpdate(
       req.params.id,
-      { status: req.body.status },
+      updateData,
       { new: true }
     ).populate('client', 'name email phone');
     if (!updated) return res.status(404).json({ success: false, message: 'Request not found' });
@@ -818,11 +877,19 @@ exports.uploadDocumentForensicReport = async (req, res, next) => {
       });
     }
 
-    await Booking.findByIdAndUpdate(req.params.id, {
-      $push: { advocateDocuments: { url: result.secure_url, name: req.file.originalname, type: isPdf ? 'pdf' : 'image', uploadedAt: new Date() } }
-    });
+    const url = result.secure_url;
+    
+    // Support saving to either adminDocuments or advocateDocuments
+    const side = req.body.side || 'admin';
+    const docEntry = { url, name: req.file.originalname, type: isPdf ? 'pdf' : 'image', uploadedAt: new Date() };
+    
+    if (side === 'advocate') {
+      await Booking.findByIdAndUpdate(req.params.id, { $push: { advocateDocuments: docEntry } });
+    } else {
+      await Booking.findByIdAndUpdate(req.params.id, { $push: { adminDocuments: docEntry } });
+    }
 
-    res.json({ success: true, data: { url: result.secure_url, name: req.file.originalname } });
+    res.json({ success: true, data: { url, name: req.file.originalname } });
   } catch (err) {
     if (req.file?.path) { try { require('fs').unlinkSync(req.file.path); } catch (e) {} }
     next(err);

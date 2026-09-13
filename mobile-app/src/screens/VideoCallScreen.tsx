@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
 import { View, StyleSheet, StatusBar, Alert, Text, ActivityIndicator, TouchableOpacity } from 'react-native';
 import Constants from 'expo-constants';
-import ZegoUIKitPrebuiltCallComponent, {
+import {
+  ZegoUIKitPrebuiltCall as ZegoUIKitPrebuiltCallComponent,
   ONE_ON_ONE_VIDEO_CALL_CONFIG,
   ONE_ON_ONE_VOICE_CALL_CONFIG,
 } from '@zegocloud/zego-uikit-prebuilt-call-rn';
@@ -89,9 +90,10 @@ export default function VideoCallScreen({ navigation, route }: any) {
   const handleHangUp = () => {
     // Notify advocate that client hung up
     const socket = getSocket();
-    if (socket && bookingId) {
+    if (socket) {
       socket.emit('call_ended', {
         bookingId,
+        clientId: myUserId || null,
         advocateUserId: advocateUserId || null,
       });
     }

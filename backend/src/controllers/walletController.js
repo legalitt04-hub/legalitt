@@ -190,9 +190,40 @@ exports.getEarnings = async (req, res, next) => {
       .lean();
     if (!advocate) return next(new AppError('Advocate profile not found.', 404));
 
+    const settings = await Settings.findOne().lean();
+    const commissionRate = settings?.commissionRate || 20;
+
     const allTxns = (advocate.wallet?.earningTransactions || [])
       .slice()
-      .sort((a, b) => new Date(b.creditedAt) - new Date(a.creditedAt));
+      .map(tx => ({ ...tx, isExpected: false }));
+
+    // Inject active (confirmed) bookings as pending expected earnings
+    const activeBookings = await Booking.find({
+      advocate: advocate._id, // use the actual advocate document ID, not the user ID
+      status: 'confirmed'
+    }).populate('client', 'name').lean();
+
+    let pendingExpectedTotal = 0;
+    activeBookings.forEach(booking => {
+      const amount = booking.consultationFee || booking.amount || 0;
+      const expectedNet = amount * (1 - commissionRate / 100);
+      pendingExpectedTotal += expectedNet;
+      
+      allTxns.push({
+        bookingId: booking._id,
+        clientName: booking.client?.name || 'Client',
+        serviceType: 'Consultation',
+        consultationMode: booking.consultationMode,
+        grossAmount: amount,
+        platformFee: amount - expectedNet,
+        netAmount: expectedNet,
+        commissionRate,
+        creditedAt: booking.createdAt,
+        isExpected: true
+      });
+    });
+
+    allTxns.sort((a, b) => new Date(b.creditedAt) - new Date(a.creditedAt));
 
     const pageNum  = Number(page);
     const limitNum = Number(limit);
@@ -217,7 +248,7 @@ exports.getEarnings = async (req, res, next) => {
         hasMore: pageNum * limitNum < allTxns.length,
       },
       summary: {
-        totalEarned:      advocate.wallet?.totalEarned    || 0,
+        totalEarned:      (advocate.wallet?.totalEarned || 0) + pendingExpectedTotal,
         availableBalance: advocate.wallet?.balance        || 0,
         totalConsultations: advocate.totalConsultations   || 0,
       },

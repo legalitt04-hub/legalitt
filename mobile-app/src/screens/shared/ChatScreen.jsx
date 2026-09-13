@@ -38,7 +38,7 @@ const ChatScreen = ({ navigation, route }) => {
   const {
     chatId, advocateName, advocateAvatar, advocateId,
     zegoRoomId, zegoToken, zegoAppId, zegoAppSign, mode: callMode,
-    scheduledSlot, bookingId, advocateUserId,
+    scheduledSlot, bookingId, bookingDate, advocateUserId,
   } = route.params || {};
   const { user } = useAuth();
   const { isConnected } = useNetwork();
@@ -52,13 +52,57 @@ const ChatScreen = ({ navigation, route }) => {
   const flatListRef = useRef(null);
   const [text, setText]       = useState('');
   const [sharing, setSharing] = useState(false);
-  // Delay showing offline banner — socket needs ~2s to connect on first mount
   const [showOfflineBanner, setShowOfflineBanner] = useState(false);
   useEffect(() => {
     if (connected) { setShowOfflineBanner(false); return; }
     const timer = setTimeout(() => setShowOfflineBanner(true), 3000);
     return () => clearTimeout(timer);
   }, [connected]);
+
+  // ── Countdown Timer Logic ─────────────────────────────────────
+  const [timeRemaining, setTimeRemaining] = useState(null);
+  const [chatExpired, setChatExpired] = useState(false);
+
+  useEffect(() => {
+    if (!bookingDate) return;
+
+    let timerInterval;
+    const fetchAndStartTimer = async () => {
+      try {
+        // Fetch buffer hours from settings
+        const res = await api.get('/settings/public');
+        const bufferHours = res.data?.data?.postConsultationBufferHours ?? 24;
+        
+        const scheduledStart = new Date(bookingDate).getTime();
+        // Base 1 hour consultation + buffer
+        const expiryTime = scheduledStart + (60 * 60 * 1000) + (bufferHours * 60 * 60 * 1000);
+
+        const updateTimer = () => {
+          const now = Date.now();
+          const diff = expiryTime - now;
+
+          if (diff <= 0) {
+            setChatExpired(true);
+            setTimeRemaining('00h 00m 00s');
+            clearInterval(timerInterval);
+          } else {
+            const h = Math.floor(diff / (1000 * 60 * 60));
+            const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const s = Math.floor((diff % (1000 * 60)) / 1000);
+            setTimeRemaining(`${h.toString().padStart(2, '0')}h ${m.toString().padStart(2, '0')}m ${s.toString().padStart(2, '0')}s`);
+          }
+        };
+
+        updateTimer(); // initial call
+        timerInterval = setInterval(updateTimer, 1000);
+      } catch (err) {
+        console.log('Failed to fetch settings for timer:', err.message);
+      }
+    };
+
+    fetchAndStartTimer();
+    return () => clearInterval(timerInterval);
+  }, [bookingDate]);
 
   // ── Register push token on mount ──────────────────────────────
   useEffect(() => {
@@ -329,58 +373,91 @@ const ChatScreen = ({ navigation, route }) => {
           </View>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.callBtn}
-          onPress={() => {
-            if (callMode === 'chat') {
-              Alert.alert('Chat Only', 'This consultation is chat-based. Voice/video calls are not included.');
-              return;
-            }
+        <View style={{ flexDirection: 'row', gap: 12 }}>
+          {/* Voice Call Button */}
+          <TouchableOpacity
+            style={styles.callBtn}
+            onPress={() => {
+              if (callMode === 'chat') {
+                Alert.alert('Chat Only', 'This consultation is chat-based. Voice/video calls are not included.');
+                return;
+              }
 
-            // roomId: prefer explicit param, then bookingId-based, then chatId-based
-            const effectiveRoomId =
-              zegoRoomId ||
-              (bookingId  ? `legalitt-${bookingId}`  : null) ||
-              (chatId     ? `legalitt-${chatId}`     : null);
+              const effectiveRoomId = zegoRoomId || (bookingId ? `legalitt-${bookingId}` : null) || (chatId ? `legalitt-${chatId}` : null);
+              if (!effectiveRoomId) return Alert.alert('Error', 'Could not start call.');
 
-            if (!effectiveRoomId) {
-              Alert.alert('Call Unavailable', 'Could not start call. Please re-open the chat from your booking.');
-              return;
-            }
+              const socket = getSocket();
+              if (socket && (bookingId || chatId)) {
+                socket.emit('initiate_call', {
+                  bookingId,
+                  chatId,
+                  zegoRoomId: effectiveRoomId,
+                  mode: 'voice',
+                });
+              }
 
-            // Notify target via backend (initiate_call → backend routes → incoming_call alert on target's app)
-            const socket = getSocket();
-            if (socket && bookingId) {
-              socket.emit('initiate_call', {
+              const userRole = userData?.role || 'client';
+              const isAdvocate = userRole === 'advocate';
+              navigation.navigate(isAdvocate ? 'AdvocateCall' : 'VideoCall', {
+                zegoRoomId:  effectiveRoomId,
+                zegoToken,
+                zegoAppId:   zegoAppId || 0,
+                advocateName: isAdvocate ? undefined : advocateName,
+                clientName:   isAdvocate ? advocateName : undefined,
+                myUserId:    String(userData._id  || ''),
+                myUserName:  String(userData.name || 'User'),
+                mode:        'voice',
                 bookingId,
-                zegoRoomId: effectiveRoomId,
-                mode:       callMode || 'voice',
+                advocateUserId: isAdvocate ? userData._id : advocateId, // target is advocateId if client is calling
+                clientId:       isAdvocate ? advocateId : userData._id, // target is advocateId if advocate is calling
               });
-            }
+            }}
+          >
+            <Ionicons name="call-outline" size={20} color={COLORS.primary} />
+          </TouchableOpacity>
 
-            const userRole = userData?.role || 'client';
-            const callScreenRoute = userRole === 'advocate' ? 'AdvocateCall' : 'VideoCall';
+          {/* Video Call Button */}
+          <TouchableOpacity
+            style={styles.callBtn}
+            onPress={() => {
+              if (callMode === 'chat') {
+                Alert.alert('Chat Only', 'This consultation is chat-based. Voice/video calls are not included.');
+                return;
+              }
 
-            navigation.navigate(callScreenRoute, {
-              zegoRoomId:  effectiveRoomId,
-              zegoToken,
-              zegoAppId:   zegoAppId || 0,
-              advocateName,
-              myUserId:    String(userData._id  || ''),
-              myUserName:  String(userData.name || 'User'),
-              mode:        callMode || 'voice',
-              bookingId,
-              advocateUserId,
-              clientId:    userData._id, // Helpful for advocate screen
-            });
-          }}
-        >
-          <Ionicons
-            name={callMode === 'video' ? 'videocam-outline' : 'call-outline'}
-            size={20}
-            color={zegoRoomId ? COLORS.primary : COLORS.textPrimary}
-          />
-        </TouchableOpacity>
+              const effectiveRoomId = zegoRoomId || (bookingId ? `legalitt-${bookingId}` : null) || (chatId ? `legalitt-${chatId}` : null);
+              if (!effectiveRoomId) return Alert.alert('Error', 'Could not start call.');
+
+              const socket = getSocket();
+              if (socket && (bookingId || chatId)) {
+                socket.emit('initiate_call', {
+                  bookingId,
+                  chatId,
+                  zegoRoomId: effectiveRoomId,
+                  mode: 'video',
+                });
+              }
+
+              const userRole = userData?.role || 'client';
+              const isAdvocate = userRole === 'advocate';
+              navigation.navigate(isAdvocate ? 'AdvocateCall' : 'VideoCall', {
+                zegoRoomId:  effectiveRoomId,
+                zegoToken,
+                zegoAppId:   zegoAppId || 0,
+                advocateName: isAdvocate ? undefined : advocateName,
+                clientName:   isAdvocate ? advocateName : undefined,
+                myUserId:    String(userData._id  || ''),
+                myUserName:  String(userData.name || 'User'),
+                mode:        'video',
+                bookingId,
+                advocateUserId: isAdvocate ? userData._id : advocateId, // target is advocateId if client is calling
+                clientId:       isAdvocate ? advocateId : userData._id, // target is advocateId if advocate is calling
+              });
+            }}
+          >
+            <Ionicons name="videocam-outline" size={20} color={COLORS.primary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Scheduled Slot Banner */}
@@ -389,6 +466,25 @@ const ChatScreen = ({ navigation, route }) => {
           <Ionicons name="time-outline" size={14} color="#D4AF37" />
           <Text style={styles.slotHeaderBannerText}>
             Session Slot: {scheduledSlot}
+          </Text>
+        </View>
+      )}
+
+      {/* Countdown Timer Banner */}
+      {timeRemaining && !chatExpired && (
+        <View style={styles.timerBanner}>
+          <Ionicons name="hourglass-outline" size={14} color="#B45309" />
+          <Text style={styles.timerBannerText}>
+            Consultation ends in: {timeRemaining}
+          </Text>
+        </View>
+      )}
+
+      {chatExpired && (
+        <View style={[styles.timerBanner, { backgroundColor: '#FEE2E2', borderColor: '#FCA5A5' }]}>
+          <Ionicons name="alert-circle-outline" size={14} color="#DC2626" />
+          <Text style={[styles.timerBannerText, { color: '#DC2626' }]}>
+            Consultation time window has expired.
           </Text>
         </View>
       )}
@@ -433,6 +529,11 @@ const ChatScreen = ({ navigation, route }) => {
           <View style={styles.readOnlyInputContainer}>
             <Ionicons name="eye-outline" size={18} color="#6B7280" style={{ marginRight: 8 }} />
             <Text style={styles.readOnlyInputText}>Chat is in read-only mode while offline</Text>
+          </View>
+        ) : chatExpired ? (
+          <View style={styles.readOnlyInputContainer}>
+            <Ionicons name="lock-closed-outline" size={18} color="#6B7280" style={{ marginRight: 8 }} />
+            <Text style={styles.readOnlyInputText}>Consultation window closed.</Text>
           </View>
         ) : (
           <View style={styles.inputContainer}>
@@ -519,6 +620,22 @@ const styles = StyleSheet.create({
     color: '#8D7865',
     fontSize: 12,
     fontWeight: '700',
+  },
+  timerBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#FEF3C7',
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  timerBannerText: {
+    color: '#92400E',
+    fontSize: 11,
+    fontWeight: '600',
   },
 
   offlineBanner: {

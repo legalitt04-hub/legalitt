@@ -96,7 +96,9 @@ const ChatListScreen = ({ navigation }) => {
             chatId: item._id, 
             advocateName: other.name, 
             advocateAvatar: otherAvatar,
-            advocateId: other._id
+            advocateId: other._id,
+            bookingId: item.booking?._id,
+            bookingDate: item.booking?.date,
           })}
           activeOpacity={0.8}
         >

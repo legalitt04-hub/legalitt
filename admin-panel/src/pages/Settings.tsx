@@ -121,6 +121,15 @@ const Settings = () => {
                   className="bg-slate-50/50 border-slate-200 text-slate-900" 
                 />
               </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-500">Post-Consultation Expiry (Hours)</label>
+                <Input 
+                  type="number" 
+                  value={settings.postConsultationBufferHours ?? 24} 
+                  onChange={(e) => handleChange('postConsultationBufferHours', Number(e.target.value))}
+                  className="bg-slate-50/50 border-slate-200 text-slate-900" 
+                />
+              </div>
             </div>
           </div>
         </Card>

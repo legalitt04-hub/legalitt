@@ -21,8 +21,7 @@ export default ({ config }) => ({
   ...config,
   expo: {
     name: "Legalitt",
-    owner: "legalittgrowths-organization",
-    slug: "legalitt",
+        slug: "legalitt",
     version: "1.0.3",
     orientation: "portrait",
     icon: "./assets/icon.png",
@@ -99,9 +98,8 @@ export default ({ config }) => ({
       // ZEGOCLOUD — Video/Voice/Chat
       ZEGO_APP_ID: parseInt(process.env.ZEGO_APP_ID || '0', 10),
       ZEGO_APP_SIGN: process.env.ZEGO_APP_SIGN || '',
-      // EAS Project linking
       eas: {
-        projectId: '8136d29e-51a5-4de0-9ae3-cbdedc794e9b'
+        projectId: 'c7cbf65c-ddc9-4089-afc6-30f135b6d5e8'
       }
     }
   }

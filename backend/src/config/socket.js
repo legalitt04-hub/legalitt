@@ -208,51 +208,100 @@ const initSocket = async (server) => {
 
     // ── CALL SIGNALING ─────────────────────────────────────────────────
     // Either client or advocate emits this when they tap "Video Call" / "Voice Call"
-    socket.on("initiate_call", async ({ bookingId, zegoRoomId, mode }) => {
+    socket.on("initiate_call", async ({ bookingId, chatId, zegoRoomId, mode }) => {
       try {
-        if (!bookingId) return;
-        const booking = await Booking.findById(bookingId)
-          .select('advocate client videoRoomId advocateVideoToken zegoAppId')
-          .lean();
-        if (!booking) return;
+        let targetUserId;
+        let callerUser;
+        let bookingDetails = {};
 
-        const advocate = await Advocate.findById(booking.advocate)
-          .populate('user', 'name expoPushToken fcmToken')
-          .lean();
-        if (!advocate?.user) return;
-        const advocateUserId = advocate.user._id.toString();
+        if (bookingId) {
+          const booking = await Booking.findById(bookingId)
+            .select('advocate client videoRoomId advocateVideoToken zegoAppId')
+            .lean();
+          if (!booking) return;
 
-        const isClientCalling = booking.client.toString() === socket.userId;
-        const isAdvocateCalling = advocateUserId === socket.userId;
+          const advocate = await Advocate.findById(booking.advocate).lean();
+          if (!advocate?.user) return;
+          const advocateUserId = advocate.user.toString();
 
-        if (!isClientCalling && !isAdvocateCalling) return; // unauthorized
+          const isClientCalling = booking.client.toString() === socket.userId;
+          const isAdvocateCalling = advocateUserId === socket.userId;
 
-        const targetUserId = isClientCalling ? advocateUserId : booking.client.toString();
-        const callerUser = await User.findById(socket.userId).select('name avatar').lean();
-        const targetUser = await User.findById(targetUserId).select('expoPushToken').lean();
+          if (!isClientCalling && !isAdvocateCalling) return; // unauthorized
+          targetUserId = isClientCalling ? advocateUserId : booking.client.toString();
+          
+          bookingDetails = {
+            zegoRoomId: booking.videoRoomId,
+            advocateToken: booking.advocateVideoToken,
+            zegoAppId: booking.zegoAppId,
+            clientId: booking.client.toString(),
+            advocateUserId: advocateUserId,
+            isClientCalling,
+          };
+        } else if (chatId) {
+          // Fallback to chat participants if no booking ID
+          const chat = await Chat.findById(chatId).lean();
+          if (!chat) return;
+          if (!chat.participants.some(p => p.toString() === socket.userId)) return;
+          targetUserId = chat.participants.find(p => p.toString() !== socket.userId)?.toString();
+          if (!targetUserId) return;
+        } else {
+          return;
+        }
+
+        callerUser = await User.findById(socket.userId).select('name avatar role').lean();
+        const targetUser = await User.findById(targetUserId).select('expoPushToken role').lean();
+
+        // Determine client and advocate IDs based on roles if not already known
+        let resolvedClientId = bookingDetails.clientId;
+        let resolvedAdvocateId = bookingDetails.advocateUserId; // we need this if we have it
+        
+        if (!resolvedClientId) {
+          if (callerUser?.role === 'client') resolvedClientId = socket.userId;
+          else if (targetUser?.role === 'client') resolvedClientId = targetUserId;
+          else resolvedClientId = targetUserId; // Fallback
+        }
+        if (!resolvedAdvocateId) {
+          if (callerUser?.role === 'advocate') resolvedAdvocateId = socket.userId;
+          else if (targetUser?.role === 'advocate') resolvedAdvocateId = targetUserId;
+          else resolvedAdvocateId = socket.userId; // Fallback
+        }
 
         // Notify target — they will open VideoCallScreen or AdvocateCallScreen
         io.to(`user:${targetUserId}`).emit("incoming_call", {
-          bookingId,
-          zegoRoomId:    booking.videoRoomId    || zegoRoomId,
-          advocateToken: booking.advocateVideoToken,
-          zegoAppId:     booking.zegoAppId || 0,
-          clientName:    callerUser?.name || (isClientCalling ? 'Client' : 'Advocate'),
+          bookingId:     bookingId || null,
+          chatId:        chatId || null,
+          zegoRoomId:    bookingDetails.zegoRoomId || zegoRoomId,
+          advocateToken: bookingDetails.advocateToken,
+          zegoAppId:     bookingDetails.zegoAppId || 0,
+          clientName:    callerUser?.name || (bookingDetails.isClientCalling ? 'Client' : 'Advocate'),
           clientAvatar:  callerUser?.avatar || null,
-          clientId:      isClientCalling ? socket.userId : booking.client.toString(), // The booking's client ID
+          clientId:      resolvedClientId,
+          advocateUserId: resolvedAdvocateId,
           mode:          mode || 'video',
         });
 
-        logger.info(`[CALL] initiate_call: ${isClientCalling ? 'client' : 'advocate'}=${socket.userId} → target=${targetUserId} | booking=${bookingId}`);
+        logger.info(`[CALL] initiate_call: caller=${socket.userId} → target=${targetUserId} | booking=${bookingId}`);
 
         // Push notification if target is offline
         const isTargetOnline = onlineUsers.has(targetUserId) && onlineUsers.get(targetUserId).size > 0;
         if (!isTargetOnline && targetUser?.expoPushToken) {
+          const pushTitle = `${mode === 'video' ? '📹' : '📞'} Incoming Call`;
+          const pushBody = `${callerUser?.name || 'Someone'} is calling you. Tap to join.`;
           await sendPushNotification(
             targetUser.expoPushToken,
-            `\uD83D\uDCDE Incoming ${mode === 'video' ? 'Video' : 'Voice'} Call`,
-            `${callerUser?.name || 'Someone'} is calling. Tap to join.`,
-            { bookingId, type: 'incoming_call', zegoRoomId: booking.videoRoomId }
+            pushTitle,
+            pushBody,
+            { 
+              type: 'incoming_call', 
+              bookingId: bookingId || null, 
+              chatId: chatId || null,
+              zegoRoomId: bookingDetails.zegoRoomId || zegoRoomId,
+              mode: mode || 'video',
+              clientId: resolvedClientId,
+              advocateUserId: resolvedAdvocateId,
+              callerName: callerUser?.name || 'Someone'
+            }
           );
         }
       } catch (err) {

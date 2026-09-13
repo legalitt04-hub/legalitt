@@ -44,6 +44,9 @@ const settingsSchema = new mongoose.Schema({
   // Max extension per session in hours
   maxExtensionHours: { type: Number, default: 24 },
   
+  // Post-Consultation Reconnect Window (How long room stays open after scheduled end)
+  postConsultationBufferHours: { type: Number, default: 24 },
+
   // Maintenance Mode
   maintenanceMode: {
     type: Boolean,

@@ -431,7 +431,16 @@ const CaseDetailScreen = ({ route, navigation }) => {
                     <TouchableOpacity
                       key={doc._id || idx}
                       style={styles.docRow}
-                      onPress={() => Linking.openURL(doc.url)}
+                      onPress={() => {
+                        if (doc.url) {
+                          navigation.navigate('DocumentViewer', {
+                            documentUrl: doc.url,
+                            fileName: doc.name || `Document ${idx + 1}`,
+                            clientName: client?.name || 'Client',
+                            caseTitle: legalCase.title || legalCase.issue || 'Case Document',
+                          });
+                        }
+                      }}
                       activeOpacity={0.7}
                     >
                       <Ionicons
@@ -457,7 +466,16 @@ const CaseDetailScreen = ({ route, navigation }) => {
                     <TouchableOpacity
                       key={doc._id || idx}
                       style={[styles.docRow, { backgroundColor: '#F0FDF4', borderRadius: 8, marginBottom: 6, paddingHorizontal: 10, paddingVertical: 8 }]}
-                      onPress={() => doc.url && Linking.openURL(doc.url)}
+                      onPress={() => {
+                        if (doc.url) {
+                          navigation.navigate('DocumentViewer', {
+                            documentUrl: doc.url,
+                            fileName: doc.name || `Admin Document ${idx + 1}`,
+                            clientName: client?.name || 'Client',
+                            caseTitle: legalCase.title || legalCase.issue || 'Case Document',
+                          });
+                        }
+                      }}
                       activeOpacity={0.7}
                     >
                       <Ionicons
@@ -554,7 +572,16 @@ const CaseDetailScreen = ({ route, navigation }) => {
                     <View key={doc._id || idx} style={styles.docRow}>
                       <Ionicons name="document-text" size={20} color={COLORS.primary} />
                       <Text style={styles.docName} numberOfLines={1}>{doc.name}</Text>
-                      <TouchableOpacity onPress={() => Linking.openURL(doc.url)}>
+                      <TouchableOpacity onPress={() => {
+                        if (doc.url) {
+                          navigation.navigate('DocumentViewer', {
+                            documentUrl: doc.url,
+                            fileName: doc.name || `Document ${idx + 1}`,
+                            clientName: client?.name || 'Client',
+                            caseTitle: legalCase.title || legalCase.issue || 'Case Document',
+                          });
+                        }
+                      }}>
                         <Text style={styles.docViewBtnText}>View</Text>
                       </TouchableOpacity>
                     </View>

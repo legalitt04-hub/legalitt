@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { WebView } from 'react-native-webview';
 
 // Theme Colors matching "Documents Viewer.pdf"
 const THEME = {
@@ -183,50 +184,36 @@ export default function DocumentViewerScreen({ navigation, route }) {
         <View style={styles.viewerContainer}>
           {viewerState === 'success' && (
             /* ── STATE 1: DOCUMENT AVAILABLE & LOADED ── */
-            <View style={styles.docPreviewWrapper}>
-              <View
-                style={[
-                  styles.a4DocumentPaper,
-                  { transform: [{ scale: zoomLevel }] },
-                ]}
-              >
-                {/* Document Header */}
-                <View style={styles.docPaperHeader}>
-                  <View style={styles.docEmblem}>
-                    <Ionicons name="shield-checkmark" size={16} color={THEME.primary} />
-                  </View>
-                  <Text style={styles.docHeaderTitle}>LEGAL NOTICE / PETITION</Text>
-                  <Text style={styles.docHeaderSub}>COURT OF RECORD JURISDICTION</Text>
-                  <View style={styles.docDivider} />
-                </View>
-
-                {/* Document Body preview */}
-                <View style={styles.docPaperBody}>
-                  <Text style={styles.docMatterTitle}>
-                    IN THE MATTER OF: {clientName.toUpperCase()}
-                  </Text>
-                  <Text style={styles.docParagraph}>
-                    {caseTitle ? `Document filed for: ${caseTitle}. ` : ''}All accompanying submissions and records have been verified and placed on legal record.
-                  </Text>
-                  <View style={styles.docPlaceholderLines}>
-                    <View style={[styles.docLine, { width: '100%' }]} />
-                    <View style={[styles.docLine, { width: '92%' }]} />
-                    <View style={[styles.docLine, { width: '85%' }]} />
-                    <View style={[styles.docLine, { width: '96%' }]} />
-                  </View>
-                </View>
-
-                {/* Document Footer */}
-                <View style={styles.docPaperFooter}>
-                  <View style={styles.docSeal}>
-                    <Ionicons name="ribbon-outline" size={18} color={THEME.primaryLight} />
-                  </View>
-                  <View style={styles.docSignBlock}>
-                    <View style={styles.docSignLine} />
-                    <Text style={styles.docSignText}>Advocate Sign & Seal</Text>
-                  </View>
-                </View>
-              </View>
+            <View style={[styles.docPreviewWrapper, { height: '100%', width: '100%', flex: 1 }]}>
+              {documentUrl ? (
+                (() => {
+                  const isPdf = documentUrl.toLowerCase().endsWith('.pdf') || (fileName && fileName.toLowerCase().endsWith('.pdf'));
+                  const viewerUri = isPdf 
+                    ? `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(documentUrl)}` 
+                    : documentUrl;
+                  
+                  return (
+                    <WebView
+                      source={{ uri: viewerUri }}
+                      style={{ flex: 1, width: '100%', borderRadius: 8 }}
+                      startInLoadingState={true}
+                      onError={(e) => {
+                        console.log('WebView Error:', e.nativeEvent);
+                        setViewerState('error');
+                      }}
+                      onHttpError={(e) => {
+                        console.log('WebView HTTP Error:', e.nativeEvent);
+                        // gview sometimes throws HTTP errors intermittently, don't immediately crash the viewer if it's a PDF
+                        if (!isPdf || e.nativeEvent.statusCode === 404) {
+                           setViewerState('error');
+                        }
+                      }}
+                    />
+                  );
+                })()
+              ) : (
+                <Text>No Document URL Provided</Text>
+              )}
             </View>
           )}
 

@@ -92,10 +92,19 @@ export const useNotifications = (isAuthenticated, navigationRef, user) => {
         nav.navigate('Chat', { chatId: data.chatId });
       } else if (data.type === 'incoming_call') {
         const currentUserRole = user?.role || user?.user?.role || 'client';
-        const targetRoute = currentUserRole === 'advocate' ? 'AdvocateCall' : 'VideoCall';
+        const isAdvocate = currentUserRole === 'advocate';
+        const targetRoute = isAdvocate ? 'AdvocateCall' : 'VideoCall';
+        const myId = user?.user?._id || user?._id;
+
         nav.navigate(targetRoute, {
           bookingId: data.bookingId,
           zegoRoomId: data.zegoRoomId,
+          mode: data.mode,
+          clientName: data.callerName || 'Caller',
+          myUserName: 'Me',
+          myUserId: String(myId || ''),
+          clientId: data.clientId,
+          advocateUserId: data.advocateUserId,
         });
       } else if (data.bookingId) {
         nav.navigate('MyBookings');
@@ -154,7 +163,20 @@ export const useNotifications = (isAuthenticated, navigationRef, user) => {
         `${modeLabel} Call Incoming!`,
         `${callerName} is calling you right now.`,
         [
-          { text: 'Decline', style: 'destructive' },
+          { 
+            text: 'Decline', 
+            style: 'destructive',
+            onPress: () => {
+              const socket = getSocket();
+              if (socket) {
+                socket.emit('call_ended', { 
+                  bookingId: data.bookingId, 
+                  clientId: data.clientId, 
+                  advocateUserId: data.advocateUserId 
+                });
+              }
+            }
+          },
           {
             text: '✅ Accept',
             onPress: () => {
@@ -163,6 +185,8 @@ export const useNotifications = (isAuthenticated, navigationRef, user) => {
                 // Route to correct screen based on logged-in user role
                 const currentUserRole = user?.role || user?.user?.role || 'client';
                 const targetRoute = currentUserRole === 'advocate' ? 'AdvocateCall' : 'VideoCall';
+                const isAdvocate = currentUserRole === 'advocate';
+                const myId = user?.user?._id || user?._id;
                 
                 nav.navigate(targetRoute, {
                   zegoRoomId:   data.zegoRoomId,
@@ -172,6 +196,9 @@ export const useNotifications = (isAuthenticated, navigationRef, user) => {
                   bookingId:    data.bookingId,
                   clientName:   callerName,
                   myUserName:   'Me',
+                  myUserId:     String(myId || ''),
+                  clientId:     data.clientId,
+                  advocateUserId: data.advocateUserId,
                 });
               }
             }
@@ -183,7 +210,15 @@ export const useNotifications = (isAuthenticated, navigationRef, user) => {
       scheduleLocalPush(
         `${modeLabel} Call Incoming!`,
         `${callerName} is calling you. Open the app to join.`,
-        { type: 'incoming_call', bookingId: data.bookingId },
+        { 
+          type: 'incoming_call', 
+          bookingId: data.bookingId,
+          zegoRoomId: data.zegoRoomId,
+          mode: data.mode,
+          clientId: data.clientId,
+          advocateUserId: data.advocateUserId,
+          callerName: callerName
+        },
         'calls'
       );
     };

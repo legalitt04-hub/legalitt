@@ -428,10 +428,19 @@ exports.canJoinCall = async (req, res, next) => {
 
     let canJoin = true;
     let reason = 'ALLOWED';
+    const { Settings } = require('../models/Settings') || {};
+    let bufferHours = 24; // Default
+    try {
+      const SettingsModel = require('../models/Settings');
+      const settings = await SettingsModel.findOne({ singletonId: 'global' });
+      if (settings && settings.postConsultationBufferHours !== undefined) {
+        bufferHours = settings.postConsultationBufferHours;
+      }
+    } catch (e) {}
 
     if (scheduledStart && scheduledEnd) {
       const preBuffer = 15 * 60 * 1000; // 15 mins before
-      const postBuffer = 60 * 60 * 1000; // 60 mins after
+      const postBuffer = bufferHours * 60 * 60 * 1000; // Dynamic hours after
 
       if (now < scheduledStart - preBuffer) {
         canJoin = false;
@@ -458,6 +467,7 @@ exports.canJoinCall = async (req, res, next) => {
         clientName: booking.client?.name || 'Client',
         advocateName: booking.advocate?.user?.name || 'Advocate',
         scheduledStart: booking.date || null,
+        bufferHours: bufferHours,
       },
     });
   } catch (err) { next(err); }

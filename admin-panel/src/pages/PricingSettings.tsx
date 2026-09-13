@@ -70,12 +70,15 @@ export default function PricingSettings() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center space-x-3 text-white">
-        <div className="p-2 bg-primary-500/10 rounded-lg">
-          <Settings className="h-6 w-6 text-primary-400" />
+    <div className="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="flex items-center space-x-3 text-slate-900 mb-8">
+        <div className="p-3 bg-teal-500/10 rounded-xl">
+          <Settings className="h-6 w-6 text-teal-600" />
         </div>
-        <h1 className="text-2xl font-bold">Service Pricing Settings</h1>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Service Pricing</h1>
+          <p className="text-sm text-slate-500 mt-1">Configure base prices for consultations</p>
+        </div>
       </div>
 
       {error && (
@@ -92,22 +95,26 @@ export default function PricingSettings() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
-            className="bg-slate-800 border border-slate-700 rounded-xl p-6"
+            className="bg-white/60 border border-slate-200/60 rounded-2xl p-6 shadow-sm backdrop-blur-xl hover:shadow-md transition-all duration-300 relative overflow-hidden group"
           >
-            <h3 className="text-lg font-semibold text-white mb-4">{price.name}</h3>
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <Settings className="w-16 h-16 text-teal-500" />
+            </div>
+
+            <h3 className="text-lg font-semibold text-slate-900 mb-6">{price.name}</h3>
             
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-400 mb-1">
+            <div className="space-y-5 relative z-10">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-slate-600">
                   Base Price ({price.currency})
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">₹</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-medium">₹</span>
                   <Input
                     type="number"
                     value={price.basePrice}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => handlePriceChange(price._id, e.target.value)}
-                    className="pl-8"
+                    className="pl-8 bg-white border-slate-200/60 focus:border-teal-500 focus:ring-teal-500/20 text-slate-900 shadow-sm"
                   />
                 </div>
               </div>
@@ -115,7 +122,7 @@ export default function PricingSettings() {
               <Button
                 onClick={() => savePrice(price)}
                 disabled={saving === price._id}
-                className="w-full flex items-center justify-center space-x-2"
+                className="w-full flex items-center justify-center space-x-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-sm transition-all"
               >
                 {saving === price._id ? (
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>

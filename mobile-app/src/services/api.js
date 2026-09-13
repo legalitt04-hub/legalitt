@@ -6,8 +6,8 @@ import NetInfo from '@react-native-community/netinfo';
 import { getCacheKey, getCachedData, setCachedData } from '../utils/offlineCache';
 import { addToOfflineQueue } from '../utils/offlineQueue';
 
-// Production Render Live Backend URL (Enforced for all builds & Expo)
-export const BASE_URL = 'https://legalitt-growth.onrender.com/api/v1';
+// Local backend URL for testing local changes
+export const BASE_URL = 'http://172.20.10.3:5001/api/v1';
 console.log('🌐 API Base URL:', BASE_URL);
 
 export const TOKEN_KEY = 'authToken';
