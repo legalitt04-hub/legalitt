@@ -623,7 +623,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: '#0D9488',
+    backgroundColor: COLORS.primary,
     width: 32,
     height: 32,
     borderRadius: 16,

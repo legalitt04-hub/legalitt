@@ -4,7 +4,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import api from '../../services/api';
-import caseAPI from '../../services/caseAPI';
+import { caseAPI } from '../../services/api';
 
 const THEME = {
   background: '#FAF9F8', cardBg: '#FFFFFF', primary: '#8C6E52', primaryLight: '#B09C85',
