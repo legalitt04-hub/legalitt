@@ -409,7 +409,7 @@ const ChatScreen = ({ navigation, route }) => {
                 mode:        'voice',
                 bookingId,
                 advocateUserId: isAdvocate ? userData._id : advocateId, // target is advocateId if client is calling
-                clientId:       isAdvocate ? advocateId : userData._id, // target is advocateId if advocate is calling
+                clientId:       isAdvocate ? advocateId : userData._id,        // pass explicitly for backend tracking
               });
             }}
           >
@@ -451,7 +451,7 @@ const ChatScreen = ({ navigation, route }) => {
                 mode:        'video',
                 bookingId,
                 advocateUserId: isAdvocate ? userData._id : advocateId, // target is advocateId if client is calling
-                clientId:       isAdvocate ? advocateId : userData._id, // target is advocateId if advocate is calling
+                clientId:       isAdvocate ? advocateId : userData._id,        // pass explicitly for backend tracking
               });
             }}
           >

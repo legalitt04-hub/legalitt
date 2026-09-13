@@ -63,8 +63,6 @@ router.put('/services/:id',           adminModuleController.updateService);
 router.get('/documents',              adminModuleController.getDocuments);
 router.post('/documents/upload-for-booking', upload.single('file'), adminModuleController.uploadDocForBooking);
 router.get('/support-tickets',              adminModuleController.getSupportTickets);
-router.post('/support-tickets',             adminModuleController.createSupportTicket);
-router.get('/support-tickets/mine',         adminModuleController.getMyTickets);
 router.put('/support-tickets/:id',          adminModuleController.updateSupportTicket);
 router.post('/support-tickets/:id/reply',   adminModuleController.replyToTicket);
 router.get('/ai-drafts',              adminModuleController.getAIDrafts);

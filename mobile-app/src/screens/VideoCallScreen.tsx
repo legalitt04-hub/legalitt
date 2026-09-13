@@ -48,7 +48,7 @@ export default function VideoCallScreen({ navigation, route }: any) {
   if (!rawAppId || rawAppId === 'undefined') rawAppId = FALLBACK_APP_ID;
   const effectiveAppId = Number(rawAppId) || FALLBACK_APP_ID;
 
-  const effectiveAppSign = ZEGO_APP_SIGN && ZEGO_APP_SIGN !== 'undefined' ? ZEGO_APP_SIGN : FALLBACK_APP_SIGN;
+  const effectiveAppSign = String(ZEGO_APP_SIGN && ZEGO_APP_SIGN !== 'undefined' ? ZEGO_APP_SIGN : FALLBACK_APP_SIGN);
   const isCallReady = !!effectiveRoomId && !!effectiveAppId;
 
   useEffect(() => {
@@ -75,13 +75,23 @@ export default function VideoCallScreen({ navigation, route }: any) {
     const requestPermissions = async () => {
       if (Platform.OS === 'android') {
         try {
-          const granted = await PermissionsAndroid.requestMultiple([
+          const permissionsToRequest = [
             PermissionsAndroid.PERMISSIONS.CAMERA,
             PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-          ]);
+          ];
+          
+          if (Platform.Version >= 31) {
+            permissionsToRequest.push(PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT);
+          }
+          if (Platform.Version >= 33) {
+            permissionsToRequest.push(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
+          }
+
+          const granted = await PermissionsAndroid.requestMultiple(permissionsToRequest);
+          
           if (
-            granted['android.permission.CAMERA'] === PermissionsAndroid.RESULTS.GRANTED &&
-            granted['android.permission.RECORD_AUDIO'] === PermissionsAndroid.RESULTS.GRANTED
+            granted[PermissionsAndroid.PERMISSIONS.CAMERA] === PermissionsAndroid.RESULTS.GRANTED &&
+            granted[PermissionsAndroid.PERMISSIONS.RECORD_AUDIO] === PermissionsAndroid.RESULTS.GRANTED
           ) {
             setPermissionsGranted(true);
           } else {

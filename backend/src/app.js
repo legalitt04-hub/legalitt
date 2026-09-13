@@ -25,6 +25,7 @@ const adminRoutes = require('./routes/admin');
 const notificationRoutes = require('./routes/notifications');
 const walletRoutes = require('./routes/wallet');
 const advocateDashboardRoutes = require('./routes/advocateDashboard');
+const supportRoutes = require('./routes/support');
 
 const app = express();
 
@@ -132,6 +133,7 @@ app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/wallet', walletRoutes);
 app.use('/api/v1/advocate-dashboard', advocateDashboardRoutes);
+app.use('/api/v1/support', supportRoutes);
 app.use('/api/v1/fir', require('./routes/firDrafts'));
 app.use('/api/v1/users', require('./routes/userProfile'));
 app.use('/api/v1/cases', require('./routes/cases'));

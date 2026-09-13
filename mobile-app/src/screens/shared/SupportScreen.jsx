@@ -230,6 +230,11 @@ export default function SupportScreen({ navigation }) {
   const [myTickets, setMyTkts]  = useState([]);
   const [tktLoading, setTktL]   = useState(false);
   const [expandedFAQ, setFAQex] = useState(null);
+  
+  // Ticket Reply state
+  const [viewTicket, setViewTicket] = useState(null);
+  const [replyText, setReplyText]   = useState('');
+  const [replying, setReplying]     = useState(false);
 
   const [form, setForm] = useState({
     subject: '', description: '', category: 'general', priority: 'medium',
@@ -267,7 +272,7 @@ export default function SupportScreen({ navigation }) {
     }
     setSub(true);
     try {
-      await api.post('/admin/support-tickets', form);
+      await api.post('/support', form);
       setModal(false);
       Alert.alert('✅ Ticket Submitted!', 'Our support team will respond within 24 hours. You can track it in "My Tickets".');
       fetchMyTickets();
@@ -281,7 +286,7 @@ export default function SupportScreen({ navigation }) {
   const fetchMyTickets = useCallback(async () => {
     setTktL(true);
     try {
-      const { data } = await api.get('/admin/support-tickets/mine');
+      const { data } = await api.get('/support/mine');
       setMyTkts(data.data || []);
     } catch {
       setMyTkts([]);
@@ -289,6 +294,21 @@ export default function SupportScreen({ navigation }) {
       setTktL(false);
     }
   }, []);
+
+  const sendReply = async () => {
+    if (!replyText.trim()) return;
+    setReplying(true);
+    try {
+      const { data } = await api.post(`/support/${viewTicket._id}/reply`, { message: replyText });
+      setViewTicket(data.data);
+      setReplyText('');
+      fetchMyTickets();
+    } catch (err) {
+      Alert.alert('Error', err?.response?.data?.message || 'Failed to send reply');
+    } finally {
+      setReplying(false);
+    }
+  };
 
   const STATUS_CFG = {
     open:        { color: '#EF4444', bg: '#FEF2F2', label: 'Open' },
@@ -437,7 +457,7 @@ export default function SupportScreen({ navigation }) {
             renderItem={({ item }) => {
               const cfg = STATUS_CFG[item.status] || STATUS_CFG.open;
               return (
-                <View style={s.ticketCard}>
+                <TouchableOpacity style={s.ticketCard} activeOpacity={0.8} onPress={() => setViewTicket(item)}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
                     <View style={[s.statusBadge, { backgroundColor: cfg.bg }]}>
                       <Text style={[s.statusText, { color: cfg.color }]}>{cfg.label}</Text>
@@ -460,11 +480,12 @@ export default function SupportScreen({ navigation }) {
                     <View style={s.replyBox}>
                       <Ionicons name="chatbubble-ellipses" size={12} color={PRIMARY} />
                       <Text style={s.replyText} numberOfLines={2}>
+                        {item.messages[item.messages.length - 1]?.isStaff ? 'Agent: ' : 'You: '}
                         {item.messages[item.messages.length - 1]?.message}
                       </Text>
                     </View>
                   )}
-                </View>
+                </TouchableOpacity>
               );
             }}
           />
@@ -536,6 +557,64 @@ export default function SupportScreen({ navigation }) {
                 }
               </TouchableOpacity>
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── TICKET DETAILS / REPLY MODAL ── */}
+      <Modal visible={!!viewTicket} transparent animationType="slide" onRequestClose={() => setViewTicket(null)}>
+        <View style={s.modalOverlay}>
+          <TouchableOpacity style={StyleSheet.absoluteFillObject} activeOpacity={1} onPress={() => setViewTicket(null)} />
+          <View style={[s.modalSheet, { height: '85%' }]}>
+            <View style={s.modalHandle} />
+            <Text style={s.modalTitle}>{viewTicket?.subject}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+               <View style={[s.statusBadge, { backgroundColor: (STATUS_CFG[viewTicket?.status] || STATUS_CFG.open).bg }]}>
+                  <Text style={[s.statusText, { color: (STATUS_CFG[viewTicket?.status] || STATUS_CFG.open).color }]}>
+                     {(STATUS_CFG[viewTicket?.status] || STATUS_CFG.open).label}
+                  </Text>
+               </View>
+               <Text style={s.ticketDate}>
+                  {new Date(viewTicket?.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
+               </Text>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
+              <View style={[s.msgBubble, { alignSelf: 'flex-end', backgroundColor: '#F8F4EC', borderBottomRightRadius: 4 }]}>
+                 <Text style={s.msgText}>{viewTicket?.description}</Text>
+              </View>
+
+              {viewTicket?.messages?.map((msg, i) => (
+                <View key={i} style={[
+                  s.msgBubble, 
+                  msg.isStaff 
+                    ? { alignSelf: 'flex-start', backgroundColor: '#F1F5F9', borderBottomLeftRadius: 4 }
+                    : { alignSelf: 'flex-end', backgroundColor: '#F8F4EC', borderBottomRightRadius: 4 }
+                ]}>
+                  {msg.isStaff && <Text style={{ fontSize: 10, color: '#64748B', fontWeight: '700', marginBottom: 4 }}>Support Team</Text>}
+                  <Text style={s.msgText}>{msg.message}</Text>
+                </View>
+              ))}
+            </ScrollView>
+
+            {viewTicket?.status !== 'closed' && viewTicket?.status !== 'resolved' ? (
+              <View style={s.replyInputBox}>
+                <TextInput 
+                  style={s.replyInput}
+                  placeholder="Type a reply..."
+                  value={replyText}
+                  onChangeText={setReplyText}
+                  multiline
+                />
+                <TouchableOpacity style={s.sendBtn} onPress={sendReply} disabled={replying || !replyText.trim()}>
+                  {replying ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="send" size={16} color="#fff" />}
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={{ padding: 16, alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 12, marginBottom: 16 }}>
+                 <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>This ticket has been {viewTicket?.status}.</Text>
+              </View>
+            )}
           </View>
         </View>
       </Modal>
@@ -624,4 +703,10 @@ const s = StyleSheet.create({
 
   submitBtn: { height: 52, borderRadius: 14, backgroundColor: '#2E2A26', alignItems: 'center', justifyContent: 'center', marginTop: 4 },
   submitBtnText: { fontSize: 15, fontWeight: '800', color: '#FFFFFF' },
+
+  msgBubble: { maxWidth: '85%', padding: 12, borderRadius: 16, marginBottom: 12 },
+  msgText: { fontSize: 13, color: '#334155', lineHeight: 18 },
+  replyInputBox: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 4, borderTopWidth: 1, borderColor: '#F1EDE6', backgroundColor: '#FFFFFF', paddingBottom: 30 },
+  replyInput: { flex: 1, backgroundColor: '#F8F4EC', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, fontSize: 13, color: '#2E2A26', maxHeight: 100 },
+  sendBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: PRIMARY, alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
 });
