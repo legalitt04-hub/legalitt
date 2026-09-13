@@ -42,8 +42,10 @@ export default ({ config }) => ({
       infoPlist: {
         NSLocationWhenInUseUsageDescription: "Legalitt uses your location to find advocates near you.",
         NSLocationAlwaysUsageDescription: "Legalitt uses your location to find advocates near you.",
-        NSCameraUsageDescription: "Upload profile photo or documents.",
-        NSPhotoLibraryUsageDescription: "Upload profile photo or documents."
+        NSCameraUsageDescription: "Upload profile photo, documents, and participate in video calls.",
+        NSMicrophoneUsageDescription: "Legalitt needs microphone access for voice and video consultations.",
+        NSPhotoLibraryUsageDescription: "Upload profile photo or documents.",
+        UIBackgroundModes: ["audio", "voip"]
       }
     },
     android: {

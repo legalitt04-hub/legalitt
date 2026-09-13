@@ -14,16 +14,27 @@ import {
   Platform,
 } from 'react-native';
 import Constants from 'expo-constants';
-import {
-  ZegoUIKitPrebuiltCall as ZegoUIKitPrebuiltCallComponent,
-  ONE_ON_ONE_VIDEO_CALL_CONFIG,
-  ONE_ON_ONE_VOICE_CALL_CONFIG,
-} from '@zegocloud/zego-uikit-prebuilt-call-rn';
 import { getSocket } from '../../services/socket';
 import { callsAPI } from '../../services/api';
 
-const ZegoCall = ZegoUIKitPrebuiltCallComponent;
+let ZegoUIKitPrebuiltCallComponent = null;
+let ONE_ON_ONE_VIDEO_CALL_CONFIG = {};
+let ONE_ON_ONE_VOICE_CALL_CONFIG = {};
+
 const isZegoComponent = Constants.appOwnership !== 'expo';
+
+if (isZegoComponent) {
+  try {
+    const ZegoModule = require('@zegocloud/zego-uikit-prebuilt-call-rn');
+    ZegoUIKitPrebuiltCallComponent = ZegoModule.ZegoUIKitPrebuiltCall;
+    ONE_ON_ONE_VIDEO_CALL_CONFIG = ZegoModule.ONE_ON_ONE_VIDEO_CALL_CONFIG;
+    ONE_ON_ONE_VOICE_CALL_CONFIG = ZegoModule.ONE_ON_ONE_VOICE_CALL_CONFIG;
+  } catch (e) {
+    console.warn("Zego module not available");
+  }
+}
+
+const ZegoCall = ZegoUIKitPrebuiltCallComponent;
 const { ZEGO_APP_ID, ZEGO_APP_SIGN } = Constants.expoConfig?.extra || {};
 const FALLBACK_APP_ID = 954831467;
 const FALLBACK_APP_SIGN = '6aaa4f1b530a5ddff76b050d56a56974101548cf30d10b1c547feb7da07b16ad';

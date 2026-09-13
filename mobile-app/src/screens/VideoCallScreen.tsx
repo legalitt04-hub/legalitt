@@ -1,17 +1,26 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, StatusBar, Alert, Text, ActivityIndicator, TouchableOpacity, PermissionsAndroid, Platform } from 'react-native';
 import Constants from 'expo-constants';
-import {
-  ZegoUIKitPrebuiltCall as ZegoUIKitPrebuiltCallComponent,
-  ONE_ON_ONE_VIDEO_CALL_CONFIG,
-  ONE_ON_ONE_VOICE_CALL_CONFIG,
-} from '@zegocloud/zego-uikit-prebuilt-call-rn';
 import { getSocket } from '../services/socket';
 
-// Guard: In Expo Go, Zego native module is not linked
-// In standalone APKs, appOwnership is null or 'standalone', so it will render the real component
-const ZegoUIKitPrebuiltCall: any = ZegoUIKitPrebuiltCallComponent;
+let ZegoUIKitPrebuiltCallComponent: any = null;
+let ONE_ON_ONE_VIDEO_CALL_CONFIG: any = {};
+let ONE_ON_ONE_VOICE_CALL_CONFIG: any = {};
+
 const isZegoComponent = Constants.appOwnership !== 'expo';
+
+if (isZegoComponent) {
+  try {
+    const ZegoModule = require('@zegocloud/zego-uikit-prebuilt-call-rn');
+    ZegoUIKitPrebuiltCallComponent = ZegoModule.ZegoUIKitPrebuiltCall;
+    ONE_ON_ONE_VIDEO_CALL_CONFIG = ZegoModule.ONE_ON_ONE_VIDEO_CALL_CONFIG;
+    ONE_ON_ONE_VOICE_CALL_CONFIG = ZegoModule.ONE_ON_ONE_VOICE_CALL_CONFIG;
+  } catch (e) {
+    console.warn("Zego module not available");
+  }
+}
+
+const ZegoUIKitPrebuiltCall: any = ZegoUIKitPrebuiltCallComponent;
 
 const { ZEGO_APP_ID, ZEGO_APP_SIGN } = Constants.expoConfig?.extra || {};
 const FALLBACK_APP_ID = 954831467;
