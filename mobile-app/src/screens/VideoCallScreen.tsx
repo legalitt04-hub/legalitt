@@ -198,7 +198,7 @@ export default function VideoCallScreen({ navigation, route }: any) {
       <StatusBar hidden />
       <ZegoUIKitPrebuiltCall
         appID={effectiveAppId}
-        appSign={effectiveAppSign || ''}
+        appSign={effectiveAppSign || FALLBACK_APP_SIGN}
         userID={String(myUserId || 'user_' + Date.now())}
         userName={String(myUserName || 'User')}
         callID={String(effectiveRoomId)}
