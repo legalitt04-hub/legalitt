@@ -66,6 +66,20 @@ const AnalyticsChart = ({ dataPoints, labels }) => {
   );
 };
 
+// ListTile Component for Settings & Support
+const ListTile = ({ icon, title, subtitle, onPress, color = '#4B5563', hideBorder }) => (
+  <TouchableOpacity style={[styles.listTile, hideBorder && styles.listTileNoBorder]} onPress={onPress}>
+    <View style={[styles.listTileIconBg, { backgroundColor: `${color}15` }]}>
+      <Ionicons name={icon} size={20} color={color} />
+    </View>
+    <View style={styles.listTileContent}>
+      <Text style={styles.listTileTitle}>{title}</Text>
+      {subtitle && <Text style={styles.listTileSubtitle}>{subtitle}</Text>}
+    </View>
+    <Ionicons name="chevron-forward" size={20} color="#D1D5DB" />
+  </TouchableOpacity>
+);
+
 // Mini bar chart component
 const BarChart = ({ data, labels }) => {
   const max = Math.max(...data, 1);
@@ -463,7 +477,7 @@ const AdvocateDashboardScreen = ({ navigation }) => {
             ...dashboardData.earningsSummary,
             totalConsultations: dashboardData.totalConsultations,
           }}
-          onWalletPress={() => navigation.navigate('Earnings')}
+          onWalletPress={() => navigation.navigate('AdvocateWallet')}
         />
 
         {/* Today's appointments Section */}
@@ -509,71 +523,87 @@ const AdvocateDashboardScreen = ({ navigation }) => {
           />
         </View>
 
-        {/* Quick actions panel 1 */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Practice Tools</Text>
-          <View style={styles.actionsGrid}>
-            <TouchableOpacity style={styles.actionBtn} onPress={handleProfilePress}>
-              <View style={[styles.actionIconBg, { backgroundColor: 'rgba(20, 184, 166, 0.1)' }]}>
-                <Ionicons name="create-outline" size={20} color={COLORS.primary} />
-              </View>
-              <Text style={styles.actionLabel}>Edit Details</Text>
-            </TouchableOpacity>
+        {/* Highlighted Services Section */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Practice Hub</Text>
+        </View>
+        <View style={styles.highlightedServicesGrid}>
+          <TouchableOpacity 
+            style={[styles.highlightedCard, { backgroundColor: '#F0F9FF', borderColor: '#BAE6FD' }]} 
+            onPress={() => navigation.navigate('AdvocateWallet')}
+          >
+            <View style={[styles.highlightedIconWrap, { backgroundColor: '#E0F2FE' }]}>
+              <Ionicons name="wallet" size={24} color="#0284C7" />
+            </View>
+            <Text style={styles.highlightedCardTitle}>Withdrawals</Text>
+            <Text style={styles.highlightedCardSub}>Manage earnings</Text>
+          </TouchableOpacity>
 
-            <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate('Earnings')}>
-              <View style={[styles.actionIconBg, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
-                <Ionicons name="wallet-outline" size={20} color="#3B82F6" />
-              </View>
-              <Text style={styles.actionLabel}>Withdrawal</Text>
-            </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.highlightedCard, { backgroundColor: '#F5F3FF', borderColor: '#DDD6FE' }]}
+            onPress={() => navigation.navigate('AdvocateAnalytics')}
+          >
+            <View style={[styles.highlightedIconWrap, { backgroundColor: '#EDE9FE' }]}>
+              <Ionicons name="bar-chart" size={24} color="#7C3AED" />
+            </View>
+            <Text style={styles.highlightedCardTitle}>Analytics</Text>
+            <Text style={styles.highlightedCardSub}>View insights</Text>
+          </TouchableOpacity>
 
-            <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate('AdvocateAnalytics')}>
-              <View style={[styles.actionIconBg, { backgroundColor: 'rgba(139, 92, 246, 0.1)' }]}>
-                <Ionicons name="bar-chart-outline" size={20} color="#8B5CF6" />
+          <TouchableOpacity 
+            style={[styles.highlightedCardFull, { backgroundColor: '#FFFBEB', borderColor: '#FDE68A' }]}
+            onPress={() => navigation.navigate('AdvocateCalendar')}
+          >
+            <View style={styles.fullCardContent}>
+              <View style={[styles.highlightedIconWrap, { backgroundColor: '#FEF3C7' }]}>
+                <Ionicons name="calendar" size={24} color="#D97706" />
               </View>
-              <Text style={styles.actionLabel}>Analytics</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate('AdvocateCalendar')}>
-              <View style={[styles.actionIconBg, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}>
-                <Ionicons name="calendar-outline" size={20} color="#F59E0B" />
+              <View style={styles.fullCardText}>
+                <Text style={styles.highlightedCardTitle}>Calendar & Slots</Text>
+                <Text style={styles.highlightedCardSub}>Manage your availability schedule</Text>
               </View>
-              <Text style={styles.actionLabel}>Calendar</Text>
-            </TouchableOpacity>
-          </View>
+            </View>
+            <Ionicons name="arrow-forward-circle" size={24} color="#D97706" />
+          </TouchableOpacity>
         </View>
 
-        {/* Quick actions panel 2 */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Settings & Support</Text>
-          <View style={styles.actionsGrid}>
-            <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate('AdvocateSettings')}>
-              <View style={[styles.actionIconBg, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
-                <Ionicons name="settings-outline" size={20} color="#EF4444" />
-              </View>
-              <Text style={styles.actionLabel}>Settings</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate('CallHistory')}>
-              <View style={[styles.actionIconBg, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
-                <Ionicons name="call-outline" size={20} color="#EF4444" />
-              </View>
-              <Text style={styles.actionLabel}>Call History</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate('Support')}>
-              <View style={[styles.actionIconBg, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
-                <Ionicons name="help-circle-outline" size={20} color="#3B82F6" />
-              </View>
-              <Text style={styles.actionLabel}>Support</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.actionBtn} onPress={() => Alert.alert('Share Link', 'Copied your professional profile card link!')}>
-              <View style={[styles.actionIconBg, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
-                <Ionicons name="share-social-outline" size={20} color="#10B981" />
-              </View>
-              <Text style={styles.actionLabel}>Share profile</Text>
-            </TouchableOpacity>
+        {/* Isolated Settings & Support Section */}
+        <View style={[styles.card, { marginTop: 8, padding: 0, overflow: 'hidden' }]}>
+          <View style={{ padding: 16, paddingBottom: 8 }}>
+            <Text style={styles.cardTitle}>Account & Preferences</Text>
+          </View>
+          <View style={styles.listContainer}>
+            <ListTile 
+              icon="person-outline" 
+              title="Edit Profile Details" 
+              color="#0D9488"
+              onPress={handleProfilePress} 
+            />
+            <ListTile 
+              icon="call-outline" 
+              title="Call History" 
+              color="#4F46E5"
+              onPress={() => navigation.navigate('CallHistory')} 
+            />
+            <ListTile 
+              icon="share-social-outline" 
+              title="Share Profile" 
+              color="#10B981"
+              onPress={() => Alert.alert('Share Link', 'Copied your professional profile card link!')} 
+            />
+            <ListTile 
+              icon="settings-outline" 
+              title="Settings" 
+              color="#6B7280"
+              onPress={() => navigation.navigate('AdvocateSettings')} 
+            />
+            <ListTile 
+              icon="help-circle-outline" 
+              title="Help & Support" 
+              color="#EC4899"
+              hideBorder
+              onPress={() => navigation.navigate('Support')} 
+            />
           </View>
         </View>
 
@@ -664,19 +694,32 @@ const styles = StyleSheet.create({
   },
   cardTitle: { fontSize: 13, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
   
-  actionsGrid: { 
-    flexDirection: 'row', 
-    flexWrap: 'wrap',
-    marginTop: 4,
-    gap: 12,
+  // Highlighted Services Grid
+  highlightedServicesGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 24, gap: 12 },
+  highlightedCard: {
+    width: '48%', padding: 16, borderRadius: 16, borderWidth: 1,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1,
   },
-  actionBtn: { 
-    alignItems: 'center', 
-    width: '22%',  // 4 per row with gap
-    marginBottom: 8,
+  highlightedCardFull: {
+    width: '100%', padding: 16, borderRadius: 16, borderWidth: 1,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1,
   },
-  actionIconBg: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
-  actionLabel: { fontSize: 11, color: COLORS.textPrimary, fontWeight: '600' },
+  fullCardContent: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  fullCardText: { marginLeft: 12, flex: 1 },
+  highlightedIconWrap: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+  highlightedCardTitle: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 4 },
+  highlightedCardSub: { fontSize: 11, color: '#6B7280', lineHeight: 16 },
+
+  // List Tile Styles
+  listContainer: { paddingBottom: 8 },
+  listTile: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
+  listTileNoBorder: { borderBottomWidth: 0 },
+  listTileIconBg: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  listTileContent: { flex: 1 },
+  listTileTitle: { fontSize: 15, fontWeight: '600', color: COLORS.textPrimary },
+  listTileSubtitle: { fontSize: 12, color: '#9CA3AF', marginTop: 2 },
+
   badgeDot: {
     position: 'absolute',
     right: -4,

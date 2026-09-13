@@ -24,6 +24,7 @@ interface Advocate {
   about?: string;  // legacy alias for bio
   documents?: { barCouncilCertificate?: string; degreeDocument?: string; idProof?: string };
   verificationRejectionReason?: string;
+  wallet?: { balance: number; totalEarned: number; pendingWithdrawal: number; totalWithdrawn: number };
   createdAt: string;
 }
 
@@ -496,7 +497,6 @@ export default function Advocates() {
                 ))}
               </div>
 
-              {/* Bio / About Section */}
               <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 mb-4">
                 <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                   <span>📝</span> Professional Bio
@@ -506,6 +506,21 @@ export default function Advocates() {
                 ) : (
                   <p className="text-xs text-gray-400 italic">No bio added. Click Edit Advocate to add one.</p>
                 )}
+              </div>
+
+              {/* Wallet & Earnings Section */}
+              <div className="bg-emerald-50/60 border border-emerald-100 rounded-2xl p-4 mb-4">
+                <h4 className="text-xs font-bold text-emerald-900 uppercase tracking-wider mb-3">Wallet & Earnings</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-white p-3 rounded-xl border border-emerald-100/50 shadow-sm">
+                    <p className="text-[10px] text-emerald-600 font-bold uppercase mb-0.5">Current Balance</p>
+                    <p className="text-lg font-extrabold text-gray-900">₹{(selectedAdv.wallet?.balance || 0).toLocaleString('en-IN')}</p>
+                  </div>
+                  <div className="bg-white p-3 rounded-xl border border-emerald-100/50 shadow-sm">
+                    <p className="text-[10px] text-slate-500 font-bold uppercase mb-0.5">Total Earned</p>
+                    <p className="text-lg font-extrabold text-gray-900">₹{(selectedAdv.wallet?.totalEarned || 0).toLocaleString('en-IN')}</p>
+                  </div>
+                </div>
               </div>
 
 
