@@ -86,6 +86,7 @@ import CallHistoryScreen from '../screens/shared/CallHistoryScreen';
 import IncomingCallScreen from '../screens/shared/IncomingCallScreen';
 import CallFeedbackScreen from '../screens/shared/CallFeedbackScreen';
 import SupportScreen from '../screens/shared/SupportScreen';
+import VideoCallScreen from '../screens/VideoCallScreen';
 
 // ADVOCATE SCREENS
 import AdvocateStack from './AdvocateStack';
