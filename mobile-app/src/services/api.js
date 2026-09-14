@@ -302,55 +302,52 @@ export const legalAdviceAPI = {
   getRequestDetail: (id) => api.get(`/legal-advice/request/${id}`),
 };
 
-// Document Upload to Cloudinary (Native fetch implementation to avoid Axios boundary issues on React Native)
+import * as FileSystem from 'expo-file-system';
+
+// Document Upload to Cloudinary using FileSystem for robust React Native uploads
 export const uploadAPI = {
   uploadFile: async (fileUri, fileName, mimeType) => {
     const token = await SecureStore.getItemAsync(TOKEN_KEY);
-    const formData = new FormData();
     const cleanName = fileName || `document_${Date.now()}.${mimeType?.includes('pdf') ? 'pdf' : 'jpg'}`;
     const cleanType = mimeType || (cleanName.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg');
-
-    formData.append('file', {
-      uri: Platform.OS === 'android' ? fileUri : fileUri.replace('file://', ''),
-      name: cleanName,
-      type: cleanType,
-    });
 
     const headers = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    const res = await fetch(`${BASE_URL}/uploads/document`, {
-      method: 'POST',
+    const uriToUpload = Platform.OS === 'android' ? fileUri : fileUri.replace('file://', '');
+
+    const res = await FileSystem.uploadAsync(`${BASE_URL}/uploads/document`, uriToUpload, {
+      httpMethod: 'POST',
+      uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+      fieldName: 'file',
+      mimeType: cleanType,
       headers,
-      body: formData,
     });
 
-    const json = await res.json();
-    if (!res.ok || !json.success) {
+    const json = JSON.parse(res.body);
+    if (res.status < 200 || res.status >= 300 || !json.success) {
       throw new Error(json.message || 'Upload failed');
     }
     return { data: json };
   },
   uploadAvatar: async (fileUri, fileName, mimeType) => {
     const token = await SecureStore.getItemAsync(TOKEN_KEY);
-    const formData = new FormData();
-    formData.append('file', {
-      uri: Platform.OS === 'android' ? fileUri : fileUri.replace('file://', ''),
-      name: fileName || 'avatar.jpg',
-      type: mimeType || 'image/jpeg',
-    });
-
+    
     const headers = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    const res = await fetch(`${BASE_URL}/uploads/avatar`, {
-      method: 'POST',
+    const uriToUpload = Platform.OS === 'android' ? fileUri : fileUri.replace('file://', '');
+
+    const res = await FileSystem.uploadAsync(`${BASE_URL}/uploads/avatar`, uriToUpload, {
+      httpMethod: 'POST',
+      uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+      fieldName: 'file',
+      mimeType: mimeType || 'image/jpeg',
       headers,
-      body: formData,
     });
 
-    const json = await res.json();
-    if (!res.ok || !json.success) {
+    const json = JSON.parse(res.body);
+    if (res.status < 200 || res.status >= 300 || !json.success) {
       throw new Error(json.message || 'Upload failed');
     }
     return { data: json };

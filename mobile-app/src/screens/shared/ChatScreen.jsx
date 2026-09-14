@@ -327,14 +327,6 @@ const ChatScreen = ({ navigation, route }) => {
     );
   };
 
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
-  }
-
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
@@ -499,80 +491,86 @@ const ChatScreen = ({ navigation, route }) => {
         </View>
       )}
 
-      <KeyboardAvoidingView 
-        style={{ flex: 1 }} 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 20}
-      >
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          keyExtractor={(item, index) => item._id || `msg-${index}`}
-          renderItem={renderMessage}
-          contentContainerStyle={styles.messagesContent}
-          showsVerticalScrollIndicator={false}
-          onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.15}
-          ListHeaderComponent={renderListHeader}
-          ListFooterComponent={renderListFooter}
-          ListHeaderComponentStyle={{ paddingTop: 8 }}
-          onContentSizeChange={() =>
-            flatListRef.current?.scrollToEnd({ animated: true })
-          }
-          // Pull-to-top for older messages indicator
-          refreshing={loadingMore}
-          onRefresh={handleLoadMore}
-        />
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+        </View>
+      ) : (
+        <KeyboardAvoidingView 
+          style={{ flex: 1 }} 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 20}
+        >
+          <FlatList
+            ref={flatListRef}
+            data={messages}
+            keyExtractor={(item, index) => item._id || `msg-${index}`}
+            renderItem={renderMessage}
+            contentContainerStyle={styles.messagesContent}
+            showsVerticalScrollIndicator={false}
+            onEndReached={handleLoadMore}
+            onEndReachedThreshold={0.15}
+            ListHeaderComponent={renderListHeader}
+            ListFooterComponent={renderListFooter}
+            ListHeaderComponentStyle={{ paddingTop: 8 }}
+            onContentSizeChange={() =>
+              flatListRef.current?.scrollToEnd({ animated: true })
+            }
+            // Pull-to-top for older messages indicator
+            refreshing={loadingMore}
+            onRefresh={handleLoadMore}
+          />
 
-        {/* Input Bar or Read-Only Banner */}
-        {!isConnected ? (
-          <View style={styles.readOnlyInputContainer}>
-            <Ionicons name="eye-outline" size={18} color="#6B7280" style={{ marginRight: 8 }} />
-            <Text style={styles.readOnlyInputText}>Chat is in read-only mode while offline</Text>
-          </View>
-        ) : chatExpired ? (
-          <View style={styles.readOnlyInputContainer}>
-            <Ionicons name="lock-closed-outline" size={18} color="#6B7280" style={{ marginRight: 8 }} />
-            <Text style={styles.readOnlyInputText}>Consultation window closed.</Text>
-          </View>
-        ) : (
-          <View style={styles.inputContainer}>
-            <TouchableOpacity
-              onPress={handleShareDocument}
-              style={styles.attachmentBtn}
-              disabled={sharing}
-            >
-              {sharing ? (
-                <ActivityIndicator size="small" color={COLORS.primary} />
-              ) : (
-                <Ionicons name="attach" size={24} color="#6B7280" />
-              )}
-            </TouchableOpacity>
+          {/* Input Bar or Read-Only Banner */}
+          {!isConnected ? (
+            <View style={styles.readOnlyInputContainer}>
+              <Ionicons name="eye-outline" size={18} color="#6B7280" style={{ marginRight: 8 }} />
+              <Text style={styles.readOnlyInputText}>Chat is in read-only mode while offline</Text>
+            </View>
+          ) : chatExpired ? (
+            <View style={styles.readOnlyInputContainer}>
+              <Ionicons name="lock-closed-outline" size={18} color="#6B7280" style={{ marginRight: 8 }} />
+              <Text style={styles.readOnlyInputText}>Consultation window closed.</Text>
+            </View>
+          ) : (
+            <View style={styles.inputContainer}>
+              <TouchableOpacity
+                onPress={handleShareDocument}
+                style={styles.attachmentBtn}
+                disabled={sharing}
+              >
+                {sharing ? (
+                  <ActivityIndicator size="small" color={COLORS.primary} />
+                ) : (
+                  <Ionicons name="attach" size={24} color="#6B7280" />
+                )}
+              </TouchableOpacity>
 
-            <TextInput
-              style={styles.textInput}
-              value={text}
-              onChangeText={handleTextChange}
-              placeholder="Type your message..."
-              placeholderTextColor="#9CA3AF"
-              multiline
-              maxHeight={100}
-              returnKeyType="send"
-              onSubmitEditing={handleSend}
-              blurOnSubmit={false}
-              textAlignVertical="center"
-            />
+              <TextInput
+                style={styles.textInput}
+                value={text}
+                onChangeText={handleTextChange}
+                placeholder="Type your message..."
+                placeholderTextColor="#9CA3AF"
+                multiline
+                maxHeight={100}
+                returnKeyType="send"
+                onSubmitEditing={handleSend}
+                blurOnSubmit={false}
+                textAlignVertical="center"
+              />
 
-            <TouchableOpacity
-              onPress={handleSend}
-              style={[styles.sendBtn, !text.trim() && styles.sendBtnDisabled]}
-              disabled={!text.trim()}
-            >
-              <Ionicons name="send" size={18} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
-        )}
-      </KeyboardAvoidingView>
+              <TouchableOpacity
+                onPress={handleSend}
+                style={[styles.sendBtn, !text.trim() && styles.sendBtnDisabled]}
+                disabled={!text.trim()}
+              >
+                <Ionicons name="send" size={18} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+          )}
+        </KeyboardAvoidingView>
+      )}
     </SafeAreaView>
   );
 };

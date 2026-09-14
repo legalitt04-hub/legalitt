@@ -67,8 +67,8 @@ const MyDraftsScreen = ({ navigation }) => {
   };
 
   const renderVaultItem = ({ item }) => (
-    <TouchableOpacity 
-      style={styles.card} 
+    <TouchableOpacity
+      style={styles.card}
       onPress={() => {
         if (item.type === 'fir') {
           navigation.navigate('FIRPreview', { draft: item.raw });
@@ -80,10 +80,10 @@ const MyDraftsScreen = ({ navigation }) => {
     >
       <View style={styles.cardHeader}>
         <View style={[styles.iconContainer, { backgroundColor: item.type === 'fir' ? 'rgba(176, 156, 133, 0.15)' : '#EFF6FF' }]}>
-          <Ionicons 
-            name={item.type === 'fir' ? 'document-text' : 'shield-checkmark'} 
-            size={22} 
-            color={item.type === 'fir' ? COLORS.primary : '#2563EB'} 
+          <Ionicons
+            name={item.type === 'fir' ? 'document-text' : 'shield-checkmark'}
+            size={22}
+            color={item.type === 'fir' ? COLORS.primary : '#2563EB'}
           />
         </View>
         <View style={styles.cardInfo}>
@@ -148,7 +148,7 @@ const MyDraftsScreen = ({ navigation }) => {
           <Ionicons name="folder-open-outline" size={64} color="#cbd5e1" />
           <Text style={styles.emptyTitle}>No Documents Found</Text>
           <Text style={styles.emptySub}>Your FIR drafts and Legal Notices will be stored here safely.</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.createBtn}
             onPress={() => navigation.navigate('AILegalNotice')}
           >

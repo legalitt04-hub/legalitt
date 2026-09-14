@@ -31,107 +31,43 @@ const PALETTE = {
   actionText: '#8C6E52',
 };
 
-// ─── DEFAULT PRESET NOTIFICATIONS (MATCHING REFERENCE EXACTLY) ─────────────────
-const DEFAULT_TODAY = [
-  {
-    id: 't1',
-    icon: 'calendar-outline',
-    title: 'New cases Request',
-    description: 'Rahul sharma has request a consultation\nregarding of divorce metter',
-    time: '1 hour ago',
-    unread: true,
-    targetScreen: 'Requests',
-  },
-  {
-    id: 't2',
-    icon: 'wallet-outline',
-    title: 'Payment Received',
-    description: 'Payment has been added to your wallet',
-    time: '1 hour ago',
-    unread: true,
-    targetScreen: 'Earnings',
-  },
-  {
-    id: 't3',
-    icon: 'chatbubble-ellipses-outline',
-    title: 'New message from Akash',
-    description: 'you have a new message from akash',
-    time: '1 hour ago',
-    unread: true,
-    targetScreen: 'ChatList',
-  },
-  {
-    id: 't4',
-    icon: 'document-text-outline',
-    title: 'New Legal notice request',
-    description: 'you have a new legal notice request',
-    time: '1 hour ago',
-    unread: true,
-    targetScreen: 'Requests',
-  },
-];
-
-const DEFAULT_EARLIER = [
-  {
-    id: 'e1',
-    icon: 'call-outline',
-    title: 'Consultation Confirmed',
-    description: 'Your consultation with Priya Mehta is\nconfirmed for today at 4 : 00 PM',
-    time: 'Yesterday',
-    unread: false,
-    targetScreen: 'TodayCases',
-  },
-  {
-    id: 'e2',
-    icon: 'scale-outline',
-    title: 'Case Updated',
-    description: 'The status of your assigned case\nhas been updated',
-    time: 'Yesterday',
-    unread: false,
-    targetScreen: 'TodayCases',
-  },
-];
-
 const NotificationsScreen = ({ navigation }) => {
-  const [todayList, setTodayList] = useState(DEFAULT_TODAY);
-  const [earlierList, setEarlierList] = useState(DEFAULT_EARLIER);
-  const [loading, setLoading] = useState(false);
+  const [todayList, setTodayList] = useState([]);
+  const [earlierList, setEarlierList] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchNotifications = useCallback(async () => {
     try {
       const res = await notificationAPI.getAll();
-      const serverData = res?.data?.data;
-      if (Array.isArray(serverData) && serverData.length > 0) {
-        // Partition server data into today / earlier if available
-        const now = Date.now();
-        const oneDay = 24 * 60 * 60 * 1000;
-        const today = [];
-        const earlier = [];
+      const serverData = res?.data?.data || [];
+      const now = Date.now();
+      const oneDay = 24 * 60 * 60 * 1000;
+      const today = [];
+      const earlier = [];
 
-        serverData.forEach((item) => {
-          const itemTime = item.createdAt ? new Date(item.createdAt).getTime() : now;
-          const isToday = now - itemTime < oneDay;
-          const mapped = {
-            id: item._id || item.id,
-            icon: item.type === 'booking_created' ? 'calendar-outline'
-              : item.type === 'payment' ? 'wallet-outline'
-              : item.type === 'message_received' ? 'chatbubble-ellipses-outline'
-              : item.type === 'case_updated' ? 'scale-outline'
-              : 'document-text-outline',
-            title: item.title,
-            description: item.message || item.description,
-            time: isToday ? '1 hour ago' : 'Yesterday',
-            unread: !item.read,
-            targetScreen: item.type === 'message_received' ? 'ChatList' : 'Requests',
-          };
-          if (isToday) today.push(mapped);
-          else earlier.push(mapped);
-        });
+      serverData.forEach((item) => {
+        const itemTime = item.createdAt ? new Date(item.createdAt).getTime() : now;
+        const isToday = now - itemTime < oneDay;
+        const mapped = {
+          id: item._id || item.id,
+          icon: item.type === 'booking_created' ? 'calendar-outline'
+            : item.type === 'payment' ? 'wallet-outline'
+            : item.type === 'message_received' ? 'chatbubble-ellipses-outline'
+            : item.type === 'case_updated' ? 'scale-outline'
+            : 'document-text-outline',
+          title: item.title,
+          description: item.message || item.description,
+          time: isToday ? '1 hour ago' : 'Yesterday',
+          unread: !item.read,
+          targetScreen: item.type === 'message_received' ? 'ChatList' : 'Requests',
+        };
+        if (isToday) today.push(mapped);
+        else earlier.push(mapped);
+      });
 
-        if (today.length > 0) setTodayList(today);
-        if (earlier.length > 0) setEarlierList(earlier);
-      }
+      setTodayList(today);
+      setEarlierList(earlier);
     } catch (err) {
       console.log('Using default mock notifications on fetch error:', err.message);
     } finally {
@@ -259,6 +195,13 @@ const NotificationsScreen = ({ navigation }) => {
             />
           }
         >
+          {todayList.length === 0 && earlierList.length === 0 && (
+            <View style={{ alignItems: 'center', marginTop: 40 }}>
+              <Ionicons name="notifications-off-outline" size={48} color={PALETTE.textMuted} />
+              <Text style={{ color: PALETTE.textMuted, marginTop: 12 }}>No notifications yet</Text>
+            </View>
+          )}
+
           {/* SECTION: TODAY */}
           {todayList.length > 0 && (
             <View style={styles.section}>

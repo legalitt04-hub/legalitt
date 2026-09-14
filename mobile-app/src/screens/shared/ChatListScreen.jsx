@@ -9,6 +9,7 @@ import { useChatList } from '../../hooks/useChat';
 import { useAuth } from '../../context/AuthContext';
 import { COLORS, SIZES } from '../../constants/theme';
 import api from '../../services/api';
+import SkeletonLoader from '../../components/common/SkeletonLoader';
 
 
 const ChatListScreen = ({ navigation }) => {
@@ -174,8 +175,10 @@ const ChatListScreen = ({ navigation }) => {
         )}
       </View>
 
-      {loading ? (
-        <ActivityIndicator style={{ marginTop: 40 }} size="large" color={COLORS.primary} />
+      {loading && localChats.length === 0 ? (
+        <View style={{ padding: 16 }}>
+          <SkeletonLoader type="clientRow" count={6} />
+        </View>
       ) : (
         <FlatList
           data={filteredChats}

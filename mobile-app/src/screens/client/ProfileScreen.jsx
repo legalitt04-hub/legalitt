@@ -111,11 +111,7 @@ const ProfileScreen = ({ navigation }) => {
     );
   };
 
-  if (loading) return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <ActivityIndicator size="large" color={COLORS.primary} />
-    </View>
-  );
+  // Loading state removed to allow silent pull-to-refresh without blocking UI
 
   return (
     <SafeAreaView style={styles.container}>

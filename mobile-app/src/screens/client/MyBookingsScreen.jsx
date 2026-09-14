@@ -13,6 +13,7 @@ import { getSocket } from '../../services/socket';
 import { COLORS } from '../../constants/theme';
 import { LEGAL_THEME } from '../../constants/legalAdviceTheme';
 import { usePricing } from '../../context/PricingContext';
+import SkeletonLoader from '../../components/common/SkeletonLoader';
 
 const STATUS_CONFIG = {
   pending_assignment: {
@@ -714,9 +715,8 @@ export default function MyBookingsScreen({ navigation }) {
       </View>
 
       {loading && bookings.length === 0 ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#B89A6A" />
-          <Text style={styles.loadingText}>Loading your requests...</Text>
+        <View style={{ padding: 16 }}>
+          <SkeletonLoader type="clientRow" count={5} />
         </View>
       ) : (
         <FlatList

@@ -20,6 +20,7 @@ import { COLORS } from '../../constants/theme';
 import { advocateAPI, chatAPI } from '../../services/api';
 import profileAPI from '../../services/profileAPI';
 import { useAuth } from '../../context/AuthContext';
+import SkeletonLoader from '../../components/common/SkeletonLoader';
 
 const AdvocateProfileScreen = ({ navigation, route }) => {
   const { isAuthenticated } = useAuth();
@@ -145,9 +146,8 @@ const AdvocateProfileScreen = ({ navigation, route }) => {
 
   if (loading) {
     return (
-      <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={{ marginTop: 12, color: "#6B7280" }}>Loading...</Text>
+      <View style={{ flex: 1, backgroundColor: '#FFFFFF', paddingTop: insets.top + 50, paddingHorizontal: 16 }}>
+        <SkeletonLoader type="clientRow" count={4} />
       </View>
     );
   }

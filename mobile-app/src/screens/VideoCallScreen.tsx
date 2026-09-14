@@ -91,22 +91,24 @@ export default function VideoCallScreen({ navigation, route }: any) {
     (async () => {
       try {
         const toRequest: string[] = [
-          PermissionsAndroid.PERMISSIONS.CAMERA,
           PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
         ];
+        if (mode === 'video') {
+          toRequest.push(PermissionsAndroid.PERMISSIONS.CAMERA);
+        }
         if (Platform.Version >= 31) toRequest.push(PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT);
         if (Platform.Version >= 33) toRequest.push('android.permission.POST_NOTIFICATIONS');
 
         const result = await PermissionsAndroid.requestMultiple(toRequest as any);
-        const camOk  = result[PermissionsAndroid.PERMISSIONS.CAMERA]       === PermissionsAndroid.RESULTS.GRANTED;
         const micOk  = result[PermissionsAndroid.PERMISSIONS.RECORD_AUDIO] === PermissionsAndroid.RESULTS.GRANTED;
+        const camOk  = mode === 'video' ? result[PermissionsAndroid.PERMISSIONS.CAMERA] === PermissionsAndroid.RESULTS.GRANTED : true;
 
         if (camOk && micOk) {
           setPermissionsGranted(true);
         } else {
           Alert.alert(
             'Permissions Denied',
-            'Camera and microphone access are required to join this call.',
+            mode === 'video' ? 'Camera and microphone access are required.' : 'Microphone access is required.',
             [{ text: 'Go Back', onPress: () => navigation.goBack() }]
           );
         }
@@ -147,7 +149,7 @@ export default function VideoCallScreen({ navigation, route }: any) {
       <View style={styles.container}>
         <ActivityIndicator size="large" color="#14B8A6" />
         <Text style={styles.waitText}>
-          {!permissionsGranted ? 'Requesting camera & mic access...' : 'Setting up room...'}
+          {!permissionsGranted ? (mode === 'video' ? 'Requesting camera & mic access...' : 'Requesting mic access...') : 'Setting up room...'}
         </Text>
       </View>
     );
