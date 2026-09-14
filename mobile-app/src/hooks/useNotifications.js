@@ -150,45 +150,48 @@ export const useNotifications = (isAuthenticated, navigationRef, user) => {
 
     // ── Incoming Call (foreground) ──────────────────────────────────────────
     const handleIncomingCall = (data) => {
-      const modeLabel = data.mode === 'video' ? '📹 Video' : '📞 Voice';
-      const callerName = data.clientName || data.advocateName || 'Someone';
+      const modeLabel  = data.mode === 'video' ? '📹 Video' : '📞 Voice';
+      // Backend now sends callerName directly; fall back to legacy fields
+      const callerName   = data.callerName || data.clientName || data.advocateName || 'Someone';
+      const callerAvatar = data.callerAvatar || data.clientAvatar || null;
 
       const nav = navigationRef?.current;
       if (nav?.isReady?.()) {
-        // Navigate to beautiful full-screen IncomingCallScreen
         const currentUserRole = user?.role || user?.user?.role || 'client';
         const targetRoute = currentUserRole === 'advocate' ? 'AdvocateCall' : 'VideoCall';
-        const myId = user?.user?._id || user?._id;
+        // Extract the logged-in user's ID correctly from auth context
+        const myId   = user?._id || user?.user?._id || user?.id || user?.user?.id || '';
+        const myName = user?.name || user?.user?.name || 'Me';
 
         nav.navigate('IncomingCall', {
           callerName,
-          callerAvatar: data.clientAvatar || null,
-          mode: data.mode || 'video',
-          zegoRoomId:    data.zegoRoomId,
-          zegoToken:     data.advocateToken || data.clientToken || null,
-          zegoAppId:     data.zegoAppId || 0,
-          bookingId:     data.bookingId,
-          clientId:      data.clientId,
+          callerAvatar,
+          mode:           data.mode || 'video',
+          zegoRoomId:     data.zegoRoomId,
+          zegoToken:      data.advocateToken || data.clientToken || null,
+          zegoAppId:      data.zegoAppId || 0,
+          bookingId:      data.bookingId,
+          clientId:       data.clientId,
           advocateUserId: data.advocateUserId,
-          myUserId:      String(myId || ''),
-          myUserName:    user?.name || user?.user?.name || 'Me',
-          targetRoute,   // which call screen to go to after accepting
+          myUserId:       String(myId),
+          myUserName:     myName,
+          targetRoute,
         });
       }
 
-      // Fire local push so it appears on lock screen if device is locked
+      // Local push if app is in background
       if (AppState.currentState !== 'active') {
         scheduleLocalPush(
           `${modeLabel} Call Incoming!`,
-          `${callerName} is calling you. Open the app to join.`,
-          { 
-            type: 'incoming_call', 
-            bookingId: data.bookingId,
-            zegoRoomId: data.zegoRoomId,
-            mode: data.mode,
-            clientId: data.clientId,
+          `${callerName} is calling you. Open the app to answer.`,
+          {
+            type:           'incoming_call',
+            bookingId:      data.bookingId,
+            zegoRoomId:     data.zegoRoomId,
+            mode:           data.mode,
+            clientId:       data.clientId,
             advocateUserId: data.advocateUserId,
-            callerName: callerName
+            callerName,
           },
           'calls'
         );

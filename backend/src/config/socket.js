@@ -282,18 +282,24 @@ const initSocket = async (server) => {
           else resolvedAdvocateId = socket.userId; // Fallback
         }
 
-        // Notify target — they will open VideoCallScreen or AdvocateCallScreen
+        // Notify target — they will open IncomingCallScreen
+        const callerName = callerUser?.name || (bookingDetails.isClientCalling ? 'Client' : 'Advocate');
         const callPayload = {
-          bookingId:     bookingId || null,
-          chatId:        chatId || null,
-          zegoRoomId:    bookingDetails.zegoRoomId || zegoRoomId,
-          advocateToken: bookingDetails.advocateToken,
-          zegoAppId:     bookingDetails.zegoAppId || 0,
-          clientName:    callerUser?.name || (bookingDetails.isClientCalling ? 'Client' : 'Advocate'),
-          clientAvatar:  callerUser?.avatar || null,
-          clientId:      resolvedClientId,
+          bookingId:      bookingId || null,
+          chatId:         chatId || null,
+          zegoRoomId:     bookingDetails.zegoRoomId || zegoRoomId,
+          advocateToken:  bookingDetails.advocateToken,
+          zegoAppId:      bookingDetails.zegoAppId || 0,
+          // Caller info — used by IncomingCallScreen to show name + avatar
+          callerName,
+          callerAvatar:   callerUser?.avatar || null,
+          // Legacy fields kept for compatibility
+          clientName:     callerName,
+          clientAvatar:   callerUser?.avatar || null,
+          advocateName:   callerName,
+          clientId:       resolvedClientId,
           advocateUserId: resolvedAdvocateId,
-          mode:          mode || 'video',
+          mode:           mode || 'video',
         };
 
         io.to(`user:${targetUserId}`).emit("incoming_call", callPayload);
@@ -401,7 +407,7 @@ const initSocket = async (server) => {
 
         if (bookingId) {
           const booking = await Booking.findById(bookingId)
-            .select('advocate client chatId')
+            .select('advocate client chat')
             .lean();
           if (booking) {
             finalClientId = finalClientId || booking.client?.toString();
@@ -409,7 +415,7 @@ const initSocket = async (server) => {
               const adv = await Advocate.findById(booking.advocate).lean();
               finalAdvocateId = adv?.user?.toString();
             }
-            chatId = booking.chatId?.toString() || null;
+            chatId = booking.chat?.toString() || null;
           }
         }
 
@@ -429,17 +435,14 @@ const initSocket = async (server) => {
 
             const callIcon = mode === 'video' ? '📹' : '📞';
             const missedMsg = new Message({
-              chat:    chatId,
-              sender:  socket.userId,
-              content: `${callIcon} Missed ${mode === 'video' ? 'video' : 'voice'} call`,
-              type:    'system',
-              metadata: { callMissed: true, mode },
+              chat:        chatId,
+              sender:      socket.userId,
+              content:     `${callIcon} Missed ${mode === 'video' ? 'video' : 'voice'} call`,
+              messageType: 'system',
+              metadata:    { callMissed: true, mode },
             });
             await missedMsg.save();
-            await Chat.findByIdAndUpdate(chatId, {
-              lastMessage: missedMsg._id,
-              updatedAt: new Date(),
-            });
+            await Chat.findByIdAndUpdate(chatId, { lastMessage: missedMsg._id, updatedAt: new Date() });
             // Broadcast missed-call message to chat participants
             io.to(`chat:${chatId}`).emit('new_message', {
               _id:       missedMsg._id,
@@ -508,14 +511,14 @@ const initSocket = async (server) => {
         let chatId = null;
 
         if (bookingId) {
-          const booking = await Booking.findById(bookingId).select('advocate client chatId').lean();
+          const booking = await Booking.findById(bookingId).select('advocate client chat').lean();
           if (booking) {
             finalClientId = finalClientId || booking.client?.toString();
             if (!finalAdvocateId && booking.advocate) {
               const adv = await Advocate.findById(booking.advocate).lean();
               finalAdvocateId = adv?.user?.toString();
             }
-            chatId = booking.chatId?.toString() || null;
+            chatId = booking.chat?.toString() || null;
           }
         }
 
@@ -537,11 +540,11 @@ const initSocket = async (server) => {
             const durationStr = `${mins}:${secs.toString().padStart(2, '0')}`;
             
             const msg = new Message({
-              chat:    chatId,
-              sender:  socket.userId,
-              content: `${callIcon} ${mode === 'video' ? 'Video' : 'Voice'} call ended (${durationStr})`,
-              type:    'system',
-              metadata: { callCompleted: true, mode, duration },
+              chat:        chatId,
+              sender:      socket.userId,
+              content:     `${callIcon} ${mode === 'video' ? 'Video' : 'Voice'} call ended (${durationStr})`,
+              messageType: 'system',
+              metadata:    { callCompleted: true, mode, duration },
             });
             await msg.save();
             await Chat.findByIdAndUpdate(chatId, { lastMessage: msg._id, updatedAt: new Date() });

@@ -1,24 +1,15 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigation } from '@react-navigation/native';
-import { io } from 'socket.io-client';
-import * as SecureStore from '../utils/secureStorage';
-import { chatAPI, BASE_URL } from '../services/api';
-import { TOKEN_KEY } from '../services/api';
-import Constants from 'expo-constants';
+import { chatAPI } from '../services/api';
+import { getSocket, connectSocket } from '../services/socket';
 import { useAuth } from '../context/AuthContext';
 
-// Derive SOCKET_URL from BASE_URL — must strip full /api/v1 suffix
-const SOCKET_URL = BASE_URL.replace('/api/v1', '');
 const PAGE_SIZE = 30;
 
 /**
- * Full-featured chat hook:
- * - Socket.io real-time messaging
- * - Message history with pagination (load older messages)
- * - Offline message queue (sends queued messages on reconnect)
- * - Typing indicators
- * - Read receipts (sent + delivered)
- * - Read receipt incoming updates (marks double-tick blue)
+ * Full-featured chat hook using the shared global socket.
+ * Uses getSocket() so incoming_call, call history (new_message on user room),
+ * and chat messages all go through ONE socket connection.
  */
 export const useChat = (chatId, userId) => {
   const [messages, setMessages]       = useState([]);
@@ -29,32 +20,27 @@ export const useChat = (chatId, userId) => {
   const [isTyping, setIsTyping]       = useState(false);
   const [error, setError]             = useState(null);
   const pageRef                       = useRef(1);
-  const socketRef                     = useRef(null);
   const typingTimerRef                = useRef(null);
-  const offlineQueueRef               = useRef([]); // Queue for offline messages
+  const offlineQueueRef               = useRef([]);
+  const joinedRef                     = useRef(false);
 
-  // ── Load initial message history ──────────────────────────────
+  // ── Load message history from REST API ──────────────────────────
   const loadMessages = useCallback(async (page = 1) => {
-    if (!chatId) {
-      setLoading(false);
-      return;
-    }
+    if (!chatId) { setLoading(false); return; }
     try {
       const { data } = await chatAPI.getMessages(chatId, { page, limit: PAGE_SIZE });
-      const incoming = data.data || []; // Backend already reversed it to oldest-first chronological order
+      const incoming = data.data || [];
       if (page === 1) {
         setMessages(incoming);
       } else {
-        // Prepend older messages
         setMessages(prev => {
           const existingIds = new Set(prev.map(m => m._id));
           const newOnes = incoming.filter(m => !existingIds.has(m._id));
           return [...newOnes, ...prev];
         });
       }
-      // If we got fewer than PAGE_SIZE, there are no more older messages
       setHasMore(incoming.length === PAGE_SIZE);
-    } catch (err) {
+    } catch {
       setError('Failed to load messages');
     } finally {
       setLoading(false);
@@ -62,7 +48,6 @@ export const useChat = (chatId, userId) => {
     }
   }, [chatId]);
 
-  // ── Load older (paginated) messages ───────────────────────────
   const loadMoreMessages = useCallback(async () => {
     if (loadingMore || !hasMore) return;
     setLoadingMore(true);
@@ -70,127 +55,123 @@ export const useChat = (chatId, userId) => {
     await loadMessages(pageRef.current);
   }, [loadingMore, hasMore, loadMessages]);
 
-  // ── Flush offline queue when reconnected ──────────────────────
+  // ── Flush queued messages when socket reconnects ─────────────────
   const flushOfflineQueue = useCallback(() => {
-    if (!socketRef.current?.connected) return;
+    const socket = getSocket();
+    if (!socket?.connected) return;
     const queue = [...offlineQueueRef.current];
     offlineQueueRef.current = [];
-    queue.forEach(msg => {
-      socketRef.current.emit('send_message', msg);
-    });
+    queue.forEach(msg => socket.emit('send_message', msg));
   }, []);
 
-  // ── Socket lifecycle ──────────────────────────────────────────
+  // ── Attach socket listeners using the GLOBAL socket ─────────────
   useEffect(() => {
-    if (!chatId) {
-      setLoading(false);
-      return;
-    }
-    let socket;
-
-    const connect = async () => {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      if (!token) return;
-
-      socket = io(SOCKET_URL, {
-        auth: { token },
-        transports: ['polling', 'websocket'],
-        reconnection: true,
-        reconnectionDelay: 1000,
-        reconnectionAttempts: 15,
-        timeout: 20000,
-      });
-
-      socket.on('connect', () => {
-        setConnected(true);
-        setError(null);
-        socket.emit('join_chat', { chatId });
-        socket.emit('mark_read', { chatId });
-        flushOfflineQueue(); // Send any queued offline messages
-      });
-
-      socket.on('disconnect', () => setConnected(false));
-
-      socket.on('connect_error', () => {
-        setConnected(false);
-        setError('Connecting...');
-      });
-
-      // ── Incoming message ────────────────────────────────────
-      socket.on('new_message', (msg) => {
-        setMessages(prev => {
-          if (prev.some(m => m._id === msg._id)) return prev;
-          return [...prev, msg];
-        });
-        // Auto mark as read when actively in chat
-        socket.emit('mark_read', { chatId });
-      });
-
-      // ── Read receipts inbound — update existing messages ────
-      socket.on('messages_read', ({ chatId: cid, readAt }) => {
-        if (cid !== chatId) return;
-        setMessages(prev =>
-          prev.map(m =>
-            m.readAt ? m : { ...m, readAt }
-          )
-        );
-      });
-
-      // ── Typing ──────────────────────────────────────────────
-      socket.on('user_typing', () => {
-        setIsTyping(true);
-        clearTimeout(typingTimerRef.current);
-        typingTimerRef.current = setTimeout(() => setIsTyping(false), 2500);
-      });
-      socket.on('user_stopped_typing', () => setIsTyping(false));
-
-      socketRef.current = socket;
-    };
+    if (!chatId) { setLoading(false); return; }
 
     pageRef.current = 1;
     loadMessages(1);
-    connect();
+
+    // Ensure global socket is connected
+    const ensureAndJoin = async () => {
+      let socket = getSocket();
+      if (!socket) {
+        socket = await connectSocket();
+      }
+      if (!socket) return;
+
+      const doJoin = () => {
+        if (joinedRef.current) return;
+        joinedRef.current = true;
+        socket.emit('join_chat', { chatId });
+        socket.emit('mark_read', { chatId });
+        setConnected(true);
+        flushOfflineQueue();
+      };
+
+      if (socket.connected) {
+        doJoin();
+      } else {
+        socket.once('connect', doJoin);
+      }
+
+      // ── Incoming message (from chat room OR user personal room) ──
+      const onNewMessage = (msg) => {
+        // Accept messages for this chat only
+        const msgChatId = msg.chat?._id || msg.chat;
+        if (msgChatId && msgChatId.toString() !== chatId.toString()) return;
+
+        setMessages(prev => {
+          if (prev.some(m => m._id?.toString() === msg._id?.toString())) return prev;
+          return [...prev, msg];
+        });
+        socket.emit('mark_read', { chatId });
+      };
+
+      const onRead = ({ chatId: cid, readAt }) => {
+        if (cid !== chatId) return;
+        setMessages(prev => prev.map(m => m.readAt ? m : { ...m, readAt }));
+      };
+
+      const onTyping      = () => { setIsTyping(true);  clearTimeout(typingTimerRef.current); typingTimerRef.current = setTimeout(() => setIsTyping(false), 2500); };
+      const onStopTyping  = () => setIsTyping(false);
+      const onDisconnect  = () => { setConnected(false); joinedRef.current = false; };
+      const onReconnect   = () => { doJoin(); flushOfflineQueue(); };
+
+      socket.on('new_message',        onNewMessage);
+      socket.on('messages_read',      onRead);
+      socket.on('user_typing',        onTyping);
+      socket.on('user_stopped_typing', onStopTyping);
+      socket.on('disconnect',         onDisconnect);
+      socket.on('connect',            onReconnect);
+
+      return () => {
+        socket.off('new_message',        onNewMessage);
+        socket.off('messages_read',      onRead);
+        socket.off('user_typing',        onTyping);
+        socket.off('user_stopped_typing', onStopTyping);
+        socket.off('disconnect',         onDisconnect);
+        socket.off('connect',            onReconnect);
+        joinedRef.current = false;
+      };
+    };
+
+    let cleanup;
+    ensureAndJoin().then(fn => { cleanup = fn; });
 
     return () => {
       clearTimeout(typingTimerRef.current);
-      socket?.disconnect();
-      socketRef.current = null;
+      joinedRef.current = false;
+      if (cleanup) cleanup();
     };
   }, [chatId, loadMessages, flushOfflineQueue]);
 
-  // ── Send a message (with offline queue fallback) ──────────────
+  // ── Send a message ────────────────────────────────────────────────
   const sendMessage = useCallback((content, messageType = 'text', fileUrl, fileName) => {
     const payload = { chatId, content, messageType, fileUrl, fileName };
-
-    if (socketRef.current?.connected) {
-      socketRef.current.emit('send_message', payload);
+    const socket = getSocket();
+    if (socket?.connected) {
+      socket.emit('send_message', payload);
       return true;
     } else {
-      // Queue for offline sending — add optimistic message to UI
       offlineQueueRef.current.push(payload);
       const optimistic = {
-        _id: `offline-${Date.now()}`,
-        chat: chatId,
-        sender: userId,
+        _id:         `offline-${Date.now()}`,
+        chat:        chatId,
+        sender:      userId,
         content,
         messageType,
         fileUrl,
         fileName,
-        createdAt: new Date().toISOString(),
-        pending: true, // Show a pending indicator
+        createdAt:   new Date().toISOString(),
+        pending:     true,
       };
       setMessages(prev => [...prev, optimistic]);
       return false;
     }
   }, [chatId, userId]);
 
-  const sendTyping = useCallback(() => {
-    socketRef.current?.emit('typing', { chatId });
-  }, [chatId]);
-
-  const sendStopTyping = useCallback(() => {
-    socketRef.current?.emit('stop_typing', { chatId });
-  }, [chatId]);
+  const sendTyping     = useCallback(() => getSocket()?.emit('typing',      { chatId }), [chatId]);
+  const sendStopTyping = useCallback(() => getSocket()?.emit('stop_typing', { chatId }), [chatId]);
 
   return {
     messages,
@@ -209,15 +190,14 @@ export const useChat = (chatId, userId) => {
 
 /**
  * Hook for the chat list screen.
- * Listens to 'conversation_updated' socket events to update the list in real-time.
+ * Uses the global socket for conversation_updated events.
  */
 export const useChatList = () => {
-  const { user } = useAuth();
-  const navigation = useNavigation();
-  const [chats, setChats]     = useState([]);
+  const { user }       = useAuth();
+  const navigation     = useNavigation();
+  const [chats, setChats]   = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(null);
-  const socketRef             = useRef(null);
 
   const fetchChats = useCallback(async () => {
     setLoading(true);
@@ -232,45 +212,30 @@ export const useChatList = () => {
     }
   }, []);
 
+  // Refresh on screen focus
   useEffect(() => {
-    const unsubscribe = navigation?.addListener?.('focus', () => {
-      fetchChats();
-    });
+    const unsubscribe = navigation?.addListener?.('focus', fetchChats);
     return () => {
       if (typeof unsubscribe === 'function') unsubscribe();
       else if (unsubscribe?.remove) unsubscribe.remove();
     };
   }, [navigation, fetchChats]);
 
+  // Initial fetch + global socket listener for real-time updates
   useEffect(() => {
     fetchChats();
 
-    // Connect socket just for list-level events
-    const connectListSocket = async () => {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      if (!token || !SOCKET_URL) return;
+    const setupListener = async () => {
+      let socket = getSocket();
+      if (!socket) socket = await connectSocket();
+      if (!socket) return;
 
-      const socket = io(SOCKET_URL, {
-        auth: { token },
-        transports: ['polling', 'websocket'],
-        reconnection: true,
-        reconnectionAttempts: 5,
-      });
-
-      socket.on('connect', () => {});
-
-      // Real-time conversation list update
-      socket.on('conversation_updated', ({ chatId, lastMessage, updatedAt }) => {
+      const onUpdated = ({ chatId, lastMessage, updatedAt }) => {
         setChats(prev => {
           const exists = prev.some(c => c._id === chatId);
-          if (!exists) {
-            fetchChats();
-            return prev;
-          }
-          
+          if (!exists) { fetchChats(); return prev; }
           const myId = user?._id?.toString() || user?.id?.toString();
           const isMyMsg = lastMessage?.senderId && myId && lastMessage.senderId.toString() === myId;
-          
           return prev.map(c => {
             if (c._id !== chatId) return c;
             return {
@@ -281,17 +246,39 @@ export const useChatList = () => {
             };
           });
         });
-      });
+      };
 
-      socketRef.current = socket;
+      // Also refresh list when a new_message arrives (for call history bubbles)
+      const onNewMsg = (msg) => {
+        setChats(prev => {
+          const chatId = msg.chat?._id || msg.chat;
+          if (!chatId) return prev;
+          return prev.map(c => {
+            if (c._id?.toString() !== chatId?.toString()) return c;
+            const myId = user?._id?.toString() || user?.id?.toString();
+            const isMe = msg.sender?._id?.toString() === myId;
+            return {
+              ...c,
+              lastMessage: { content: msg.content },
+              updatedAt:   msg.createdAt || new Date().toISOString(),
+              unreadCount: isMe ? (c.unreadCount || 0) : (c.unreadCount || 0) + 1,
+            };
+          });
+        });
+      };
+
+      socket.on('conversation_updated', onUpdated);
+      socket.on('new_message',          onNewMsg);
+
+      return () => {
+        socket.off('conversation_updated', onUpdated);
+        socket.off('new_message',          onNewMsg);
+      };
     };
 
-    connectListSocket();
-
-    return () => {
-      socketRef.current?.disconnect();
-      socketRef.current = null;
-    };
+    let cleanup;
+    setupListener().then(fn => { cleanup = fn; });
+    return () => { if (cleanup) cleanup(); };
   }, [fetchChats, user]);
 
   return { chats, loading, error, refetch: fetchChats };

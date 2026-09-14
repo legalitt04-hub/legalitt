@@ -251,19 +251,21 @@ const ChatScreen = ({ navigation, route }) => {
     const isDoc = msg.messageType === 'file' || msg.messageType === 'document' || (msg.fileUrl && !msg.fileUrl.match(/\.(jpeg|jpg|gif|png)$/i));
     const isPending = msg.pending;
 
-    // ── System / Missed-call messages — render as centered pill ──────────────
-    if (msg.type === 'system' || msg.metadata?.callMissed) {
+    // ── System / call messages — render as centered pill ──────────────
+    if (msg.type === 'system' || msg.messageType === 'system' || msg.metadata?.callMissed || msg.metadata?.callCompleted) {
       const isVideo = msg.metadata?.mode === 'video';
+      const isMissed = msg.metadata?.callMissed;
+      const isCompleted = msg.metadata?.callCompleted;
       return (
         <View style={styles.systemMsgWrap}>
           <View style={styles.systemMsgPill}>
             <Ionicons
-              name={isVideo ? 'videocam-off' : 'call'}
+              name={isVideo ? (isMissed ? 'videocam-off' : 'videocam') : (isMissed ? 'call' : 'call')}
               size={13}
-              color="#EF4444"
+              color={isMissed ? '#EF4444' : '#10B981'}
               style={{ marginRight: 5 }}
             />
-            <Text style={styles.systemMsgText}>{msg.content || 'Missed call'}</Text>
+            <Text style={styles.systemMsgText}>{msg.content || (isMissed ? 'Missed call' : 'Call ended')}</Text>
           </View>
           <Text style={styles.systemMsgTime}>{formatDate(msg.createdAt, 'time')}</Text>
         </View>
