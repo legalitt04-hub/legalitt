@@ -159,10 +159,14 @@ export default function IncomingCallScreen({ navigation, route }) {
       zegoAppId,
       mode,
       bookingId,
-      clientName: callerName,
+      clientName:    callerName,
+      advocateName:  callerName,   // either side needs peerName
+      callerName:    callerName,
+      clientAvatar:  callerAvatar,
+      advocateAvatar: callerAvatar,
       clientId,
       advocateUserId,
-      myUserId: myUserId || '',
+      myUserId:   myUserId || '',
       myUserName: myUserName || 'Me',
     });
   };

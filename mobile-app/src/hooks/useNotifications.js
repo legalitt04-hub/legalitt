@@ -96,7 +96,8 @@ export const useNotifications = (isAuthenticated, navigationRef, user) => {
           bookingId: data.bookingId,
           zegoRoomId: data.zegoRoomId,
           mode: data.mode,
-          callerName: data.callerName || 'Caller',
+          callerName: data.clientName || data.callerName || 'Caller',
+          callerAvatar: data.clientAvatar || data.callerAvatar || null,
           clientId: data.clientId,
           advocateUserId: data.advocateUserId,
         });

@@ -1,8 +1,7 @@
 /**
  * CustomCallScreen.jsx
- * Beautiful custom video/voice call screen using Zego Express Engine directly.
- * Shows caller name, photo, call duration, and custom safe controls.
- * Camera switch is wrapped in try-catch — will NEVER crash the app.
+ * Custom video/voice call screen using Zego Express Engine.
+ * Shows caller name, photo, call duration, and controls.
  */
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
@@ -35,11 +34,9 @@ const _extra = Constants.expoConfig?.extra ?? {};
 const FALLBACK_APP_ID   = 954831467;
 const FALLBACK_APP_SIGN = '6aaa4f1b530a5ddff76b050d56a56974101548cf30d10b1c547feb7da07b16ad';
 
-function getAppId(param)   { const n = Number(_extra.ZEGO_APP_ID ?? param); return n > 0 ? n : FALLBACK_APP_ID; }
-function getAppSign()      { const s = String(_extra.ZEGO_APP_SIGN ?? ''); return s.length > 10 ? s : FALLBACK_APP_SIGN; }
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-const fmt = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+function getAppId(param)  { const n = Number(_extra.ZEGO_APP_ID ?? param); return n > 0 ? n : FALLBACK_APP_ID; }
+function getAppSign()     { const s = String(_extra.ZEGO_APP_SIGN ?? ''); return s.length > 10 ? s : FALLBACK_APP_SIGN; }
+const fmt = (s) => `${String(Math.floor(s / 60)).padStart(2,'0')}:${String(s % 60).padStart(2,'0')}`;
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default function CustomCallScreen({ navigation, route }) {
@@ -51,6 +48,7 @@ export default function CustomCallScreen({ navigation, route }) {
     clientName    = 'Caller',
     clientAvatar  = null,
     advocateName,
+    advocateAvatar = null,
     myUserId      = '',
     myUserName    = 'Me',
     bookingId,
@@ -60,46 +58,51 @@ export default function CustomCallScreen({ navigation, route }) {
 
   const insets   = useSafeAreaInsets();
   const isVideo  = mode === 'video';
-  const peerName = clientName || advocateName || 'Caller';
+
+  // Peer display info — accept either clientName or advocateName
+  const peerName   = clientName || advocateName || 'Caller';
+  const peerAvatar = clientAvatar || advocateAvatar || null;
 
   // ── State ─────────────────────────────────────────────────────────────────
-  const [status,     setStatus]     = useState('connecting'); // connecting | connected | ended
-  const [micOn,      setMicOn]      = useState(true);
-  const [cameraOn,   setCameraOn]   = useState(isVideo);
-  const [isFront,    setIsFront]    = useState(true);
-  const [speakerOn,  setSpeakerOn]  = useState(true);
-  const [duration,   setDuration]   = useState(0);
-  const [remoteHere, setRemoteHere] = useState(false);
+  const [status,         setStatus]         = useState('connecting');
+  const [micOn,          setMicOn]          = useState(true);
+  const [cameraOn,       setCameraOn]       = useState(isVideo);
+  const [isFront,        setIsFront]        = useState(true);
+  const [speakerOn,      setSpeakerOn]      = useState(true);
+  const [duration,       setDuration]       = useState(0);
+  const [remoteHere,     setRemoteHere]     = useState(false);
   const [networkQuality, setNetworkQuality] = useState('🟢 Good');
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [remoteCameraOff, setRemoteCameraOff] = useState(false);
-  const [remoteMicOff, setRemoteMicOff] = useState(false);
+  const [remoteMicOff,   setRemoteMicOff]   = useState(false);
 
   // ── Refs ──────────────────────────────────────────────────────────────────
-  const engineRef   = useRef(null);
-  const localRef    = useRef(null);
-  const remoteRef   = useRef(null);
-  const timerRef    = useRef(null);
-  const startRef    = useRef(null);
-  const cleanedUp   = useRef(false);
-  const stableId    = useRef(myUserId ? String(myUserId) : `u_${Date.now()}`);
-  const roomId      = zegoRoomId || (bookingId ? `legalitt-${bookingId}` : null);
-  const appID       = getAppId(zegoAppId);
-  const appSign     = getAppSign();
+  const engineRef    = useRef(null);
+  const localRef     = useRef(null);
+  const remoteRef    = useRef(null);
+  const timerRef     = useRef(null);
+  const startRef     = useRef(null);
+  const cleanedUp    = useRef(false);
+  const hangupCalled = useRef(false);          // prevent double hangup
+  const pendingStreamId = useRef(null);        // store stream ID if remoteRef not ready yet
+  const stableId     = useRef(myUserId ? String(myUserId) : `u_${Date.now()}`);
+  const roomId       = zegoRoomId || (bookingId ? `legalitt-${bookingId}` : null);
+  const appID        = getAppId(zegoAppId);
+  const appSign      = getAppSign();
 
-  // ── Pulse animation for "connecting" avatar ───────────────────────────────
+  // ── Pulse animation ───────────────────────────────────────────────────────
   const pulse = useRef(new Animated.Value(1)).current;
   useEffect(() => {
-    if (status !== 'connecting') return;
+    if (remoteHere) return;
     const anim = Animated.loop(Animated.sequence([
       Animated.timing(pulse, { toValue: 1.08, duration: 900, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
       Animated.timing(pulse, { toValue: 1,    duration: 900, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
     ]));
     anim.start();
     return () => anim.stop();
-  }, [status]);
+  }, [remoteHere]);
 
-  // ── Cleanup ───────────────────────────────────────────────────────────────
+  // ── Cleanup Zego engine ───────────────────────────────────────────────────
   const cleanup = useCallback(() => {
     if (cleanedUp.current) return;
     cleanedUp.current = true;
@@ -114,14 +117,66 @@ export default function CustomCallScreen({ navigation, route }) {
     engineRef.current = null;
   }, [roomId]);
 
+  // ── HANG UP — THE MOST IMPORTANT FUNCTION ────────────────────────────────
+  const handleHangUp = useCallback(async () => {
+    if (hangupCalled.current) return;
+    hangupCalled.current = true;
+
+    // Calculate duration OUTSIDE try block so it's available for navigation
+    const finalDuration = startRef.current
+      ? Math.floor((Date.now() - startRef.current) / 1000)
+      : 0;
+
+    // Emit socket events
+    try {
+      const socket = getSocket();
+      if (socket) {
+        if (finalDuration > 0) {
+          socket.emit('call_completed', { bookingId, clientId, advocateUserId, mode, duration: finalDuration });
+        } else {
+          socket.emit('call_missed', { bookingId, clientId, advocateUserId, mode });
+        }
+        socket.emit('call_ended', { bookingId, clientId, advocateUserId });
+      }
+    } catch (_) {}
+
+    // Log to backend
+    try {
+      const resolvedClientId = clientId || (advocateUserId !== stableId.current ? stableId.current : null);
+      if (resolvedClientId) {
+        await callsAPI.logCall({
+          bookingId:      bookingId || null,
+          clientUserId:   resolvedClientId,
+          advocateUserId: advocateUserId,
+          duration:       finalDuration,
+          mode:           mode || (isVideo ? 'video' : 'voice'),
+          status:         finalDuration > 0 ? 'completed' : 'missed',
+          endReason:      finalDuration > 0 ? 'USER_ENDED' : 'MISSED',
+        });
+      }
+    } catch (_) {}
+
+    cleanup();
+
+    // Navigate — slight delay so engine cleanup runs first
+    setTimeout(() => {
+      if (finalDuration > 0 && bookingId) {
+        navigation.replace('CallFeedback', { bookingId, advocateUserId, clientId, duration: finalDuration });
+      } else {
+        if (navigation.canGoBack()) navigation.goBack();
+        else navigation.replace('Home');
+      }
+    }, 250);
+  }, [bookingId, clientId, advocateUserId, mode, isVideo, cleanup, navigation]);
+
   // ── Init Zego Express Engine ──────────────────────────────────────────────
   useEffect(() => {
     if (!roomId) {
-      setStatus('connected'); // no room → show UI but no actual call
+      setStatus('connected');
       return;
     }
     if (!ZegoExpressEngine) {
-      setStatus('connected'); // Expo Go fallback
+      setStatus('connected');
       return;
     }
 
@@ -141,11 +196,11 @@ export default function CustomCallScreen({ navigation, route }) {
         const engine = await ZegoExpressEngine.createEngineWithProfile({
           appID,
           appSign,
-          scenario: 0, // General
+          scenario: 0,
         });
         engineRef.current = engine;
 
-        // 3. Room state & quality events
+        // 3. Event listeners
         engine.on('networkQuality', (userId, upstream, downstream) => {
           const maxLevel = Math.max(upstream, downstream);
           if (maxLevel <= 1) setNetworkQuality('🟢 Good');
@@ -158,12 +213,12 @@ export default function CustomCallScreen({ navigation, route }) {
         });
 
         engine.on('remoteMicStateUpdate', (streamID, state) => {
-           setRemoteMicOff(state !== 0);
+          setRemoteMicOff(state !== 0);
         });
 
         engine.on('roomStateUpdate', (rId, state, errCode) => {
-          // state: 0 = Disconnected, 1 = Connecting, 2 = Connected
           if (state === 2) {
+            // Connected
             setStatus('connected');
             setIsReconnecting(false);
             if (!startRef.current) startRef.current = Date.now();
@@ -179,22 +234,28 @@ export default function CustomCallScreen({ navigation, route }) {
           }
         });
 
-        // 4. Remote stream updates
+        // 4. Remote stream — save stream ID and try to play; retry if remoteRef not mounted yet
         engine.on('roomStreamUpdate', (rId, updateType, streamList) => {
-          // updateType 0 = ADD, 1 = DELETE
           if (updateType === 0 && streamList?.length > 0) {
             const streamID = streamList[0].streamID;
-            if (isVideo && remoteRef.current) {
-              const remoteView = findNodeHandle(remoteRef.current);
-              if (remoteView) {
-                engine.startPlayingStream(streamID, { reactTag: remoteView, viewMode: 1, backgroundColor: 0 });
-              } else {
-                engine.startPlayingStream(streamID, null, {});
+            pendingStreamId.current = streamID;
+
+            const tryPlay = () => {
+              if (isVideo && remoteRef.current) {
+                const remoteView = findNodeHandle(remoteRef.current);
+                if (remoteView) {
+                  engine.startPlayingStream(streamID, { reactTag: remoteView, viewMode: 1, backgroundColor: 0 });
+                  pendingStreamId.current = null;
+                  return;
+                }
               }
-            } else {
-              // Voice call — play audio only (pass null view)
+              // Audio-only fallback OR remoteRef not yet mounted
               engine.startPlayingStream(streamID, null, {});
-            }
+              pendingStreamId.current = null;
+            };
+
+            // Small delay so remoteRef has time to mount
+            setTimeout(tryPlay, 400);
             setRemoteHere(true);
           }
         });
@@ -207,24 +268,32 @@ export default function CustomCallScreen({ navigation, route }) {
           { isUserStatusNotify: true, ...loginConfig }
         );
 
-        // 6. Start publishing my stream and preview
-        if (isVideo && localRef.current) {
-          const localView = findNodeHandle(localRef.current);
-          if (localView) {
-            engine.startPreview({ reactTag: localView, viewMode: 1, backgroundColor: 0 });
+        // 6. Start local camera preview — retry until localRef is mounted
+        const startLocalPreview = () => {
+          if (isVideo && localRef.current) {
+            const localView = findNodeHandle(localRef.current);
+            if (localView) {
+              engine.startPreview({ reactTag: localView, viewMode: 1, backgroundColor: 0 });
+              return;
+            }
           }
-        }
+          // Retry after 300ms if not mounted yet
+          setTimeout(startLocalPreview, 300);
+        };
+        setTimeout(startLocalPreview, 300);
+
+        // 7. Start publishing
         engine.startPublishingStream(`${stableId.current}_stream`);
 
-        // 7. Initial device state
-        try { engine.enableCamera(isVideo); }   catch (_) {}
-        try { engine.muteMicrophone(false); }   catch (_) {}
-        try { engine.setAudioRouteToSpeaker(true); } catch (_) {}
-        try { engine.useFrontCamera(true); }    catch (_) {}
+        // 8. Initial device state
+        try { engine.enableCamera(isVideo); }           catch (_) {}
+        try { engine.muteMicrophone(false); }           catch (_) {}
+        try { engine.setAudioRouteToSpeaker(true); }   catch (_) {}
+        try { engine.useFrontCamera(true); }            catch (_) {}
 
       } catch (err) {
         console.warn('[CustomCall] init error:', err?.message);
-        setStatus('connected'); // Optimistic fallback — show UI anyway
+        setStatus('connected'); // Show UI anyway
       }
     };
 
@@ -238,82 +307,81 @@ export default function CustomCallScreen({ navigation, route }) {
     if (!socket) return;
 
     const onEnded = () => {
-      let finalDuration = 0;
-      if (startRef.current) finalDuration = Math.floor((Date.now() - startRef.current) / 1000);
+      const finalDuration = startRef.current
+        ? Math.floor((Date.now() - startRef.current) / 1000)
+        : 0;
       cleanup();
-      
-      if (finalDuration > 0) {
-        navigation.replace('CallFeedback', { bookingId, advocateUserId, clientId, duration: finalDuration });
-      } else if (navigation.canGoBack()) {
-        navigation.goBack();
-      }
+      setTimeout(() => {
+        if (finalDuration > 0 && bookingId) {
+          navigation.replace('CallFeedback', { bookingId, advocateUserId, clientId, duration: finalDuration });
+        } else if (navigation.canGoBack()) {
+          navigation.goBack();
+        }
+      }, 250);
     };
-    
+
     const onBusy = (data) => {
-      Alert.alert("User Busy", data?.message || "The user is currently on another call. Please try again later.");
+      Alert.alert('User Busy', data?.message || 'The user is currently on another call.');
       cleanup();
       if (navigation.canGoBack()) navigation.goBack();
     };
 
     socket.on('call_ended', onEnded);
-    socket.on('call_busy', onBusy);
+    socket.on('call_busy',  onBusy);
 
     return () => {
       socket.off('call_ended', onEnded);
-      socket.off('call_busy', onBusy);
+      socket.off('call_busy',  onBusy);
     };
-  }, []);
+  }, [cleanup, navigation, bookingId, advocateUserId, clientId]);
 
-  // ── 40-Second Timeout for Missed Call ──────────────────────────────────────
+  // ── 40-Second Timeout → Missed Call ──────────────────────────────────────
   useEffect(() => {
-    // Only apply timeout if we are still waiting for the remote user
-    if (remoteHere || status !== 'connecting') return;
-    
+    if (remoteHere) return;
+
     const timeout = setTimeout(async () => {
       try {
         const socket = getSocket();
         if (socket) {
           socket.emit('call_missed', { bookingId, clientId, advocateUserId, mode });
-          socket.emit('call_ended', { bookingId, clientId, advocateUserId });
+          socket.emit('call_ended',  { bookingId, clientId, advocateUserId });
         }
-        
-        const targetClientId = clientId || (advocateUserId === myUserId ? null : myUserId);
-        if (targetClientId) {
+        const resolvedClientId = clientId || stableId.current;
+        if (resolvedClientId) {
           await callsAPI.logCall({
-            bookingId: bookingId || null,
-            clientUserId: targetClientId,
+            bookingId:      bookingId || null,
+            clientUserId:   resolvedClientId,
             advocateUserId: advocateUserId,
-            duration: 0,
-            mode: mode || (isVideo ? 'video' : 'voice'),
-            status: 'missed',
-            endReason: 'TIMEOUT'
+            duration:       0,
+            mode:           mode || (isVideo ? 'video' : 'voice'),
+            status:         'missed',
+            endReason:      'TIMEOUT',
           });
         }
-      } catch (e) {
-        console.warn('Error handling missed call timeout:', e);
-      }
+      } catch (_) {}
       cleanup();
       if (navigation.canGoBack()) navigation.goBack();
     }, 40000);
 
     return () => clearTimeout(timeout);
-  }, [remoteHere, status, bookingId, clientId, advocateUserId, mode, myUserId, isVideo, cleanup, navigation]);
+  }, [remoteHere]); // eslint-disable-line
 
-  // ── Dial Tone for Outgoing Calls ──────────────────────────────────────────
+  // ── Dial Tone ─────────────────────────────────────────────────────────────
   const dialSoundRef = useRef(null);
-
   useEffect(() => {
-    let isMounted = true;
+    if (remoteHere) {
+      // Stop dial tone when remote joins
+      if (dialSoundRef.current) {
+        dialSoundRef.current.stopAsync().then(() => dialSoundRef.current?.unloadAsync());
+        dialSoundRef.current = null;
+      }
+      return;
+    }
 
-    const playDialTone = async () => {
-      // Only play if we are waiting for the remote user
-      if (remoteHere || status !== 'connecting') return;
-      
+    let isMounted = true;
+    (async () => {
       try {
-        await Audio.setAudioModeAsync({
-          playsInSilentModeIOS: true,
-          staysActiveInBackground: true,
-        });
+        await Audio.setAudioModeAsync({ playsInSilentModeIOS: true, staysActiveInBackground: true });
         const { sound } = await Audio.Sound.createAsync(
           { uri: 'https://actions.google.com/sounds/v1/communications/dial_tone.ogg' },
           { shouldPlay: true, isLooping: true }
@@ -323,14 +391,8 @@ export default function CustomCallScreen({ navigation, route }) {
         } else {
           sound.unloadAsync();
         }
-      } catch (err) {
-        console.warn('Could not play dial tone:', err);
-      }
-    };
-
-    if (!remoteHere && status === 'connecting') {
-      playDialTone();
-    }
+      } catch (_) {}
+    })();
 
     return () => {
       isMounted = false;
@@ -341,55 +403,9 @@ export default function CustomCallScreen({ navigation, route }) {
         });
       }
     };
-  }, [remoteHere, status]);
+  }, [remoteHere]);
 
-  // ── Hang-up ───────────────────────────────────────────────────────────────
-  const handleHangUp = useCallback(async () => {
-    try {
-      // Calculate final duration
-      let finalDuration = 0;
-      if (startRef.current) {
-        finalDuration = Math.floor((Date.now() - startRef.current) / 1000);
-      }
-      
-      const socket = getSocket();
-      if (socket) {
-        if (finalDuration > 0) {
-          socket.emit('call_completed', { bookingId, clientId, advocateUserId, mode, duration: finalDuration });
-        } else {
-          socket.emit('call_missed', { bookingId, clientId, advocateUserId, mode });
-        }
-        socket.emit('call_ended', { bookingId, clientId, advocateUserId });
-      }
-
-      // Log call to backend
-      const targetClientId = clientId || (advocateUserId === myUserId ? null : myUserId);
-      if (targetClientId) {
-        await callsAPI.logCall({
-          bookingId: bookingId || null,
-          clientUserId: targetClientId,
-          advocateUserId: advocateUserId,
-          duration: finalDuration,
-          mode: mode || (isVideo ? 'video' : 'voice'),
-          status: finalDuration > 0 ? 'completed' : 'missed',
-          endReason: finalDuration > 0 ? 'USER_ENDED' : 'MISSED'
-        });
-      }
-    } catch (e) {
-      console.warn('Error logging call on hang up:', e);
-    }
-    
-    cleanup();
-    
-    // Navigate to feedback screen if call was successful
-    if (finalDuration > 0) {
-      navigation.replace('CallFeedback', { bookingId, advocateUserId, clientId, duration: finalDuration });
-    } else {
-      if (navigation.canGoBack()) navigation.goBack();
-    }
-  }, [bookingId, clientId, advocateUserId, myUserId, isVideo, cleanup, navigation]);
-
-  // ── Controls ─────────────────────────────────────────────────────────────
+  // ── Controls ──────────────────────────────────────────────────────────────
   const toggleMic = () => {
     try { engineRef.current?.muteMicrophone(micOn); } catch (_) {}
     setMicOn(v => !v);
@@ -405,7 +421,6 @@ export default function CustomCallScreen({ navigation, route }) {
       engineRef.current?.useFrontCamera(!isFront);
       setIsFront(v => !v);
     } catch (err) {
-      // ✅ Never crash — silently ignore camera flip errors
       console.warn('[CustomCall] camera flip warn:', err?.message);
     }
   };
@@ -420,37 +435,30 @@ export default function CustomCallScreen({ navigation, route }) {
     <View style={styles.root}>
       <StatusBar hidden />
 
-      {/* ── BACKGROUND: video stream OR voice dark bg ── */}
+      {/* ── BACKGROUND: remote video stream OR dark bg ── */}
       {isVideo && ZegoSurfaceView ? (
-        // Remote video — full screen background
         <ZegoSurfaceView ref={remoteRef} style={StyleSheet.absoluteFill} />
       ) : (
-        // Voice call background
         <View style={[StyleSheet.absoluteFill, styles.voiceBg]} />
       )}
 
-      {/* ── DARK overlay ── */}
-      <View style={[StyleSheet.absoluteFill, styles.scrim]} />
+      {/* ── Dark scrim overlay ── */}
+      <View style={[StyleSheet.absoluteFill, styles.scrim]} pointerEvents="none" />
 
       {/* ── TOP: caller info ── */}
       <View style={[styles.topBar, { paddingTop: insets.top + 12 }]}>
         <View style={styles.callerRow}>
-          {/* Avatar */}
           <Animated.View style={[styles.avatarFrame, { transform: [{ scale: pulse }] }]}>
-            {clientAvatar ? (
-              <Image source={{ uri: clientAvatar }} style={styles.avatarImg} />
+            {peerAvatar ? (
+              <Image source={{ uri: peerAvatar }} style={styles.avatarImg} />
             ) : (
               <View style={styles.avatarFallback}>
-                <Text style={styles.avatarInitial}>
-                  {peerName?.charAt(0)?.toUpperCase() || '?'}
-                </Text>
+                <Text style={styles.avatarInitial}>{peerName?.charAt(0)?.toUpperCase() || '?'}</Text>
               </View>
             )}
-            {/* Online ring */}
             <View style={[styles.onlineRing, status === 'connected' && styles.onlineRingGreen]} />
           </Animated.View>
 
-          {/* Name + status */}
           <View style={{ flex: 1, marginLeft: 12 }}>
             <Text style={styles.peerName} numberOfLines={1}>{peerName}</Text>
             <Text style={styles.callStatusText}>
@@ -458,14 +466,12 @@ export default function CustomCallScreen({ navigation, route }) {
                 ? '⏳ Ringing...'
                 : `${isVideo ? '📹 Video' : '📞 Voice'} · ${fmt(duration)}`}
             </Text>
-            {remoteHere && (
-              <Text style={styles.networkText}>{networkQuality}</Text>
-            )}
+            {remoteHere && <Text style={styles.networkText}>{networkQuality}</Text>}
           </View>
         </View>
       </View>
 
-      {/* ── VIDEO ONLY: local camera preview (bottom-right) ── */}
+      {/* ── LOCAL CAMERA PREVIEW (bottom-right pip) ── */}
       {isVideo && ZegoSurfaceView && cameraOn && (
         <View style={[styles.localCamWrap, { bottom: insets.bottom + 110 }]}>
           <ZegoSurfaceView ref={localRef} style={styles.localCam} />
@@ -475,17 +481,15 @@ export default function CustomCallScreen({ navigation, route }) {
         </View>
       )}
 
-      {/* ── VIDEO ONLY: show avatar if remote video not ready yet OR camera off ── */}
+      {/* ── VIDEO: avatar when waiting OR remote camera off ── */}
       {isVideo && (!remoteHere || remoteCameraOff) && (
-        <View style={styles.waitingCenter}>
+        <View style={styles.waitingCenter} pointerEvents="none">
           <Animated.View style={[styles.waitAvatarFrame, !remoteHere && { transform: [{ scale: pulse }] }]}>
-            {clientAvatar ? (
-              <Image source={{ uri: clientAvatar }} style={styles.waitAvatar} />
+            {peerAvatar ? (
+              <Image source={{ uri: peerAvatar }} style={styles.waitAvatar} />
             ) : (
               <View style={styles.waitAvatarFallback}>
-                <Text style={styles.waitAvatarInitial}>
-                  {peerName?.charAt(0)?.toUpperCase() || '?'}
-                </Text>
+                <Text style={styles.waitAvatarInitial}>{peerName?.charAt(0)?.toUpperCase() || '?'}</Text>
               </View>
             )}
           </Animated.View>
@@ -496,15 +500,13 @@ export default function CustomCallScreen({ navigation, route }) {
 
       {/* ── VOICE CALL: large centered avatar ── */}
       {!isVideo && (
-        <View style={styles.voiceCenter}>
+        <View style={styles.voiceCenter} pointerEvents="none">
           <Animated.View style={[styles.voiceAvatarFrame, { transform: [{ scale: pulse }] }]}>
-            {clientAvatar ? (
-              <Image source={{ uri: clientAvatar }} style={styles.voiceAvatar} />
+            {peerAvatar ? (
+              <Image source={{ uri: peerAvatar }} style={styles.voiceAvatar} />
             ) : (
               <View style={styles.voiceAvatarFallback}>
-                <Text style={styles.voiceAvatarInitial}>
-                  {peerName?.charAt(0)?.toUpperCase() || '?'}
-                </Text>
+                <Text style={styles.voiceAvatarInitial}>{peerName?.charAt(0)?.toUpperCase() || '?'}</Text>
               </View>
             )}
           </Animated.View>
@@ -515,24 +517,19 @@ export default function CustomCallScreen({ navigation, route }) {
         </View>
       )}
 
-      {/* ── UI OVERLAYS ── */}
-      {/* Remote Muted */}
+      {/* ── Status pills ── */}
       {remoteHere && remoteMicOff && (
         <View style={styles.remoteMutedPill}>
           <Ionicons name="mic-off" size={14} color="#fff" />
           <Text style={styles.mutedText}>{peerName} is muted</Text>
         </View>
       )}
-
-      {/* Local Muted */}
       {remoteHere && !micOn && (
         <View style={styles.localMutedPill}>
           <Ionicons name="mic-off" size={14} color="#EF4444" />
           <Text style={styles.mutedTextRed}>You are muted</Text>
         </View>
       )}
-
-      {/* Reconnecting Overlay */}
       {isReconnecting && (
         <View style={styles.reconnectOverlay}>
           <Ionicons name="warning-outline" size={32} color="#FBBF24" />
@@ -542,12 +539,11 @@ export default function CustomCallScreen({ navigation, route }) {
 
       {/* ── BOTTOM: control bar ── */}
       <View style={[styles.controls, { paddingBottom: insets.bottom + 20 }]}>
-
         {/* Camera flip — video only */}
         {isVideo ? (
           <CtrlButton icon="camera-reverse-outline" label="Flip" onPress={switchCamera} />
         ) : (
-          <View style={{ width: 64 }} />
+          <View style={{ width: 60 }} />
         )}
 
         {/* Mute mic */}
@@ -558,12 +554,12 @@ export default function CustomCallScreen({ navigation, route }) {
           active={!micOn}
         />
 
-        {/* Hang up — BIG red button */}
+        {/* HANG UP — big red button */}
         <TouchableOpacity style={styles.hangupBtn} onPress={handleHangUp} activeOpacity={0.85}>
           <Ionicons name="call" size={30} color="#fff" style={{ transform: [{ rotate: '135deg' }] }} />
         </TouchableOpacity>
 
-        {/* Camera toggle — video only, else speaker */}
+        {/* Camera toggle / Speaker */}
         {isVideo ? (
           <CtrlButton
             icon={cameraOn ? 'videocam' : 'videocam-off'}
@@ -580,7 +576,7 @@ export default function CustomCallScreen({ navigation, route }) {
           />
         )}
 
-        {/* Speaker — video */}
+        {/* Speaker — video only */}
         {isVideo ? (
           <CtrlButton
             icon={speakerOn ? 'volume-high' : 'volume-mute'}
@@ -589,14 +585,14 @@ export default function CustomCallScreen({ navigation, route }) {
             active={!speakerOn}
           />
         ) : (
-          <View style={{ width: 64 }} />
+          <View style={{ width: 60 }} />
         )}
       </View>
     </View>
   );
 }
 
-// ── Small reusable control button ─────────────────────────────────────────────
+// ── Control button component ──────────────────────────────────────────────────
 function CtrlButton({ icon, label, onPress, active }) {
   return (
     <TouchableOpacity
@@ -612,51 +608,48 @@ function CtrlButton({ icon, label, onPress, active }) {
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: '#0B1120' },
-  voiceBg:{ flex: 1, backgroundColor: '#0B1120' },
-  scrim:  { backgroundColor: 'rgba(0,0,0,0.45)' },
+  root:    { flex: 1, backgroundColor: '#0B1120' },
+  voiceBg: { flex: 1, backgroundColor: '#0B1120' },
+  scrim:   { backgroundColor: 'rgba(0,0,0,0.45)' },
 
-  // ── Top bar ──────────────────────────────────────────────────────────────
   topBar: {
     position: 'absolute', top: 0, left: 0, right: 0,
     paddingHorizontal: 20, paddingBottom: 16,
     backgroundColor: 'rgba(0,0,0,0.35)',
+    zIndex: 10,
   },
-  callerRow:    { flexDirection: 'row', alignItems: 'center' },
-  avatarFrame:  { width: 52, height: 52, borderRadius: 26, position: 'relative' },
-  avatarImg:    { width: 52, height: 52, borderRadius: 26, borderWidth: 2, borderColor: 'rgba(255,255,255,0.4)' },
-  avatarFallback:{ width: 52, height: 52, borderRadius: 26, backgroundColor: '#1E3A5F', alignItems: 'center', justifyContent: 'center' },
-  avatarInitial: { fontSize: 22, fontWeight: '700', color: '#14B8A6' },
-  onlineRing:   { position: 'absolute', bottom: 0, right: 0, width: 14, height: 14, borderRadius: 7, backgroundColor: '#6B7280', borderWidth: 2, borderColor: '#0B1120' },
-  onlineRingGreen: { backgroundColor: '#10B981' },
-  peerName:     { color: '#FFFFFF', fontSize: 17, fontWeight: '700' },
+  callerRow:      { flexDirection: 'row', alignItems: 'center' },
+  avatarFrame:    { width: 52, height: 52, borderRadius: 26, position: 'relative' },
+  avatarImg:      { width: 52, height: 52, borderRadius: 26, borderWidth: 2, borderColor: 'rgba(255,255,255,0.4)' },
+  avatarFallback: { width: 52, height: 52, borderRadius: 26, backgroundColor: '#1E3A5F', alignItems: 'center', justifyContent: 'center' },
+  avatarInitial:  { fontSize: 22, fontWeight: '700', color: '#14B8A6' },
+  onlineRing:     { position: 'absolute', bottom: 0, right: 0, width: 14, height: 14, borderRadius: 7, backgroundColor: '#6B7280', borderWidth: 2, borderColor: '#0B1120' },
+  onlineRingGreen:{ backgroundColor: '#10B981' },
+  peerName:       { color: '#FFFFFF', fontSize: 17, fontWeight: '700' },
   callStatusText: { color: 'rgba(255,255,255,0.65)', fontSize: 12, marginTop: 2 },
+  networkText:    { color: 'rgba(255,255,255,0.7)', fontSize: 10, marginTop: 4, fontWeight: '500' },
 
-  // ── Local camera preview ─────────────────────────────────────────────────
-  localCamWrap: { position: 'absolute', right: 16, width: 90, height: 130, borderRadius: 12, overflow: 'hidden', borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)' },
+  localCamWrap: { position: 'absolute', right: 16, width: 90, height: 130, borderRadius: 12, overflow: 'hidden', borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)', zIndex: 20 },
   localCam:     { flex: 1 },
   localLabel:   { position: 'absolute', bottom: 4, left: 0, right: 0, alignItems: 'center' },
   localLabelText: { color: '#fff', fontSize: 10, fontWeight: '600', backgroundColor: 'rgba(0,0,0,0.5)', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 },
 
-  // ── Waiting (video not yet connected) ────────────────────────────────────
-  waitingCenter: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
-  waitAvatarFrame: { width: 110, height: 110, borderRadius: 55, overflow: 'hidden', borderWidth: 3, borderColor: '#14B8A6', marginBottom: 16 },
-  waitAvatar:    { width: '100%', height: '100%' },
+  waitingCenter:      { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
+  waitAvatarFrame:    { width: 110, height: 110, borderRadius: 55, overflow: 'hidden', borderWidth: 3, borderColor: '#14B8A6', marginBottom: 16 },
+  waitAvatar:         { width: '100%', height: '100%' },
   waitAvatarFallback: { flex: 1, backgroundColor: '#1E3A5F', alignItems: 'center', justifyContent: 'center' },
   waitAvatarInitial:  { fontSize: 44, fontWeight: '700', color: '#14B8A6' },
-  waitName:      { color: '#fff', fontSize: 22, fontWeight: '700' },
-  waitSub:       { color: 'rgba(255,255,255,0.5)', fontSize: 13, marginTop: 6 },
+  waitName:           { color: '#fff', fontSize: 22, fontWeight: '700' },
+  waitSub:            { color: 'rgba(255,255,255,0.5)', fontSize: 13, marginTop: 6 },
 
-  // ── Voice call center ────────────────────────────────────────────────────
-  voiceCenter: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
-  voiceAvatarFrame: { width: 130, height: 130, borderRadius: 65, overflow: 'hidden', borderWidth: 3, borderColor: '#14B8A6', marginBottom: 20, elevation: 16, shadowColor: '#14B8A6', shadowOpacity: 0.5, shadowRadius: 20 },
-  voiceAvatar:       { width: '100%', height: '100%' },
-  voiceAvatarFallback: { flex: 1, backgroundColor: '#1E3A5F', alignItems: 'center', justifyContent: 'center' },
-  voiceAvatarInitial:  { fontSize: 52, fontWeight: '800', color: '#14B8A6' },
-  voiceName:     { color: '#fff', fontSize: 26, fontWeight: '700', textAlign: 'center' },
-  voiceSub:      { color: 'rgba(255,255,255,0.5)', fontSize: 14, marginTop: 8, textAlign: 'center' },
+  voiceCenter:          { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
+  voiceAvatarFrame:     { width: 130, height: 130, borderRadius: 65, overflow: 'hidden', borderWidth: 3, borderColor: '#14B8A6', marginBottom: 20, elevation: 16, shadowColor: '#14B8A6', shadowOpacity: 0.5, shadowRadius: 20 },
+  voiceAvatar:          { width: '100%', height: '100%' },
+  voiceAvatarFallback:  { flex: 1, backgroundColor: '#1E3A5F', alignItems: 'center', justifyContent: 'center' },
+  voiceAvatarInitial:   { fontSize: 52, fontWeight: '800', color: '#14B8A6' },
+  voiceName:            { color: '#fff', fontSize: 26, fontWeight: '700', textAlign: 'center' },
+  voiceSub:             { color: 'rgba(255,255,255,0.5)', fontSize: 14, marginTop: 8, textAlign: 'center' },
 
-  // ── Controls ─────────────────────────────────────────────────────────────
   controls: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
     flexDirection: 'row',
@@ -665,6 +658,7 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingHorizontal: 8,
     backgroundColor: 'rgba(0,0,0,0.55)',
+    zIndex: 30,
   },
   hangupBtn: {
     width: 68, height: 68, borderRadius: 34,
@@ -674,23 +668,21 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
 
-  // ── Network & Status pills ───────────────────────────────────────────────
-  networkText: { color: 'rgba(255,255,255,0.7)', fontSize: 10, marginTop: 4, fontWeight: '500' },
   remoteMutedPill: {
-    position: 'absolute', top: 90, left: 20,
-    backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 20,
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 5, gap: 6
-  },
-  localMutedPill: {
-    position: 'absolute', top: 90, right: 20,
+    position: 'absolute', top: 90, left: 20, zIndex: 15,
     backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 20,
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 5, gap: 6,
-    borderColor: '#EF4444', borderWidth: 1
   },
-  mutedText: { color: '#fff', fontSize: 12, fontWeight: '500' },
+  localMutedPill: {
+    position: 'absolute', top: 90, right: 20, zIndex: 15,
+    backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 20,
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 5, gap: 6,
+    borderColor: '#EF4444', borderWidth: 1,
+  },
+  mutedText:    { color: '#fff', fontSize: 12, fontWeight: '500' },
   mutedTextRed: { color: '#EF4444', fontSize: 12, fontWeight: '500' },
   reconnectOverlay: {
-    position: 'absolute', top: '35%', left: 0, right: 0,
+    position: 'absolute', top: '35%', left: 0, right: 0, zIndex: 25,
     alignItems: 'center', justifyContent: 'center',
     backgroundColor: 'rgba(0,0,0,0.75)', paddingVertical: 20, marginHorizontal: 40, borderRadius: 16,
   },
@@ -698,12 +690,7 @@ const styles = StyleSheet.create({
 });
 
 const s = StyleSheet.create({
-  ctrlBtn: {
-    width: 60, height: 60, borderRadius: 30,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center', justifyContent: 'center',
-    gap: 4,
-  },
+  ctrlBtn:       { width: 60, height: 60, borderRadius: 30, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', gap: 4 },
   ctrlBtnActive: { backgroundColor: 'rgba(239,68,68,0.4)' },
-  ctrlLabel: { color: 'rgba(255,255,255,0.8)', fontSize: 9, fontWeight: '600', marginTop: 2 },
+  ctrlLabel:     { color: 'rgba(255,255,255,0.8)', fontSize: 9, fontWeight: '600', marginTop: 2 },
 });

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -14,6 +14,7 @@ import {
   Image,
 } from 'react-native';
 import Constants from 'expo-constants';
+import { Ionicons } from '@expo/vector-icons';
 import { getSocket } from '../services/socket';
 import { callsAPI } from '../services/api';
 
@@ -25,7 +26,7 @@ let ONE_ON_ONE_VOICE_CALL_CONFIG: any = null;
 try {
   if (Constants.appOwnership !== 'expo') {
     const zego = require('@zegocloud/zego-uikit-prebuilt-call-rn');
-    ZegoUIKitPrebuiltCall      = zego.ZegoUIKitPrebuiltCall      ?? null;
+    ZegoUIKitPrebuiltCall       = zego.ZegoUIKitPrebuiltCall       ?? null;
     ONE_ON_ONE_VIDEO_CALL_CONFIG = zego.ONE_ON_ONE_VIDEO_CALL_CONFIG ?? null;
     ONE_ON_ONE_VOICE_CALL_CONFIG = zego.ONE_ON_ONE_VOICE_CALL_CONFIG ?? null;
   }
@@ -37,7 +38,7 @@ const FALLBACK_APP_ID   = 954831467;
 const FALLBACK_APP_SIGN = '6aaa4f1b530a5ddff76b050d56a56974101548cf30d10b1c547feb7da07b16ad';
 
 function resolveAppId(param?: any): number {
-  const fromEnv = Number(_extra.ZEGO_APP_ID);
+  const fromEnv   = Number(_extra.ZEGO_APP_ID);
   const fromParam = Number(param);
   return (fromEnv > 0 ? fromEnv : 0) || (fromParam > 0 ? fromParam : 0) || FALLBACK_APP_ID;
 }
@@ -52,12 +53,14 @@ export default function VideoCallScreen({ navigation, route }: any) {
   const {
     zegoRoomId,
     zegoToken,
-    advocateName = 'Advocate',
-    myUserId     = '',
-    myUserName   = 'User',
-    mode         = 'video',
+    advocateName  = 'Advocate',
+    advocateAvatar = null,
+    myUserId      = '',
+    myUserName    = 'User',
+    mode          = 'video',
     bookingId,
     advocateUserId,
+    clientId,
     zegoAppId,
   } = route?.params ?? {};
 
@@ -71,9 +74,10 @@ export default function VideoCallScreen({ navigation, route }: any) {
   const isCallReady      = !!effectiveRoomId && effectiveAppId > 0;
 
   const [permissionsGranted, setPermissionsGranted] = useState(Platform.OS === 'ios');
-  const [zegoReady, setZegoReady] = useState(false);
+  const [zegoReady, setZegoReady]       = useState(false);
   const [remoteJoined, setRemoteJoined] = useState(false);
   const [callStartTime, setCallStartTime] = useState<number | null>(null);
+  const hangupCalledRef = useRef(false); // prevent double-hangup
   const pulse = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -135,20 +139,12 @@ export default function VideoCallScreen({ navigation, route }: any) {
     return () => clearTimeout(t);
   }, [permissionsGranted]);
 
-  // ── Socket: listen for remote hang-up ───────────────────────────────────
-  useEffect(() => {
-    const socket = getSocket();
-    if (!socket) return;
-    const onEnded = () => {
-      // Remote hung up, we should run the same hangup logic
-      handleHangUp();
-    };
-    socket.on('call_ended', onEnded);
-    return () => { socket.off('call_ended', onEnded); };
-  }, [callStartTime, bookingId]); // eslint-disable-line react-hooks/exhaustive-deps
-
   // ── Hang-up handler ──────────────────────────────────────────────────────
-  const handleHangUp = async () => {
+  // useCallback ensures stable reference so Zego config doesn't recreate it
+  const handleHangUp = useCallback(async () => {
+    if (hangupCalledRef.current) return; // prevent double call
+    hangupCalledRef.current = true;
+
     let duration = 0;
     if (callStartTime) {
       duration = Math.floor((Date.now() - callStartTime) / 1000);
@@ -158,42 +154,64 @@ export default function VideoCallScreen({ navigation, route }: any) {
       const socket = getSocket();
       if (socket) {
         if (duration > 0) {
-          socket.emit('call_completed', { bookingId, clientId: stableUserIdRef.current, advocateUserId: advocateUserId ?? null, mode, duration });
+          socket.emit('call_completed', {
+            bookingId,
+            clientId: clientId || stableUserIdRef.current,
+            advocateUserId: advocateUserId ?? null,
+            mode,
+            duration,
+          });
         } else {
-          socket.emit('call_missed', { bookingId, clientId: stableUserIdRef.current, advocateUserId: advocateUserId ?? null, mode });
+          socket.emit('call_missed', {
+            bookingId,
+            clientId: clientId || stableUserIdRef.current,
+            advocateUserId: advocateUserId ?? null,
+            mode,
+          });
         }
         socket.emit('call_ended', {
           bookingId,
-          clientId: stableUserIdRef.current,
+          clientId: clientId || stableUserIdRef.current,
           advocateUserId: advocateUserId ?? null,
         });
       }
-      
-      // Hit backend to save call log and auto-complete booking
+
+      // Log call to backend
       await callsAPI.logCall({
         bookingId,
         advocateUserId: advocateUserId ?? null,
-        clientUserId: stableUserIdRef.current,
+        clientUserId: clientId || stableUserIdRef.current,
         mode: mode ?? 'video',
         status: duration > 0 ? 'completed' : 'missed',
         duration,
-        endedAt: new Date().toISOString()
+        endedAt: new Date().toISOString(),
       });
     } catch (_) {}
 
-    // Navigate to feedback screen if call was connected, else go back
-    if (duration > 0 && bookingId) {
-      navigation.replace('CallFeedback', { 
-        bookingId, 
-        duration,
-        advocateUserId: advocateUserId ?? null,
-        mode 
-      });
-    } else {
-      if (navigation.canGoBack()) navigation.goBack();
-      else navigation.replace('Home');
-    }
-  };
+    // Navigate away — use timeout so Zego engine can clean up first
+    setTimeout(() => {
+      if (duration > 0 && bookingId) {
+        navigation.replace('CallFeedback', {
+          bookingId,
+          duration,
+          advocateUserId: advocateUserId ?? null,
+          mode,
+        });
+      } else {
+        if (navigation.canGoBack()) navigation.goBack();
+        else navigation.replace('Home');
+      }
+    }, 300);
+  }, [callStartTime, bookingId, clientId, advocateUserId, mode, navigation]);
+
+  // ── Socket: listen for remote hang-up ───────────────────────────────────
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+    const onEnded = () => { handleHangUp(); };
+    socket.on('call_ended', onEnded);
+    return () => { socket.off('call_ended', onEnded); };
+  }, [handleHangUp]);
 
   // ── Loading / permission gate ────────────────────────────────────────────
   if (!isCallReady || !permissionsGranted || !zegoReady) {
@@ -211,55 +229,57 @@ export default function VideoCallScreen({ navigation, route }: any) {
     );
   }
 
-  // ── Expo Go / module-not-loaded fallback ─────────────────────────────────
+  // ── Expo Go fallback ─────────────────────────────────────────────────────
   if (!ZegoUIKitPrebuiltCall || Constants.appOwnership === 'expo') {
     return (
       <View style={styles.container}>
-        <StatusBar hidden />
-        <Text style={styles.devIcon}>{mode === 'video' ? '📹' : '🎙️'}</Text>
-        <Text style={styles.devTitle}>{mode === 'video' ? 'Video Call' : 'Voice Call'}</Text>
+        <Ionicons name="code-working-outline" size={64} color="#14B8A6" style={{ marginBottom: 16 }} />
+        <Text style={styles.devTitle}>Expo Go Detected</Text>
         <Text style={styles.devRoom}>Room: {effectiveRoomId}</Text>
-        <Text style={styles.devNote}>
-          Calling is only available in the EAS build.{'\n'}
-          This is an Expo Go / dev build — native modules not linked.
-        </Text>
+        <Text style={styles.devNote}>Native calling modules cannot run inside Expo Go. Use the EAS build.</Text>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Text style={styles.backBtnText}>← Go Back</Text>
+          <Text style={styles.backBtnText}>Go Back</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  // ── Zego config — default preset + required no-op stubs ─────────────────
-  // IMPORTANT: Zego internally calls onJoinRoom, onUserJoin, onCallEnd etc.
-  // Passing undefined for these causes "undefined is not a function" crash.
+  // ── Zego config ──────────────────────────────────────────────────────────
   const callConfig = {
     ...(mode === 'video' ? (ONE_ON_ONE_VIDEO_CALL_CONFIG ?? {}) : (ONE_ON_ONE_VOICE_CALL_CONFIG ?? {})),
     turnOnCameraWhenJoining:     mode === 'video',
     turnOnMicrophoneWhenJoining: true,
     useSpeakerWhenJoining:       true,
-    onJoinRoom:       () => {},
-    onUserJoin:       () => { 
-      setRemoteJoined(true); 
+    // Remote user joined → hide our ringing overlay
+    onUserJoin: () => {
+      setRemoteJoined(true);
       if (!callStartTime) setCallStartTime(Date.now());
     },
-    onUserLeave:      () => { setRemoteJoined(false); },
-    onCallEnd:        () => { handleHangUp(); },
+    onUserLeave: () => {
+      setRemoteJoined(false);
+    },
+    // Both onHangUp and onCallEnd should trigger our cleanup
+    onHangUp:  () => { handleHangUp(); },
+    onCallEnd: () => { handleHangUp(); },
+    // No-ops to prevent Zego crash
+    onJoinRoom: () => {},
     onDurationUpdate: () => {},
     bottomMenuBarConfig: {
-      buttons: mode === 'video' 
+      buttons: mode === 'video'
         ? ['toggleCameraButton', 'switchCameraButton', 'hangUpButton', 'toggleMicrophoneButton']
         : ['toggleMicrophoneButton', 'hangUpButton', 'switchAudioOutputButton'],
     },
   };
 
-  // ── Render ───────────────────────────────────────────────────────────────
-  const peerName = advocateName || 'Advocate';
-  const peerAvatar = route?.params?.advocateAvatar || null;
+  // ── Peer info ────────────────────────────────────────────────────────────
+  const peerName   = advocateName || 'Advocate';
+  const peerAvatar = advocateAvatar || null;
 
   return (
-    <View style={styles.container}>
+    <View style={{ flex: 1, backgroundColor: '#0f172a' }}>
       <StatusBar hidden />
+
+      {/* ── Zego renders camera and call UI ── */}
       <ZegoUIKitPrebuiltCall
         appID={effectiveAppId}
         appSign={effectiveAppSign}
@@ -268,10 +288,15 @@ export default function VideoCallScreen({ navigation, route }: any) {
         callID={String(effectiveRoomId)}
         config={callConfig}
       />
+
+      {/* ── Ringing overlay — only before remote joins, pointer-events none so Zego buttons work ── */}
       {!remoteJoined && (
-        <View 
-          style={[styles.ringingOverlay, { backgroundColor: mode === 'voice' ? '#0f172a' : 'rgba(15, 23, 42, 0.4)' }]} 
-          pointerEvents="none"
+        <View
+          style={[
+            styles.ringingOverlay,
+            { backgroundColor: mode === 'voice' ? '#0f172a' : 'rgba(15,23,42,0.55)' },
+          ]}
+          pointerEvents="none"  // <<< CRITICAL: lets touches pass through to Zego hangup button
         >
           <Animated.View style={[styles.ringingAvatarFrame, { transform: [{ scale: pulse }] }]}>
             {peerAvatar ? (
@@ -293,7 +318,6 @@ export default function VideoCallScreen({ navigation, route }: any) {
 const styles = StyleSheet.create({
   container:   { flex: 1, backgroundColor: '#0f172a', alignItems: 'center', justifyContent: 'center' },
   waitText:    { color: '#94A3B8', fontSize: 14, marginTop: 12, textAlign: 'center' },
-  devIcon:     { fontSize: 64, marginBottom: 16 },
   devTitle:    { color: '#FFFFFF', fontSize: 22, fontWeight: '700', marginBottom: 8 },
   devRoom:     { color: '#14B8A6', fontSize: 13, marginBottom: 16 },
   devNote:     { color: '#94A3B8', fontSize: 13, textAlign: 'center', lineHeight: 20, marginBottom: 32, paddingHorizontal: 32 },
@@ -303,8 +327,8 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 10,
-    paddingBottom: 40,
+    // bottom is NOT limited — we cover full screen but pointerEvents="none" lets touches through
+    zIndex: 5,
   },
   ringingAvatarFrame: {
     width: 120, height: 120, borderRadius: 60,
@@ -313,10 +337,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#1E293B',
     elevation: 10,
     shadowColor: '#14B8A6', shadowOpacity: 0.5, shadowRadius: 15,
+    overflow: 'hidden',
   },
-  ringingAvatar: { width: '100%', height: '100%', borderRadius: 60 },
-  ringingAvatarFallback: { flex: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 60 },
-  ringingAvatarInitial: { fontSize: 48, fontWeight: '700', color: '#14B8A6' },
+  ringingAvatar:         { width: '100%', height: '100%' },
+  ringingAvatarFallback: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  ringingAvatarInitial:  { fontSize: 48, fontWeight: '700', color: '#14B8A6' },
   ringingName: { color: '#FFFFFF', fontSize: 24, fontWeight: '700', marginBottom: 8, textAlign: 'center' },
-  ringingSub: { color: 'rgba(255,255,255,0.7)', fontSize: 16, textAlign: 'center' },
+  ringingSub:  { color: 'rgba(255,255,255,0.7)', fontSize: 16, textAlign: 'center' },
 });

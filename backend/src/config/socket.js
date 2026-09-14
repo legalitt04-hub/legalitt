@@ -442,16 +442,32 @@ const initSocket = async (server) => {
             });
             // Broadcast missed-call message to chat participants
             io.to(`chat:${chatId}`).emit('new_message', {
-              chatId,
-              message: {
-                _id:       missedMsg._id,
-                content:   missedMsg.content,
-                type:      'system',
-                sender:    { _id: socket.userId },
-                createdAt: missedMsg.createdAt,
-                metadata:  { callMissed: true, mode },
-              },
+              _id:       missedMsg._id,
+              content:   missedMsg.content,
+              type:      'system',
+              messageType: 'system',
+              sender:    { _id: socket.userId },
+              chat:      chatId,
+              createdAt: missedMsg.createdAt,
+              metadata:  { callMissed: true, mode },
             });
+            // Also push to each user's personal room in case they're not in the chat room
+            if (finalClientId) {
+              io.to(`user:${finalClientId}`).emit('new_message', {
+                _id: missedMsg._id, content: missedMsg.content,
+                type: 'system', messageType: 'system',
+                chat: chatId, sender: { _id: socket.userId },
+                createdAt: missedMsg.createdAt, metadata: { callMissed: true, mode },
+              });
+            }
+            if (finalAdvocateId) {
+              io.to(`user:${finalAdvocateId}`).emit('new_message', {
+                _id: missedMsg._id, content: missedMsg.content,
+                type: 'system', messageType: 'system',
+                chat: chatId, sender: { _id: socket.userId },
+                createdAt: missedMsg.createdAt, metadata: { callMissed: true, mode },
+              });
+            }
           }
         }
 
@@ -530,12 +546,30 @@ const initSocket = async (server) => {
             await msg.save();
             await Chat.findByIdAndUpdate(chatId, { lastMessage: msg._id, updatedAt: new Date() });
             
-            const chatDoc = await Chat.findById(chatId).populate('participants', 'name avatar');
-            io.to(`chat:${chatId}`).emit('receive_message', {
-              ...msg.toObject(),
-              sender: { _id: socket.userId }, // simplified sender for client append
-              chat: chatDoc,
+            io.to(`chat:${chatId}`).emit('new_message', {
+              _id:       msg._id,
+              content:   msg.content,
+              type:      'system',
+              messageType: 'system',
+              sender:    { _id: socket.userId },
+              chat:      chatId,
+              createdAt: msg.createdAt,
+              metadata:  { callCompleted: true, mode, duration },
             });
+            if (finalClientId) {
+              io.to(`user:${finalClientId}`).emit('new_message', {
+                _id: msg._id, content: msg.content, type: 'system', messageType: 'system',
+                chat: chatId, sender: { _id: socket.userId },
+                createdAt: msg.createdAt, metadata: { callCompleted: true, mode, duration },
+              });
+            }
+            if (finalAdvocateId) {
+              io.to(`user:${finalAdvocateId}`).emit('new_message', {
+                _id: msg._id, content: msg.content, type: 'system', messageType: 'system',
+                chat: chatId, sender: { _id: socket.userId },
+                createdAt: msg.createdAt, metadata: { callCompleted: true, mode, duration },
+              });
+            }
           }
         }
 

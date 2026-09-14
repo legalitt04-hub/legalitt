@@ -475,6 +475,7 @@ export default function MyBookingsScreen({ navigation }) {
                   zegoToken:      item.videoRoomToken || null,
                   zegoAppId:      item.zegoAppId || 0,
                   advocateName,
+                  advocateAvatar,
                   myUserId:       userData._id || userData.id || '',
                   myUserName:     userData.name || 'Client',
                   bookingId:      bid,
