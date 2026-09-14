@@ -25,7 +25,7 @@ exports.createSupportTicket = async (req, res, next) => {
 // Get user's own tickets
 exports.getMyTickets = async (req, res, next) => {
   try {
-    const tickets = await SupportTicket.find({ user: req.user._id })
+    const tickets = await SupportTicket.find({ user: req.user._id }).lean()
       .sort('-createdAt')
       .lean();
     res.json({ success: true, data: tickets });

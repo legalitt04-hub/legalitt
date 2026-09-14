@@ -118,7 +118,7 @@ Date: ${resolvedDate}
 // Get User's Drafts
 exports.getMyDrafts = async (req, res, next) => {
   try {
-    const drafts = await FIRDraft.find({ user: req.user.id }).sort('-createdAt');
+    const drafts = await FIRDraft.find({ user: req.user.id }).lean().sort('-createdAt');
     res.json({ success: true, data: drafts });
   } catch (err) {
     next(err);

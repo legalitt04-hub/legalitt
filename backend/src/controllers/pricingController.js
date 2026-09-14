@@ -38,7 +38,7 @@ exports.getAllPrices = async (req, res, next) => {
     await initPrices();
 
     const query = req.user?.role === 'admin' ? {} : { isActive: true };
-    const prices = await ServicePricing.find(query).sort({ sortOrder: 1, name: 1 });
+    const prices = await ServicePricing.find(query).lean().sort({ sortOrder: 1, name: 1 });
 
     res.status(200).json({
       success: true,

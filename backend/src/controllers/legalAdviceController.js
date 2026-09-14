@@ -144,7 +144,7 @@ exports.createLegalRequest = async (req, res, next) => {
             'location.address.city': new RegExp(booking.clientCity, 'i'),
             isVerified: true,
             verificationStatus: 'approved',
-          }).populate('user', 'phone name').limit(20);
+          }).lean().populate('user', 'phone name').limit(20);
 
           if (nearbyAdvocates.length > 0) {
             const { notifyNearbyAdvocates } = require('../services/whatsappService');
@@ -273,7 +273,7 @@ exports.getMyRequests = async (req, res, next) => {
     if (status) filter.status = status;
     if (serviceType) filter.serviceType = serviceType;
 
-    const bookings = await Booking.find(filter)
+    const bookings = await Booking.find(filter).lean()
       .populate({ path: 'advocate', populate: { path: 'user', select: 'name avatar phone' } })
       .sort({ createdAt: -1 })
       .lean();

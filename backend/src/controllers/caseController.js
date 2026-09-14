@@ -51,7 +51,7 @@ exports.getCases = async (req, res, next) => {
 
     if (status) filter.status = status;
 
-    const cases = await Case.find(filter)
+    const cases = await Case.find(filter).lean()
       .populate('client', 'name email phone avatar')
       .populate({ path: 'advocate', populate: { path: 'user', select: 'name email avatar' } })
       .sort({ updatedAt: -1 })

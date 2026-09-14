@@ -31,7 +31,7 @@ exports.getCases = async (req, res, next) => {
 
     const skip = (Number(page) - 1) * Number(limit);
 
-    const bookings = await Booking.find(bookingFilter)
+    const bookings = await Booking.find(bookingFilter).lean()
       .populate('client', 'name email phone avatar')
       .populate({
         path: 'advocate',
@@ -151,7 +151,7 @@ exports.deleteCase = async (req, res, next) => {
 // ─── Services ─────────────────────────────────────────────────────────────────
 exports.getServices = async (req, res, next) => {
   try {
-    const services = await Service.find().sort('-createdAt');
+    const services = await Service.find().lean().sort('-createdAt');
     res.json({ success: true, data: services });
   } catch (err) {
     next(err);
@@ -180,14 +180,14 @@ exports.getDocuments = async (req, res, next) => {
     const { search, direction, page = 1, limit = 50 } = req.query;
 
     // 1. Standalone documents
-    const standaloneDocs = await Document.find()
+    const standaloneDocs = await Document.find().lean()
       .populate('uploadedBy', 'name avatar role')
       .populate('owner', 'name avatar role')
       .sort('-createdAt')
       .lean();
 
     // 2. Booking-embedded documents (client uploaded when creating booking)
-    const bookings = await Booking.find({ 'documents.0': { $exists: true } })
+    const bookings = await Booking.find({ 'documents.0': { $exists: true } }).lean()
       .populate('client', 'name email avatar')
       .populate({ path: 'advocate', populate: { path: 'user', select: 'name avatar' } })
       .select('documents client advocate serviceType createdAt advocateDocuments')
@@ -343,7 +343,7 @@ exports.getSupportTickets = async (req, res, next) => {
     if (status)   filter.status   = status;
     if (category) filter.category = category;
 
-    let tickets = await SupportTicket.find(filter)
+    let tickets = await SupportTicket.find(filter).lean()
       .populate('user', 'name email avatar role')
       .populate('assignedTo', 'name email avatar')
       .sort('-createdAt');
@@ -402,7 +402,7 @@ exports.createSupportTicket = async (req, res, next) => {
 // Mobile: get my own tickets
 exports.getMyTickets = async (req, res, next) => {
   try {
-    const tickets = await SupportTicket.find({ user: req.user._id })
+    const tickets = await SupportTicket.find({ user: req.user._id }).lean()
       .sort('-createdAt').lean();
     res.json({ success: true, data: tickets });
   } catch (err) { next(err); }
@@ -448,7 +448,7 @@ exports.updateSupportTicket = async (req, res, next) => {
 // ─── Notifications ────────────────────────────────────────────────────────────
 exports.getNotificationTemplates = async (req, res, next) => {
   try {
-    const templates = await NotificationTemplate.find().sort('-createdAt');
+    const templates = await NotificationTemplate.find().lean().sort('-createdAt');
     res.json({ success: true, data: templates });
   } catch (err) {
     next(err);
@@ -458,7 +458,7 @@ exports.getNotificationTemplates = async (req, res, next) => {
 // ─── AI Drafts ────────────────────────────────────────────────────────────────
 exports.getAIDrafts = async (req, res, next) => {
   try {
-    const drafts = await FIRDraft.find()
+    const drafts = await FIRDraft.find().lean()
       .populate('user', 'name')
       .sort('-createdAt');
     res.json({ success: true, data: drafts });
@@ -470,7 +470,7 @@ exports.getAIDrafts = async (req, res, next) => {
 // ─── Categories ──────────────────────────────────────────────────────────────
 exports.getCategories = async (req, res, next) => {
   try {
-    let categories = await Category.find().sort('displayOrder');
+    let categories = await Category.find().lean().sort('displayOrder');
     if (categories.length === 0) {
       // Seed default categories if empty
       const defaultCats = [
@@ -511,7 +511,7 @@ exports.deleteCategory = async (req, res, next) => {
 // ─── Coupons ─────────────────────────────────────────────────────────────────
 exports.getCoupons = async (req, res, next) => {
   try {
-    const coupons = await Coupon.find().sort('-createdAt');
+    const coupons = await Coupon.find().lean().sort('-createdAt');
     res.json({ success: true, data: coupons });
   } catch (err) { next(err); }
 };
@@ -533,7 +533,7 @@ exports.deleteCoupon = async (req, res, next) => {
 // ─── Reviews ─────────────────────────────────────────────────────────────────
 exports.getReviews = async (req, res, next) => {
   try {
-    const reviews = await Review.find()
+    const reviews = await Review.find().lean()
       .populate('user', 'name avatar')
       .populate('advocate', 'name')
       .sort('-createdAt');
@@ -551,7 +551,7 @@ exports.deleteReview = async (req, res, next) => {
 // ─── Audit Logs ──────────────────────────────────────────────────────────────
 exports.getAuditLogs = async (req, res, next) => {
   try {
-    const logs = await AuditLog.find().populate('user', 'name email role').sort('-createdAt').limit(100);
+    const logs = await AuditLog.find().lean().populate('user', 'name email role').sort('-createdAt').limit(100);
     res.json({ success: true, data: logs });
   } catch (err) { next(err); }
 };
@@ -569,7 +569,7 @@ exports.getAdmins = async (req, res, next) => {
       'support',
       'superadmin'
     ];
-    const admins = await User.find({ role: { $in: adminRoles } }).select('-password').sort('-createdAt');
+    const admins = await User.find({ role: { $in: adminRoles } }).lean().select('-password').sort('-createdAt');
     res.json({ success: true, data: admins });
   } catch (err) { next(err); }
 };
@@ -578,7 +578,7 @@ exports.getAdmins = async (req, res, next) => {
 exports.getFIRDrafts = async (req, res, next) => {
   try {
     const FIRDraft = require('../models/FIRDraft');
-    const drafts = await FIRDraft.find()
+    const drafts = await FIRDraft.find().lean()
       .populate('user', 'name email phone')
       .populate({ path: 'advocate', populate: { path: 'user', select: 'name email avatar' } })
       .sort({ createdAt: -1 });
@@ -706,7 +706,7 @@ exports.deleteFIRDraft = async (req, res, next) => {
 exports.getPropertyResearch = async (req, res, next) => {
   try {
     const Booking = require('../models/Booking');
-    const requests = await Booking.find({ serviceType: 'property_research' })
+    const requests = await Booking.find({ serviceType: 'property_research' }).lean()
       .populate('client', 'name email phone')
       .populate({ path: 'advocate', populate: { path: 'user', select: 'name email avatar' } })
       .sort({ createdAt: -1 });
@@ -820,7 +820,7 @@ exports.getDocumentForensic = async (req, res, next) => {
         { serviceType: 'forensic' },
         { serviceType: 'legal_advice', issue: /forensic/i }
       ]
-    })
+    }).lean()
       .populate('client', 'name email phone')
       .populate({ path: 'advocate', populate: { path: 'user', select: 'name email avatar' } })
       .sort({ createdAt: -1 });

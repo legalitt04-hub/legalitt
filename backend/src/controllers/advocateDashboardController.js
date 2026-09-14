@@ -36,13 +36,13 @@ exports.getDashboardStats = async (req, res) => {
         { date: { $gte: startOfToday, $lte: endOfToday }, status: 'confirmed' },
         { status: 'pending' }
       ]
-    })
+    }).lean()
     .populate('client', 'name email avatar phone')
     .sort({ 'timeSlot.startTime': 1 })
     .lean();
 
     // 4. Pending unread messages
-    const advocateChats   = await Chat.find({ participants: userId }).select('_id');
+    const advocateChats   = await Chat.find({ participants: userId }).lean().select('_id');
     const chatIds         = advocateChats.map(c => c._id);
     const pendingMessagesCount = await Message.countDocuments({
       chat:   { $in: chatIds },
@@ -51,7 +51,7 @@ exports.getDashboardStats = async (req, res) => {
     });
 
     // 5. Reviews & rating analytics
-    const allAdvocateReviews = await Review.find({ advocate: advocateId })
+    const allAdvocateReviews = await Review.find({ advocate: advocateId }).lean()
       .populate('client', 'name avatar')
       .populate('booking', 'type issue')
       .sort({ createdAt: -1 })
@@ -200,7 +200,7 @@ exports.getAdvocateBookings = async (req, res) => {
     if (status) filter.status = status;
 
     const skip     = (Number(page) - 1) * Number(limit);
-    const bookings = await Booking.find(filter)
+    const bookings = await Booking.find(filter).lean()
       .populate('client', 'name email phone avatar')
       .sort({ createdAt: -1 })
       .skip(skip)

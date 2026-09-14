@@ -16,7 +16,7 @@ exports.getWallet = async (req, res, next) => {
       .lean();
     if (!advocate) return next(new AppError('Advocate profile not found.', 404));
 
-    const recentWithdrawals = await Withdrawal.find({ advocateUser: req.user._id })
+    const recentWithdrawals = await Withdrawal.find({ advocateUser: req.user._id }).lean()
       .sort({ createdAt: -1 })
       .limit(20)
       .lean();

@@ -110,7 +110,7 @@ exports.getMyCallHistory = async (req, res, next) => {
     const skip = (Number(page) - 1) * Number(limit);
 
     const [calls, total] = await Promise.all([
-      CallLog.find(filter)
+      CallLog.find(filter).lean()
         .populate('client',       'name avatar')
         .populate('advocateUser', 'name avatar')
         .populate('booking',      'type')
@@ -137,7 +137,7 @@ exports.getAdminCallHistory = async (req, res, next) => {
     if (mode)   filter.mode   = mode;
     if (status) filter.status = status;
 
-    let calls = await CallLog.find(filter)
+    let calls = await CallLog.find(filter).lean()
       .populate('client',       'name avatar email phone')
       .populate('advocateUser', 'name avatar email phone')
       .populate('booking',      'type status consultationMode')
@@ -189,7 +189,7 @@ exports.getAdminChatHistory = async (req, res, next) => {
     const skip = (Number(page) - 1) * Number(limit);
 
     const [chats, total] = await Promise.all([
-      Chat.find({ isActive: true })
+      Chat.find({ isActive: true }).lean()
         .populate('participants', 'name avatar role email')
         .populate('lastMessage')
         .populate('booking', 'type status consultationMode createdAt')
@@ -227,7 +227,7 @@ exports.getAdminChatMessages = async (req, res, next) => {
     const { page = 1, limit = 50 } = req.query;
     const skip = (Number(page) - 1) * Number(limit);
 
-    const messages = await Message.find({ chat: req.params.chatId })
+    const messages = await Message.find({ chat: req.params.chatId }).lean()
       .populate('sender', 'name avatar role')
       .sort({ createdAt: -1 })
       .skip(skip).limit(Number(limit)).lean();

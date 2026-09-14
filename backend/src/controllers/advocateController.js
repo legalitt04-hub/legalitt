@@ -15,7 +15,7 @@ exports.getAdvocates = async (req, res, next) => {
     if (search) {
       const users = await User.find({
         name: { $regex: search, $options: 'i' }
-      }).select('_id');
+      }).lean().select('_id');
       
       const userIds = users.map(u => u._id);
       filter.user = { $in: userIds };
@@ -40,7 +40,7 @@ exports.getAdvocates = async (req, res, next) => {
 
     const skip = (Number(page) - 1) * Number(limit);
     const [advocates, total] = await Promise.all([
-      Advocate.find(filter)
+      Advocate.find(filter).lean()
         .populate('user', 'name avatar isActive')
         .sort(sort).skip(skip).limit(Number(limit)).lean(),
       Advocate.countDocuments(filter),
@@ -115,14 +115,14 @@ exports.getNearby = async (req, res, next) => {
             $maxDistance: radiusMeters,
           },
         },
-      })
+      }).lean()
         .populate('user', 'name avatar isActive')
         .skip(skip)
         .limit(maxResults + 1)
         .lean();
     } catch (nearErr) {
       console.warn('⚠️ Atlas $nearSphere fallback to general find:', nearErr.message);
-      advocates = await Advocate.find({ isVerified: true, verificationStatus: 'approved' })
+      advocates = await Advocate.find({ isVerified: true, verificationStatus: 'approved' }).lean()
         .populate('user', 'name avatar isActive')
         .lean();
     }

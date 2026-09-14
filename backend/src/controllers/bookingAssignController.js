@@ -30,7 +30,7 @@ exports.getPendingBookings = async (req, res, next) => {
     if (serviceType) filter.serviceType = serviceType;
 
     const [bookings, total, pendingCount, activeCount, completedCount, totalCount, paidPayments] = await Promise.all([
-      Booking.find(filter)
+      Booking.find(filter).lean()
         .populate('client', 'name email phone avatar address')
         .populate({ path: 'advocate', populate: { path: 'user', select: 'name avatar phone' } })
         .populate('assignedBy', 'name')
@@ -146,14 +146,14 @@ exports.getNearbyAdvocatesForBooking = async (req, res, next) => {
 
     // Server-side paginated fetch
     const [nearbyAdvocates, allAdvocates, totalNearbyCount, totalAdvocatesCount] = await Promise.all([
-      Advocate.find(cityFilter)
+      Advocate.find(cityFilter).lean()
         .select('user specializations rating consultationFee location experience verificationStatus isVerified')
         .populate('user', 'name avatar phone email')
         .sort({ 'rating.average': -1, createdAt: -1 })
         .skip(search ? 0 : skip)   // skip only when not searching
         .limit(pageLimit)
         .lean(),
-      Advocate.find(allFilter)
+      Advocate.find(allFilter).lean()
         .select('user specializations rating consultationFee location experience verificationStatus isVerified')
         .populate('user', 'name avatar phone email')
         .sort({ 'rating.average': -1, createdAt: -1 })

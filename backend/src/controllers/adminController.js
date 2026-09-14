@@ -234,7 +234,7 @@ exports.getUserDetail = async (req, res, next) => {
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
     const [recentBookings, bookingStats] = await Promise.all([
-      Booking.find({ client: req.params.id })
+      Booking.find({ client: req.params.id }).lean()
         .sort({ createdAt: -1 }).limit(10)
         .populate({ path: 'advocate', populate: { path: 'user', select: 'name avatar' } })
         .lean(),
@@ -413,7 +413,7 @@ exports.getAdvocatesList = async (req, res, next) => {
       filter.user = { $in: matchingUsers.map(u => u._id) };
     }
     const [advocatesRaw, total] = await Promise.all([
-      Advocate.find(filter)
+      Advocate.find(filter).lean()
         .populate('user', 'name email phone avatar isActive createdAt')
         .sort({ createdAt: -1 }).skip((page - 1) * limit).limit(Number(limit)).lean(),
       Advocate.countDocuments(filter),
@@ -440,10 +440,10 @@ exports.getAdvocateDetail = async (req, res, next) => {
     if (!advocate) return res.status(404).json({ success: false, message: 'Advocate not found' });
 
     const [recentBookings, reviews, earnings] = await Promise.all([
-      Booking.find({ advocate: req.params.id })
+      Booking.find({ advocate: req.params.id }).lean()
         .sort({ createdAt: -1 }).limit(10)
         .populate('client', 'name email avatar').lean(),
-      Review.find({ advocate: req.params.id })
+      Review.find({ advocate: req.params.id }).lean()
         .sort({ createdAt: -1 }).limit(5)
         .populate('client', 'name avatar').lean(),
       Booking.aggregate([
@@ -478,7 +478,7 @@ exports.verifyAdvocate = async (req, res, next) => {
 // ─── Recent Registrations ─────────────────────────────────────────────────────
 exports.getRecentRegistrations = async (req, res, next) => {
   try {
-    const users = await User.find()
+    const users = await User.find().lean()
       .select('name email role avatar isActive createdAt')
       .sort({ createdAt: -1 }).limit(10).lean();
     res.json({ success: true, data: users });
@@ -541,7 +541,7 @@ exports.getAdvocateEarnings = async (req, res, next) => {
         { $sort: { '_id.year': 1, '_id.month': 1 } },
       ]),
       // Recent paid transactions
-      Booking.find({ advocate: advocate._id, 'payment.status': 'paid' })
+      Booking.find({ advocate: advocate._id, 'payment.status': 'paid' }).lean()
         .sort({ createdAt: -1 })
         .limit(15)
         .populate('client', 'name avatar email')
@@ -657,11 +657,11 @@ exports.getSystemLogs = async (req, res, next) => {
     const skip = (page - 1) * limit;
 
     const [recentBookings, recentUsers, recentAdvocates] = await Promise.all([
-      Booking.find().sort({ updatedAt: -1 }).limit(25)
+      Booking.find().lean().sort({ updatedAt: -1 }).limit(25)
         .populate('client', 'name')
         .populate({ path: 'advocate', populate: { path: 'user', select: 'name' } }).lean(),
       User.find().select('name email role createdAt isActive').sort({ createdAt: -1 }).limit(25).lean(),
-      Advocate.find().select('verificationStatus createdAt updatedAt').sort({ updatedAt: -1 }).limit(10)
+      Advocate.find().lean().select('verificationStatus createdAt updatedAt').sort({ updatedAt: -1 }).limit(10)
         .populate('user', 'name email').lean(),
     ]);
 
@@ -1006,7 +1006,7 @@ exports.getLegalRequests = async (req, res, next) => {
 
     const skip = (Number(page) - 1) * Number(limit);
     const [requests, total] = await Promise.all([
-      Booking.find(filter)
+      Booking.find(filter).lean()
         .populate('client', 'name email phone avatar')
         .populate({ path: 'advocate', populate: { path: 'user', select: 'name avatar' } })
         .sort('-createdAt')
@@ -1037,7 +1037,7 @@ exports.getUserNotes = async (req, res, next) => {
     const user = await User.findById(req.params.id).select('_id name email');
     if (!user) return next(new (require('../middlewares/errorHandler').AppError)('User not found.', 404));
     // Notes stored as embedded array in user doc via virtual — use separate query
-    const notes = await require('../models/UserNote').find({ user: req.params.id }).populate('createdBy', 'name').sort('-createdAt');
+    const notes = await require('../models/UserNote').find({ user: req.params.id }).lean().populate('createdBy', 'name').sort('-createdAt');
     res.json({ success: true, data: notes });
   } catch (err) { next(err); }
 };
@@ -1103,7 +1103,7 @@ exports.getAdminBookingChatMessages = async (req, res, next) => {
       return res.json({ success: true, data: { chat: null, messages: [] }, message: 'No chat session initialized yet for this booking.' });
     }
 
-    const messages = await Message.find({ chat: chat._id })
+    const messages = await Message.find({ chat: chat._id }).lean()
       .populate('sender', 'name avatar role')
       .sort({ createdAt: 1 })
       .lean();
@@ -1140,7 +1140,7 @@ exports.getPaymentHistory = async (req, res, next) => {
 
     const skip = (Number(page) - 1) * Number(limit);
     const [payments, total, summary] = await Promise.all([
-      Booking.find(filter)
+      Booking.find(filter).lean()
         .populate('client', 'name email phone avatar')
         .populate({ path: 'advocate', populate: { path: 'user', select: 'name avatar' } })
         .sort('-createdAt')
@@ -1195,11 +1195,11 @@ exports.getTransactionHistory = async (req, res, next) => {
     if (from || to) withdrawalFilter.createdAt = dateFilter;
 
     const [bookings, withdrawals, settingsDoc] = await Promise.all([
-      (type === 'payout' ? Promise.resolve([]) : Booking.find(bookingFilter)
+      (type === 'payout' ? Promise.resolve([]) : Booking.find(bookingFilter).lean()
         .populate('client', 'name email avatar')
         .populate({ path: 'advocate', populate: { path: 'user', select: 'name avatar' } })
         .sort('-createdAt').limit(200).lean()),
-      (type === 'payment' ? Promise.resolve([]) : Withdrawal.find(withdrawalFilter)
+      (type === 'payment' ? Promise.resolve([]) : Withdrawal.find(withdrawalFilter).lean()
         .populate({ path: 'advocate', populate: { path: 'user', select: 'name avatar' } })
         .sort('-createdAt').limit(200).lean()),
       require('../models/Settings').findOne({ singletonId: 'global' }),

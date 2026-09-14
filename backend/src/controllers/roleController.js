@@ -33,7 +33,7 @@ exports.getAdminAccounts = async (req, res, next) => {
     if (status === 'active') filter.isActive = true;
     if (status === 'inactive') filter.isActive = false;
 
-    const users = await User.find(filter)
+    const users = await User.find(filter).lean()
       .select('name email phone role isActive lastSeen createdAt avatar')
       .sort({ createdAt: -1 });
 

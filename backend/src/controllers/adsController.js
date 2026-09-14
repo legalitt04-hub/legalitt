@@ -13,7 +13,7 @@ exports.getAds = async (req, res, next) => {
 
     const skip = (Number(page) - 1) * Number(limit);
     const [ads, total] = await Promise.all([
-      Advertisement.find(filter).populate('createdBy', 'name email').sort({ priority: -1, createdAt: -1 }).skip(skip).limit(Number(limit)),
+      Advertisement.find(filter).lean().populate('createdBy', 'name email').sort({ priority: -1, createdAt: -1 }).skip(skip).limit(Number(limit)),
       Advertisement.countDocuments(filter),
     ]);
 
@@ -88,7 +88,7 @@ exports.getActiveAds = async (req, res, next) => {
       delete filter.$or; // reset
       filter.placement = { $in: [placement, 'all'] };
     }
-    const ads = await Advertisement.find(filter).sort({ priority: -1 }).limit(10).select('-createdBy');
+    const ads = await Advertisement.find(filter).lean().sort({ priority: -1 }).limit(10).select('-createdBy');
     res.json({ success: true, data: ads });
   } catch (err) { next(err); }
 };

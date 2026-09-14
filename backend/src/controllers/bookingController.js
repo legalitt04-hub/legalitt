@@ -203,7 +203,7 @@ exports.getMyBookings = async (req, res, next) => {
 
     const skip = (Number(page) - 1) * Number(limit);
     const [bookings, total] = await Promise.all([
-      Booking.find(filter)
+      Booking.find(filter).lean()
         .populate({ path: 'advocate', populate: { path: 'user', select: 'name avatar' } })
         .sort({ createdAt: -1 }).skip(skip).limit(Number(limit)).lean(),
       Booking.countDocuments(filter),
@@ -236,7 +236,7 @@ exports.getAdvocateBookings = async (req, res, next) => {
 
     const skip = (Number(page) - 1) * Number(limit);
     const [bookings, total] = await Promise.all([
-      Booking.find(filter)
+      Booking.find(filter).lean()
         .populate('client', 'name avatar phone email isEmailVerified isPhoneVerified isVerified city')
         .select('+videoRoomId +advocateVideoToken +zegoAppId +chat +payment +status +consultationMode +type')
         .sort({ date: -1 }).skip(skip).limit(Number(limit)).lean(),

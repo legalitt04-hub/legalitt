@@ -30,7 +30,7 @@ exports.getAdvocates = async (req, res, next) => {
     }
 
     const [advocates, total] = await Promise.all([
-      Advocate.find(filter)
+      Advocate.find(filter).lean()
         .populate('user', 'name email phone avatar createdAt')
         .sort({ createdAt: -1 })
         .skip(skip)
@@ -157,7 +157,7 @@ exports.getWithdrawals = async (req, res, next) => {
     const filter = status !== 'all' ? { status } : {};
 
     const [withdrawals, total] = await Promise.all([
-      Withdrawal.find(filter)
+      Withdrawal.find(filter).lean()
         .populate({ path: 'advocateUser', select: 'name email phone' })
         .populate({ path: 'advocate', select: 'wallet barCouncilNumber' })
         .sort({ createdAt: -1 })

@@ -9,7 +9,7 @@ exports.getMyChats = async (req, res, next) => {
       participants: req.user._id,
       isActive: true,
       hiddenFor: { $nin: [req.user._id] }, // exclude chats hidden by this user
-    })
+    }).lean()
       .populate('participants', 'name avatar role')
       .populate('lastMessage')
       .populate('booking', 'date status payment.amount')
@@ -48,7 +48,7 @@ exports.getMessages = async (req, res, next) => {
     const messages = await Message.find({
       chat:       req.params.id,
       deletedFor: { $ne: req.user._id },
-    })
+    }).lean()
       .populate('sender', 'name avatar')
       .sort({ createdAt: -1 })
       .skip(skip)
