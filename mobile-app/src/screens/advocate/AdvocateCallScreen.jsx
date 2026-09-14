@@ -17,6 +17,21 @@ import Constants from 'expo-constants';
 import { getSocket } from '../../services/socket';
 import { callsAPI } from '../../services/api';
 
+let ZegoUIKitPrebuiltCall = null;
+let ONE_ON_ONE_VIDEO_CALL_CONFIG = {};
+let ONE_ON_ONE_VOICE_CALL_CONFIG = {};
+
+if (Constants.appOwnership !== 'expo') {
+  try {
+    const mod = require('@zegocloud/zego-uikit-prebuilt-call-rn');
+    ZegoUIKitPrebuiltCall = mod.ZegoUIKitPrebuiltCall;
+    ONE_ON_ONE_VIDEO_CALL_CONFIG = mod.ONE_ON_ONE_VIDEO_CALL_CONFIG;
+    ONE_ON_ONE_VOICE_CALL_CONFIG = mod.ONE_ON_ONE_VOICE_CALL_CONFIG;
+  } catch (e) {
+    console.warn('Error loading Zego', e);
+  }
+}
+
 // ── Zego credentials ──────────────────────────────────────────────────────────
 const _extra = Constants.expoConfig?.extra || {};
 const FALLBACK_APP_ID   = 954831467;
@@ -60,15 +75,6 @@ export default function AdvocateCallScreen({ navigation, route }) {
   const effectiveAppSign = resolveAppSign();
   const zegoRoomId       = paramRoomId || (bookingId ? `legalitt-${bookingId}` : null);
   const isCallReady      = !!zegoRoomId && !!effectiveAppId;
-
-  // ── Lazy Zego state ───────────────────────────────────────────────────────
-  const [zegoState, setZegoState] = useState({
-    loaded: false,
-    Component: null,
-    videoConfig: {},
-    voiceConfig: {},
-    error: null,
-  });
 
   const [permissionsGranted, setPermissionsGranted] = useState(Platform.OS === 'ios');
 
@@ -117,33 +123,7 @@ export default function AdvocateCallScreen({ navigation, route }) {
     })();
   }, [isCallReady]);
 
-  // ── STEP 2: Lazy-load Zego ONLY after permissions granted ─────────────────
-  // Key fix: require() inside useEffect prevents module-level hook crashes at startup.
-  useEffect(() => {
-    if (!permissionsGranted || !isCallReady) return;
 
-    if (Constants.appOwnership === 'expo') {
-      setZegoState(s => ({ ...s, loaded: true, error: 'expo_go' }));
-      return;
-    }
-
-    try {
-      const mod       = require('@zegocloud/zego-uikit-prebuilt-call-rn');
-      const Component = mod?.ZegoUIKitPrebuiltCall ?? null;
-      const videoConf = mod?.ONE_ON_ONE_VIDEO_CALL_CONFIG ?? {};
-      const voiceConf = mod?.ONE_ON_ONE_VOICE_CALL_CONFIG ?? {};
-
-      // React.forwardRef/React.memo return objects, not functions — check for null only
-      if (Component == null) {
-        setZegoState(s => ({ ...s, loaded: true, error: 'invalid_module' }));
-        return;
-      }
-      setZegoState({ loaded: true, Component, videoConfig: videoConf, voiceConfig: voiceConf, error: null });
-    } catch (e) {
-      console.warn('[AdvocateCallScreen] Zego load error:', e?.message);
-      setZegoState(s => ({ ...s, loaded: true, error: String(e?.message || 'load_error') }));
-    }
-  }, [permissionsGranted, isCallReady]);
 
   // ── Listen for remote hang-up ─────────────────────────────────────────────
   useEffect(() => {
@@ -183,24 +163,22 @@ export default function AdvocateCallScreen({ navigation, route }) {
   };
 
   // ── Loading states ────────────────────────────────────────────────────────
-  if (!isCallReady || !permissionsGranted || !zegoState.loaded) {
+  if (!isCallReady || !permissionsGranted) {
     return (
       <View style={styles.container}>
         <ActivityIndicator size="large" color="#14B8A6" />
         <Text style={styles.waitText}>
-          {!permissionsGranted
-            ? 'Requesting camera & mic access...'
-            : !zegoState.loaded
-            ? 'Loading call engine...'
-            : 'Setting up room...'}
+          {!permissionsGranted ? 'Requesting camera & mic access...' : 'Setting up room...'}
         </Text>
       </View>
     );
   }
 
+  const isExpoGo = Constants.appOwnership === 'expo';
+  const hasZegoError = !ZegoUIKitPrebuiltCall;
+
   // ── Expo Go / load error fallback ─────────────────────────────────────────
-  if (zegoState.error) {
-    const isExpoGo = zegoState.error === 'expo_go';
+  if (isExpoGo || hasZegoError) {
     return (
       <View style={styles.container}>
         <StatusBar hidden />
@@ -222,17 +200,15 @@ export default function AdvocateCallScreen({ navigation, route }) {
   }
 
   // ── Build call config ─────────────────────────────────────────────────────
-  const { Component: ZegoCall, videoConfig, voiceConfig } = zegoState;
-
   const callConfig = mode === 'video'
     ? {
-        ...videoConfig,
+        ...ONE_ON_ONE_VIDEO_CALL_CONFIG,
         bottomMenuBarConfig: {
           buttons: ['toggleCameraButton', 'switchCameraButton', 'hangUpButton', 'toggleMicrophoneButton'],
         },
       }
     : {
-        ...voiceConfig,
+        ...ONE_ON_ONE_VOICE_CALL_CONFIG,
         bottomMenuBarConfig: {
           buttons: ['toggleMicrophoneButton', 'hangUpButton', 'switchAudioOutputButton'],
         },
@@ -242,7 +218,7 @@ export default function AdvocateCallScreen({ navigation, route }) {
   return (
     <View style={styles.container}>
       <StatusBar hidden />
-      <ZegoCall
+      <ZegoUIKitPrebuiltCall
         appID={effectiveAppId}
         appSign={effectiveAppSign}
         userID={stableUserIdRef.current}
