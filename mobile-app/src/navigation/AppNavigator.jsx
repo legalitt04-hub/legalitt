@@ -81,8 +81,10 @@ import NotificationsScreen from '../screens/shared/NotificationsScreen';
 import PrivacyPolicyScreen from '../screens/shared/PrivacyPolicyScreen';
 import TermsConditionsScreen from '../screens/shared/TermsConditionsScreen';
 import DataDeletionScreen from '../screens/shared/DataDeletionScreen';
-import VideoCallScreen from '../screens/VideoCallScreen';
+import CustomCallScreen from '../screens/shared/CustomCallScreen';
 import CallHistoryScreen from '../screens/shared/CallHistoryScreen';
+import IncomingCallScreen from '../screens/shared/IncomingCallScreen';
+import CallFeedbackScreen from '../screens/shared/CallFeedbackScreen';
 import SupportScreen from '../screens/shared/SupportScreen';
 
 // ADVOCATE SCREENS
@@ -96,7 +98,7 @@ import PendingApprovalScreen from '../screens/advocate/PendingApprovalScreen';
 import AdvocateAnalyticsScreen from '../screens/advocate/AdvocateAnalyticsScreen';
 import AdvocateAppointmentCalendarScreen from '../screens/advocate/AdvocateAppointmentCalendarScreen';
 import AdvocateSettingsScreen from '../screens/advocate/AdvocateSettingsScreen';
-import { CasesScreen, ClientsScreen, CaseDetailScreen, ProfileEditScreen as AdvocateProfileEditScreen, ReviewRatingScreen, DocumentViewerScreen, AdvocateCallScreen, LegalNoticeResponseScreen } from '../screens/advocate';
+import { CasesScreen, ClientsScreen, CaseDetailScreen, ProfileEditScreen as AdvocateProfileEditScreen, ReviewRatingScreen, DocumentViewerScreen, LegalNoticeResponseScreen } from '../screens/advocate';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -430,6 +432,8 @@ const AppNavigator = () => {
               <Stack.Screen name="ConsultationCompleted" component={ConsultationCompletedScreen} />
               <Stack.Screen name="VideoCall" component={VideoCallScreen}
                 options={{ animation: 'slide_from_bottom', gestureEnabled: false }} />
+              <Stack.Screen name="IncomingCall" component={IncomingCallScreen}
+                options={{ animation: 'slide_from_bottom', gestureEnabled: false, headerShown: false }} />
               <Stack.Screen name="Settings" component={SettingsScreen} />
               <Stack.Screen name="Notifications" component={NotificationsScreen} />
               
@@ -461,12 +465,16 @@ const AppNavigator = () => {
               <Stack.Screen name="DocumentViewer" component={DocumentViewerScreen} />
               <Stack.Screen name="ChatList" component={ChatListScreen} />
               <Stack.Screen name="Chat" component={ChatScreen} />
-              <Stack.Screen name="AdvocateCall" component={AdvocateCallScreen}
+              <Stack.Screen name="AdvocateCall" component={CustomCallScreen}
                 options={{ animation: 'slide_from_bottom', gestureEnabled: false, headerShown: false }} />
-              <Stack.Screen name="VideoCall" component={AdvocateCallScreen}
+              <Stack.Screen name="VideoCall" component={CustomCallScreen}
                 options={{ animation: 'slide_from_bottom', gestureEnabled: false, headerShown: false }} />
-              <Stack.Screen name="VoiceCall" component={AdvocateCallScreen}
+              <Stack.Screen name="VoiceCall" component={CustomCallScreen}
                 options={{ animation: 'slide_from_bottom', gestureEnabled: false, headerShown: false }} />
+              <Stack.Screen name="IncomingCall" component={IncomingCallScreen}
+                options={{ animation: 'slide_from_bottom', gestureEnabled: false, headerShown: false }} />
+              <Stack.Screen name="CallFeedback" component={CallFeedbackScreen}
+                options={{ animation: 'fade', gestureEnabled: false, headerShown: false }} />
               <Stack.Screen name="Notifications" component={NotificationsScreen} />
               {/* ── NEW SCREENS FROM ASTITVA REPO ── */}
               <Stack.Screen name="AdvocateAnalytics" component={AdvocateAnalyticsScreen} />
@@ -527,10 +535,14 @@ const AppNavigator = () => {
               <Stack.Screen name="ConsultationCompleted" component={ConsultationCompletedScreen} />
 
               {/* VIDEO & VOICE CALL */}
-              <Stack.Screen name="VideoCall" component={VideoCallScreen}
-                options={{ animation: 'slide_from_bottom', gestureEnabled: false }} />
-              <Stack.Screen name="VoiceCall" component={VideoCallScreen}
-                options={{ animation: 'slide_from_bottom', gestureEnabled: false }} />
+              <Stack.Screen name="VideoCall" component={CustomCallScreen}
+                options={{ animation: 'slide_from_bottom', gestureEnabled: false, headerShown: false }} />
+              <Stack.Screen name="VoiceCall" component={CustomCallScreen}
+                options={{ animation: 'slide_from_bottom', gestureEnabled: false, headerShown: false }} />
+              <Stack.Screen name="IncomingCall" component={IncomingCallScreen}
+                options={{ animation: 'slide_from_bottom', gestureEnabled: false, headerShown: false }} />
+              <Stack.Screen name="CallFeedback" component={CallFeedbackScreen}
+                options={{ animation: 'fade', gestureEnabled: false, headerShown: false }} />
 
               <Stack.Screen name="Settings" component={SettingsScreen} />
               <Stack.Screen name="CallHistory" component={CallHistoryScreen} />

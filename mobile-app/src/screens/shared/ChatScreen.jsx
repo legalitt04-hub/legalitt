@@ -251,6 +251,25 @@ const ChatScreen = ({ navigation, route }) => {
     const isDoc = msg.messageType === 'file' || msg.messageType === 'document' || (msg.fileUrl && !msg.fileUrl.match(/\.(jpeg|jpg|gif|png)$/i));
     const isPending = msg.pending;
 
+    // ── System / Missed-call messages — render as centered pill ──────────────
+    if (msg.type === 'system' || msg.metadata?.callMissed) {
+      const isVideo = msg.metadata?.mode === 'video';
+      return (
+        <View style={styles.systemMsgWrap}>
+          <View style={styles.systemMsgPill}>
+            <Ionicons
+              name={isVideo ? 'videocam-off' : 'call'}
+              size={13}
+              color="#EF4444"
+              style={{ marginRight: 5 }}
+            />
+            <Text style={styles.systemMsgText}>{msg.content || 'Missed call'}</Text>
+          </View>
+          <Text style={styles.systemMsgTime}>{formatDate(msg.createdAt, 'time')}</Text>
+        </View>
+      );
+    }
+
     return (
       <View style={[styles.bubbleWrapper, isMe ? styles.bubbleRight : styles.bubbleLeft]}>
         {!isMe && (

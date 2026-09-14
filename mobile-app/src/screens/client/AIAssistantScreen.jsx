@@ -80,7 +80,7 @@ const AIAssistantScreen = ({ navigation }) => {
   };
 
   const loadSession = (session) => {
-    const formattedMsgs = session.messages.map(m => ({
+    const formattedMsgs = (session?.messages || []).map(m => ({
       id: m._id,
       role: m.role,
       content: m.content

@@ -462,10 +462,16 @@ export default function AdvocateAppointmentCalendarScreen({ navigation }) {
           text: 'Start Call',
           onPress: () => {
             try {
+              const consultMode = item.consultationType?.toLowerCase().includes('video') ? 'video' : 'voice';
               navigation.navigate('AdvocateCall', {
-                bookingId: item._id,
-                clientName: clientName,
-                callType: item.consultationType?.toLowerCase().includes('video') ? 'video' : 'voice',
+                bookingId:    item._id,
+                clientName:   clientName,
+                clientId:     item.client?._id || null,
+                mode:         consultMode,
+                // zegoRoomId — fallback to booking-based room if not assigned yet
+                zegoRoomId:   item.zegoRoomId || `legalitt-${item._id}`,
+                myUserId:     '',    // will use context/fallback inside screen
+                myUserName:   'Advocate',
               });
             } catch (e) {
               Alert.alert('Notice', 'Connecting to call room...');

@@ -600,7 +600,7 @@ const CaseDetailScreen = ({ route, navigation }) => {
                 <Text style={styles.emptyText}>No documents uploaded for this case yet.</Text>
               ) : (
                 <View style={styles.docsList}>
-                  {legalCase.documents.map((doc, idx) => (
+                  {(legalCase.documents || []).map((doc, idx) => (
                     <View key={doc._id || idx} style={styles.docRow}>
                       <Ionicons name="document-text" size={20} color={COLORS.primary} />
                       <Text style={styles.docName} numberOfLines={1}>{doc.name}</Text>

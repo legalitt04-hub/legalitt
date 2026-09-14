@@ -11,6 +11,7 @@ import { useChatList } from '../../hooks/useChat';
 import { COLORS } from '../../constants/theme';
 import { formatINR } from '../../utils/helpers';
 import { getSocket } from '../../services/socket';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 
 // Subcomponents
@@ -332,9 +333,6 @@ const AdvocateDashboardScreen = ({ navigation }) => {
     }
   };
 
-    ]);
-  };
-
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
@@ -634,8 +632,6 @@ const AdvocateDashboardScreen = ({ navigation }) => {
             }
           }}
         />
-                      </View>
-            )}
           </>
         )}
       </ScrollView>

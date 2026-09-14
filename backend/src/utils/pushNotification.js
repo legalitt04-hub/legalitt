@@ -19,9 +19,9 @@ const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
  * @param {string} expoPushToken - The recipient's Expo push token (ExponentPushToken[...])
  * @param {string} title - Notification title
  * @param {string} body - Notification body/message
- * @param {object} data - Extra data payload (chatId, type, etc.)
+ * @param {string} channelId - Optional Android channel ID
  */
-const sendPushNotification = async (expoPushToken, title, body, data = {}) => {
+const sendPushNotification = async (expoPushToken, title, body, data = {}, channelId = 'chat-messages') => {
   if (!expoPushToken || !expoPushToken.startsWith('ExponentPushToken')) {
     return; // Invalid or missing token — skip silently
   }
@@ -34,7 +34,7 @@ const sendPushNotification = async (expoPushToken, title, body, data = {}) => {
       body,
       data,
       priority: 'high',
-      channelId: 'chat-messages', // Android notification channel
+      channelId: channelId, // dynamic channel
     }, {
       headers: {
         'Accept': 'application/json',

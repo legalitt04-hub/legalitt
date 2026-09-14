@@ -57,9 +57,9 @@ export default function LegalNoticeResponseScreen({ navigation, route }) {
         const type = match ? `image/${match[1]}` : `image`;
         formData.append('file', { uri, name: filename, type });
 
-        const uploadRes = await api.post('/uploads/document', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        const { uploadAPI } = require('../../services/api');
+        const uploadRes = await uploadAPI.uploadFile(uri, filename, type);
+
         if (uploadRes.data.success) {
           const docUrl = uploadRes.data.data.url;
           const attachRes = await caseAPI.addDoc(caseId, { name: filename, url: docUrl });

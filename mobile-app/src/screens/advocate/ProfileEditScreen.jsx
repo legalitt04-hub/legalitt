@@ -173,9 +173,8 @@ const ProfileEditScreen = ({ navigation }) => {
 
         formData.append('file', { uri, name: filename, type });
 
-        const response = await api.post('/uploads/document', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        const { uploadAPI } = require('../../services/api');
+        const response = await uploadAPI.uploadFile(uri, filename, type);
 
         if (response.data.success) {
           const docUrl = response.data.data.url;

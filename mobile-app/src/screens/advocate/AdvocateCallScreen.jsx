@@ -1,6 +1,4 @@
 // screens/advocate/AdvocateCallScreen.jsx
-// Hardened Advocate call screen — Zego loaded lazily inside useEffect (not at module level)
-// This prevents the "TypeError: undefined is not a function" startup crash.
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
@@ -17,55 +15,51 @@ import Constants from 'expo-constants';
 import { getSocket } from '../../services/socket';
 import { callsAPI } from '../../services/api';
 
+// ── Safe lazy load — only in EAS builds ───────────────────────────────────
 let ZegoUIKitPrebuiltCall = null;
-let ONE_ON_ONE_VIDEO_CALL_CONFIG = {};
-let ONE_ON_ONE_VOICE_CALL_CONFIG = {};
+let ONE_ON_ONE_VIDEO_CALL_CONFIG = null;
+let ONE_ON_ONE_VOICE_CALL_CONFIG = null;
 
-if (Constants.appOwnership !== 'expo') {
-  try {
-    const mod = require('@zegocloud/zego-uikit-prebuilt-call-rn');
-    ZegoUIKitPrebuiltCall = mod.ZegoUIKitPrebuiltCall;
-    ONE_ON_ONE_VIDEO_CALL_CONFIG = mod.ONE_ON_ONE_VIDEO_CALL_CONFIG;
-    ONE_ON_ONE_VOICE_CALL_CONFIG = mod.ONE_ON_ONE_VOICE_CALL_CONFIG;
-  } catch (e) {
-    console.warn('Error loading Zego', e);
+try {
+  if (Constants.appOwnership !== 'expo') {
+    const zego = require('@zegocloud/zego-uikit-prebuilt-call-rn');
+    ZegoUIKitPrebuiltCall        = zego.ZegoUIKitPrebuiltCall        ?? null;
+    ONE_ON_ONE_VIDEO_CALL_CONFIG = zego.ONE_ON_ONE_VIDEO_CALL_CONFIG ?? null;
+    ONE_ON_ONE_VOICE_CALL_CONFIG = zego.ONE_ON_ONE_VOICE_CALL_CONFIG ?? null;
   }
-}
+} catch (_) {}
 
-// ── Zego credentials ──────────────────────────────────────────────────────────
-const _extra = Constants.expoConfig?.extra || {};
+// ── Zego credentials ──────────────────────────────────────────────────────
+const _extra = Constants.expoConfig?.extra ?? {};
 const FALLBACK_APP_ID   = 954831467;
 const FALLBACK_APP_SIGN = '6aaa4f1b530a5ddff76b050d56a56974101548cf30d10b1c547feb7da07b16ad';
 
-function resolveAppId(zegoAppIdParam) {
-  const fromEnv  = _extra.ZEGO_APP_ID;
-  const fromEnvN = (fromEnv && fromEnv !== 'undefined') ? Number(fromEnv) : 0;
-  const fromParam = (zegoAppIdParam && zegoAppIdParam !== 'undefined') ? Number(zegoAppIdParam) : 0;
-  return fromEnvN || fromParam || FALLBACK_APP_ID;
+function resolveAppId(param) {
+  const fromEnv   = Number(_extra.ZEGO_APP_ID);
+  const fromParam = Number(param);
+  return (fromEnv > 0 ? fromEnv : 0) || (fromParam > 0 ? fromParam : 0) || FALLBACK_APP_ID;
+}
+function resolveAppSign() {
+  const s = String(_extra.ZEGO_APP_SIGN ?? '');
+  return s.length > 10 ? s : FALLBACK_APP_SIGN;
 }
 
-function resolveAppSign() {
-  const s = _extra.ZEGO_APP_SIGN;
-  return (s && s !== 'undefined' && s.length > 10) ? String(s) : FALLBACK_APP_SIGN;
-}
-// ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────
 
 export default function AdvocateCallScreen({ navigation, route }) {
   const {
     zegoRoomId: paramRoomId,
     zegoToken,
     zegoAppId,
-    advocateName,
     clientName   = 'Client',
-    clientAvatar,
     myUserId     = '',
     myUserName   = 'Advocate',
     mode         = 'video',
     bookingId,
     clientId,
-  } = route?.params || {};
+    advocateUserId,
+  } = route?.params ?? {};
 
-  // ── Stable IDs ────────────────────────────────────────────────────────────
   const stableUserIdRef = useRef(
     myUserId ? String(myUserId) : `adv_${Math.floor(Math.random() * 1e9)}`
   );
@@ -74,11 +68,12 @@ export default function AdvocateCallScreen({ navigation, route }) {
   const effectiveAppId   = resolveAppId(zegoAppId);
   const effectiveAppSign = resolveAppSign();
   const zegoRoomId       = paramRoomId || (bookingId ? `legalitt-${bookingId}` : null);
-  const isCallReady      = !!zegoRoomId && !!effectiveAppId;
+  const isCallReady      = !!zegoRoomId && effectiveAppId > 0;
 
   const [permissionsGranted, setPermissionsGranted] = useState(Platform.OS === 'ios');
+  const [zegoReady, setZegoReady] = useState(false);
 
-  // ── STEP 1: Request permissions ───────────────────────────────────────────
+  // ── Request permissions ──────────────────────────────────────────────────
   useEffect(() => {
     if (!isCallReady) {
       Alert.alert(
@@ -96,103 +91,104 @@ export default function AdvocateCallScreen({ navigation, route }) {
 
     (async () => {
       try {
-        const toRequest = [
-          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-        ];
-        if (mode === 'video') {
-          toRequest.push(PermissionsAndroid.PERMISSIONS.CAMERA);
-        }
-        if (Platform.Version >= 31) toRequest.push(PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT);
-        if (Platform.Version >= 33) toRequest.push('android.permission.POST_NOTIFICATIONS');
+        const perms = [PermissionsAndroid.PERMISSIONS.RECORD_AUDIO];
+        if (mode === 'video') perms.push(PermissionsAndroid.PERMISSIONS.CAMERA);
+        if (Platform.Version >= 31) perms.push(PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT);
 
-        const result = await PermissionsAndroid.requestMultiple(toRequest);
-        const micOk  = result[PermissionsAndroid.PERMISSIONS.RECORD_AUDIO] === PermissionsAndroid.RESULTS.GRANTED;
-        const camOk  = mode === 'video' ? result[PermissionsAndroid.PERMISSIONS.CAMERA] === PermissionsAndroid.RESULTS.GRANTED : true;
+        const result = await PermissionsAndroid.requestMultiple(perms);
+        const micOk = result[PermissionsAndroid.PERMISSIONS.RECORD_AUDIO] === PermissionsAndroid.RESULTS.GRANTED;
+        const camOk = mode !== 'video' || result[PermissionsAndroid.PERMISSIONS.CAMERA] === PermissionsAndroid.RESULTS.GRANTED;
 
-        if (camOk && micOk) {
+        if (micOk && camOk) {
           setPermissionsGranted(true);
         } else {
           Alert.alert(
-            'Permissions Denied',
-            mode === 'video' ? 'Camera and microphone access are required.' : 'Microphone access is required.',
+            'Permission Required',
+            mode === 'video' ? 'Camera & microphone access needed.' : 'Microphone access needed.',
             [{ text: 'Go Back', onPress: () => navigation.goBack() }]
           );
         }
       } catch {
-        // Proceed optimistically if requestMultiple itself fails
         setPermissionsGranted(true);
       }
     })();
-  }, [isCallReady]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Wait a tick after permissions so Zego mounts cleanly ────────────────
+  useEffect(() => {
+    if (!permissionsGranted) return;
+    const t = setTimeout(() => setZegoReady(true), 300);
+    return () => clearTimeout(t);
+  }, [permissionsGranted]);
 
-
-  // ── Listen for remote hang-up ─────────────────────────────────────────────
+  // ── Socket: listen for remote hang-up ───────────────────────────────────
   useEffect(() => {
     const socket = getSocket();
     if (!socket) return;
     const onEnded = () => navigation.goBack();
     socket.on('call_ended', onEnded);
-    return () => { socket?.off?.('call_ended', onEnded); };
-  }, []);
+    return () => { socket.off('call_ended', onEnded); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Handle local hang-up ──────────────────────────────────────────────────
+  // ── Hang-up handler ──────────────────────────────────────────────────────
   const handleHangUp = () => {
-    const socket = getSocket();
-    if (socket) {
-      socket.emit('call_ended', {
-        bookingId,
-        clientId,
-        advocateUserId: stableUserIdRef.current,
-      });
-    }
+    try {
+      const socket = getSocket();
+      if (socket) {
+        socket.emit('call_ended', {
+          bookingId,
+          clientId,
+          advocateUserId: stableUserIdRef.current,
+        });
+      }
+    } catch (_) {}
 
-    // Log call duration to backend (fire & forget)
-    const durationSec = Math.round((Date.now() - callStartRef.current) / 1000);
-    callsAPI.logCall({
-      bookingId,
-      clientUserId:   clientId,
-      advocateUserId: stableUserIdRef.current,
-      mode,
-      status:    durationSec > 5 ? 'completed' : 'missed',
-      duration:  durationSec,
-      startedAt: new Date(callStartRef.current).toISOString(),
-      endedAt:   new Date().toISOString(),
-      zegoRoomId,
-    }).catch(() => {});
+    // Log call duration (fire & forget)
+    try {
+      const durationSec = Math.round((Date.now() - callStartRef.current) / 1000);
+      callsAPI.logCall({
+        bookingId,
+        clientUserId:   clientId,
+        advocateUserId: stableUserIdRef.current,
+        mode,
+        status:    durationSec > 5 ? 'completed' : 'missed',
+        duration:  durationSec,
+        startedAt: new Date(callStartRef.current).toISOString(),
+        endedAt:   new Date().toISOString(),
+        zegoRoomId,
+      }).catch(() => {});
+    } catch (_) {}
 
     navigation.goBack();
   };
 
-  // ── Loading states ────────────────────────────────────────────────────────
-  if (!isCallReady || !permissionsGranted) {
+  // ── Loading / permission gate ────────────────────────────────────────────
+  if (!isCallReady || !permissionsGranted || !zegoReady) {
     return (
       <View style={styles.container}>
         <ActivityIndicator size="large" color="#14B8A6" />
         <Text style={styles.waitText}>
-          {!permissionsGranted ? (mode === 'video' ? 'Requesting camera & mic access...' : 'Requesting mic access...') : 'Setting up room...'}
+          {!isCallReady
+            ? 'Setting up room...'
+            : !permissionsGranted
+            ? mode === 'video' ? 'Requesting camera & mic...' : 'Requesting mic...'
+            : 'Starting call...'}
         </Text>
       </View>
     );
   }
 
-  const isExpoGo = Constants.appOwnership === 'expo';
-  const hasZegoError = !ZegoUIKitPrebuiltCall;
-
-  // ── Expo Go / load error fallback ─────────────────────────────────────────
-  if (isExpoGo || hasZegoError) {
+  // ── Expo Go / module-not-loaded fallback ─────────────────────────────────
+  if (!ZegoUIKitPrebuiltCall || Constants.appOwnership === 'expo') {
     return (
       <View style={styles.container}>
         <StatusBar hidden />
-        <Text style={styles.devIcon}>{isExpoGo ? (mode === 'video' ? '📹' : '🎙️') : '⚠️'}</Text>
-        <Text style={styles.devTitle}>
-          {isExpoGo ? (mode === 'video' ? 'Video Call' : 'Voice Call') : 'Module Error'}
-        </Text>
-        {isExpoGo && <Text style={styles.devRoom}>Room: {zegoRoomId}</Text>}
+        <Text style={styles.devIcon}>{mode === 'video' ? '📹' : '🎙️'}</Text>
+        <Text style={styles.devTitle}>{mode === 'video' ? 'Video Call' : 'Voice Call'}</Text>
+        <Text style={styles.devRoom}>Room: {zegoRoomId}</Text>
         <Text style={styles.devNote}>
-          {isExpoGo
-            ? 'Calls are available in the EAS production/preview build.\nDev mode mein Zego native module linked nahi hai.'
-            : 'Failed to load native calling module.\nPlease use the EAS production build.'}
+          Calling is only available in the EAS build.{'\n'}
+          This is an Expo Go / dev build — native modules not linked.
         </Text>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Text style={styles.backBtnText}>← Go Back</Text>
@@ -201,22 +197,26 @@ export default function AdvocateCallScreen({ navigation, route }) {
     );
   }
 
-  // ── Build call config ─────────────────────────────────────────────────────
-  const callConfig = mode === 'video'
-    ? {
-        ...ONE_ON_ONE_VIDEO_CALL_CONFIG,
-        bottomMenuBarConfig: {
-          buttons: ['toggleCameraButton', 'switchCameraButton', 'hangUpButton', 'toggleMicrophoneButton'],
-        },
-      }
-    : {
-        ...ONE_ON_ONE_VOICE_CALL_CONFIG,
-        bottomMenuBarConfig: {
-          buttons: ['toggleMicrophoneButton', 'hangUpButton', 'switchAudioOutputButton'],
-        },
-      };
+  // ── Zego config — default preset + required no-op stubs ─────────────────
+  // IMPORTANT: Zego internally calls onJoinRoom, onUserJoin, onCallEnd etc.
+  // Passing undefined for these causes "undefined is not a function" crash.
+  const callConfig = {
+    ...(mode === 'video' ? (ONE_ON_ONE_VIDEO_CALL_CONFIG ?? {}) : (ONE_ON_ONE_VOICE_CALL_CONFIG ?? {})),
+    turnOnCameraWhenJoining:     mode === 'video',
+    turnOnMicrophoneWhenJoining: true,
+    useSpeakerWhenJoining:       true,
+    onJoinRoom:       () => {},
+    onUserJoin:       () => {},
+    onCallEnd:        () => { handleHangUp(); },
+    onDurationUpdate: () => {},
+    bottomMenuBarConfig: {
+      buttons: mode === 'video' 
+        ? ['toggleCameraButton', 'switchCameraButton', 'hangUpButton', 'toggleMicrophoneButton']
+        : ['toggleMicrophoneButton', 'hangUpButton', 'switchAudioOutputButton'],
+    },
+  };
 
-  // ── Render call ───────────────────────────────────────────────────────────
+  // ── Render ───────────────────────────────────────────────────────────────
   return (
     <View style={styles.container}>
       <StatusBar hidden />
@@ -226,10 +226,7 @@ export default function AdvocateCallScreen({ navigation, route }) {
         userID={stableUserIdRef.current}
         userName={String(myUserName || 'Advocate')}
         callID={String(zegoRoomId)}
-        config={{
-          ...callConfig,
-          onHangUp: handleHangUp,
-        }}
+        config={callConfig}
       />
     </View>
   );

@@ -55,39 +55,23 @@ export default function AdvocateAnalyticsScreen({ navigation }) {
 
   // Analytics Aggregated State
   const [analyticsData, setAnalyticsData] = useState({
-    totalEarnings: 85500,
-    earningsGrowth: 8.4,
-    consultationsCount: 42,
-    consultationsGrowth: 12.3,
-    completedCases: 36,
-    completedGrowth: 8.4,
-    acceptanceRate: 86,
-    acceptanceGrowth: 5.2,
-    earningsWeekly: [
-      { label: 'Week 1', amount: 18000 },
-      { label: 'Week 2', amount: 22500 },
-      { label: 'Week 3', amount: 20000 },
-      { label: 'Week 4', amount: 25000 },
-    ],
+    totalEarnings: 0,
+    earningsGrowth: 0,
+    consultationsCount: 0,
+    consultationsGrowth: 0,
+    completedCases: 0,
+    completedGrowth: 0,
+    acceptanceRate: 0,
+    acceptanceGrowth: 0,
+    earningsWeekly: [],
     consultationBreakdown: {
-      completed: 36,
-      pending: 4,
-      cancelled: 2,
-      total: 42,
+      completed: 0,
+      pending: 0,
+      cancelled: 0,
+      total: 0,
     },
-    servicePerformance: [
-      { name: 'Legal Advice', count: 18, percentage: 100 },
-      { name: 'Legal Notice', count: 10, percentage: 56 },
-      { name: 'Property Search', count: 7, percentage: 39 },
-      { name: 'FIR Draft', count: 5, percentage: 28 },
-      { name: 'Documents Forensic', count: 2, percentage: 11 },
-    ],
-    monthlyPerformance: [
-      { month: 'May', earnings: 62000, consultations: 31, rating: 4.6 },
-      { month: 'June', earnings: 72000, consultations: 36, rating: 4.7 },
-      { month: 'July', earnings: 79500, consultations: 39, rating: 4.8 },
-      { month: 'August', earnings: 85500, consultations: 42, rating: 4.8, isCurrent: true },
-    ],
+    servicePerformance: [],
+    monthlyPerformance: [],
   });
 
   // Consolidated Analytics Fetcher (Protected against duplicate & in-flight loops)
@@ -105,35 +89,19 @@ export default function AdvocateAnalyticsScreen({ navigation }) {
         api.get('/advocate-dashboard/bookings?limit=100'),
       ]);
 
-      let monthlyEarn = 85500;
-      let totalConsults = 42;
-      let completedCount = 36;
-      let pendingCount = 4;
-      let cancelledCount = 2;
-      let weeklyData = [
-        { label: 'Week 1', amount: 18000 },
-        { label: 'Week 2', amount: 22500 },
-        { label: 'Week 3', amount: 20000 },
-        { label: 'Week 4', amount: 25000 },
-      ];
-      let monthlyTrendTable = [
-        { month: 'May', earnings: 62000, consultations: 31, rating: 4.6 },
-        { month: 'June', earnings: 72000, consultations: 36, rating: 4.7 },
-        { month: 'July', earnings: 79500, consultations: 39, rating: 4.8 },
-        { month: 'August', earnings: 85500, consultations: 42, rating: 4.8, isCurrent: true },
-      ];
-      let serviceList = [
-        { name: 'Legal Advice', count: 18, percentage: 100 },
-        { name: 'Legal Notice', count: 10, percentage: 56 },
-        { name: 'Property Search', count: 7, percentage: 39 },
-        { name: 'FIR Draft', count: 5, percentage: 28 },
-        { name: 'Documents Forensic', count: 2, percentage: 11 },
-      ];
+      let monthlyEarn = 0;
+      let totalConsults = 0;
+      let completedCount = 0;
+      let pendingCount = 0;
+      let cancelledCount = 0;
+      let weeklyData = [];
+      let monthlyTrendTable = [];
+      let serviceList = [];
 
       // Parse Dashboard Stats
       if (statsRes.status === 'fulfilled' && statsRes.value.data?.success) {
         const d = statsRes.value.data.data;
-        if (d.earningsSummary?.monthly) {
+        if (d.earningsSummary?.monthly !== undefined) {
           monthlyEarn = d.earningsSummary.monthly;
         }
 
@@ -169,44 +137,42 @@ export default function AdvocateAnalyticsScreen({ navigation }) {
       // Parse Bookings for Consultation Breakdown & Service Performance
       if (bookingsRes.status === 'fulfilled' && bookingsRes.value.data?.data) {
         const bList = bookingsRes.value.data.data || [];
-        if (bList.length > 0) {
-          totalConsults = bList.length;
-          completedCount = bList.filter(b => b.status === 'confirmed' || b.status === 'completed').length;
-          pendingCount = bList.filter(b => b.status === 'pending').length;
-          cancelledCount = bList.filter(b => b.status === 'cancelled').length;
+        totalConsults = bList.length;
+        completedCount = bList.filter(b => b.status === 'confirmed' || b.status === 'completed').length;
+        pendingCount = bList.filter(b => b.status === 'pending').length;
+        cancelledCount = bList.filter(b => b.status === 'cancelled').length;
 
-          // Category distribution
-          const counts = {};
-          bList.forEach(b => {
-            const cat = b.type || b.consultationType || b.service || 'Legal Advice';
-            counts[cat] = (counts[cat] || 0) + 1;
-          });
+        // Category distribution
+        const counts = {};
+        bList.forEach(b => {
+          const cat = b.type || b.consultationType || b.service || 'Legal Advice';
+          counts[cat] = (counts[cat] || 0) + 1;
+        });
 
-          const maxC = Math.max(...Object.values(counts), 1);
-          const formattedServices = Object.keys(counts).map(k => ({
-            name: k.charAt(0).toUpperCase() + k.slice(1),
-            count: counts[k],
-            percentage: Math.round((counts[k] / maxC) * 100),
-          }));
-          if (formattedServices.length > 0) {
-            serviceList = formattedServices.sort((a, b) => b.count - a.count);
-          }
+        const maxC = Math.max(...Object.values(counts), 1);
+        const formattedServices = Object.keys(counts).map(k => ({
+          name: k.charAt(0).toUpperCase() + k.slice(1),
+          count: counts[k],
+          percentage: Math.round((counts[k] / maxC) * 100),
+        }));
+        if (formattedServices.length > 0) {
+          serviceList = formattedServices.sort((a, b) => b.count - a.count);
         }
       }
 
       const calculatedAcceptanceRate = totalConsults > 0
         ? Math.round((completedCount / totalConsults) * 100)
-        : 86;
+        : 0;
 
       setAnalyticsData({
         totalEarnings: monthlyEarn,
-        earningsGrowth: 8.4,
+        earningsGrowth: 0,
         consultationsCount: totalConsults,
-        consultationsGrowth: 12.3,
+        consultationsGrowth: 0,
         completedCases: completedCount,
-        completedGrowth: 8.4,
+        completedGrowth: 0,
         acceptanceRate: calculatedAcceptanceRate,
-        acceptanceGrowth: 5.2,
+        acceptanceGrowth: 0,
         earningsWeekly: weeklyData,
         consultationBreakdown: {
           completed: completedCount,

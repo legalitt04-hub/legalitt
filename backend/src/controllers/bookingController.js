@@ -130,21 +130,7 @@ exports.confirmPayment = async (req, res, next) => {
     booking.payment.paidAt = new Date();
     booking.chat = chat._id;
 
-    // ─── Credit Advocate Wallet automatically on payment confirmation ─────────
-    if (booking.advocate && !booking.walletCredited) {
-      try {
-        const { creditAdvocateWallet } = require('./walletController');
-        const bookingAmount = booking.payment?.amount || booking.amount || 500;
-        await creditAdvocateWallet({
-          advocateId: booking.advocate,
-          bookingAmount,
-          bookingId: booking._id,
-        });
-        booking.walletCredited = true;
-      } catch (wErr) {
-        logger.error('[Wallet] Failed to credit wallet in confirmPayment:', wErr.message);
-      }
-    }
+    // (Wallet credit logic has been moved to callLogController to ensure payment is released only AFTER successful consultation)
 
     // ─── Generate ZEGOCLOUD tokens for video/voice calls ────────────────────
     try {

@@ -113,4 +113,58 @@ try {
 var registerRootComponent = require('expo').registerRootComponent;
 var AppModule = require('./App');
 var App = AppModule.default || AppModule;
+
+// ─── Firebase Background Message Handler ─────────────────────────────────────
+try {
+  const messaging = require('@react-native-firebase/messaging').default;
+  const notifee = require('@notifee/react-native').default;
+  const AndroidImportance = require('@notifee/react-native').AndroidImportance;
+  const AndroidVisibility = require('@notifee/react-native').AndroidVisibility;
+
+  messaging().setBackgroundMessageHandler(async remoteMessage => {
+    const data = remoteMessage.data || {};
+    
+    // Only handle incoming_call
+    if (data.type === 'incoming_call') {
+      const modeLabel = data.mode === 'video' ? '📹 Video' : '📞 Voice';
+      const callerName = data.callerName || 'Someone';
+
+      // Create high importance channel
+      const channelId = await notifee.createChannel({
+        id: 'calls',
+        name: 'Incoming Calls',
+        importance: AndroidImportance.HIGH,
+        sound: 'phone_ringing',
+        vibration: true,
+      });
+
+      // Display full screen notification to wake up device
+      await notifee.displayNotification({
+        title: `${modeLabel} Call Incoming!`,
+        body: `${callerName} is calling you. Tap to join.`,
+        data: data,
+        android: {
+          channelId,
+          importance: AndroidImportance.HIGH,
+          visibility: AndroidVisibility.PUBLIC,
+          fullScreenAction: {
+            id: 'default',
+            mainComponent: 'custom-incoming-call',
+          },
+          pressAction: {
+            id: 'default',
+            launchActivity: 'default',
+          },
+          actions: [
+            { title: 'Answer', pressAction: { id: 'answer', launchActivity: 'default' } },
+            { title: 'Decline', pressAction: { id: 'decline' } },
+          ],
+        },
+      });
+    }
+  });
+} catch (err) {
+  // Silent fallback if firebase isn't installed yet
+}
+
 registerRootComponent(App);

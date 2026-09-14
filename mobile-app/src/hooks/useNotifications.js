@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { Platform, Alert } from 'react-native';
+import { Platform, AppState } from 'react-native';
 import { authAPI } from '../services/api';
 import { getSocket } from '../services/socket';
 
@@ -91,18 +91,12 @@ export const useNotifications = (isAuthenticated, navigationRef, user) => {
       if (data.type === 'new_message' && data.chatId) {
         nav.navigate('Chat', { chatId: data.chatId });
       } else if (data.type === 'incoming_call') {
-        const currentUserRole = user?.role || user?.user?.role || 'client';
-        const isAdvocate = currentUserRole === 'advocate';
-        const targetRoute = isAdvocate ? 'AdvocateCall' : 'VideoCall';
-        const myId = user?.user?._id || user?._id;
-
-        nav.navigate(targetRoute, {
+        // Take them to the ringing screen so they can properly Accept/Decline
+        nav.navigate('IncomingCall', {
           bookingId: data.bookingId,
           zegoRoomId: data.zegoRoomId,
           mode: data.mode,
-          clientName: data.callerName || 'Caller',
-          myUserName: user?.name || user?.user?.name || 'Me',
-          myUserId: String(myId || ''),
+          callerName: data.callerName || 'Caller',
           clientId: data.clientId,
           advocateUserId: data.advocateUserId,
         });
@@ -158,69 +152,46 @@ export const useNotifications = (isAuthenticated, navigationRef, user) => {
       const modeLabel = data.mode === 'video' ? '📹 Video' : '📞 Voice';
       const callerName = data.clientName || data.advocateName || 'Someone';
 
-      // Show interactive Alert so user can Accept or Decline (essential for clients)
-      Alert.alert(
-        `${modeLabel} Call Incoming!`,
-        `${callerName} is calling you right now.`,
-        [
-          { 
-            text: 'Decline', 
-            style: 'destructive',
-            onPress: () => {
-              const socket = getSocket();
-              if (socket) {
-                socket.emit('call_ended', { 
-                  bookingId: data.bookingId, 
-                  clientId: data.clientId, 
-                  advocateUserId: data.advocateUserId 
-                });
-              }
-            }
-          },
-          {
-            text: '✅ Accept',
-            onPress: () => {
-              const nav = navigationRef?.current;
-              if (nav?.isReady?.()) {
-                // Route to correct screen based on logged-in user role
-                const currentUserRole = user?.role || user?.user?.role || 'client';
-                const targetRoute = currentUserRole === 'advocate' ? 'AdvocateCall' : 'VideoCall';
-                const isAdvocate = currentUserRole === 'advocate';
-                const myId = user?.user?._id || user?._id;
-                
-                nav.navigate(targetRoute, {
-                  zegoRoomId:   data.zegoRoomId,
-                  zegoToken:    data.advocateToken || data.clientToken || null,
-                  zegoAppId:    data.zegoAppId || 0,
-                  mode:         data.mode,
-                  bookingId:    data.bookingId,
-                  clientName:   callerName,
-                  myUserName:   user?.name || user?.user?.name || 'Me',
-                  myUserId:     String(myId || ''),
-                  clientId:     data.clientId,
-                  advocateUserId: data.advocateUserId,
-                });
-              }
-            }
-          }
-        ]
-      );
+      const nav = navigationRef?.current;
+      if (nav?.isReady?.()) {
+        // Navigate to beautiful full-screen IncomingCallScreen
+        const currentUserRole = user?.role || user?.user?.role || 'client';
+        const targetRoute = currentUserRole === 'advocate' ? 'AdvocateCall' : 'VideoCall';
+        const myId = user?.user?._id || user?._id;
+
+        nav.navigate('IncomingCall', {
+          callerName,
+          callerAvatar: data.clientAvatar || null,
+          mode: data.mode || 'video',
+          zegoRoomId:    data.zegoRoomId,
+          zegoToken:     data.advocateToken || data.clientToken || null,
+          zegoAppId:     data.zegoAppId || 0,
+          bookingId:     data.bookingId,
+          clientId:      data.clientId,
+          advocateUserId: data.advocateUserId,
+          myUserId:      String(myId || ''),
+          myUserName:    user?.name || user?.user?.name || 'Me',
+          targetRoute,   // which call screen to go to after accepting
+        });
+      }
 
       // Fire local push so it appears on lock screen if device is locked
-      scheduleLocalPush(
-        `${modeLabel} Call Incoming!`,
-        `${callerName} is calling you. Open the app to join.`,
-        { 
-          type: 'incoming_call', 
-          bookingId: data.bookingId,
-          zegoRoomId: data.zegoRoomId,
-          mode: data.mode,
-          clientId: data.clientId,
-          advocateUserId: data.advocateUserId,
-          callerName: callerName
-        },
-        'calls'
-      );
+      if (AppState.currentState !== 'active') {
+        scheduleLocalPush(
+          `${modeLabel} Call Incoming!`,
+          `${callerName} is calling you. Open the app to join.`,
+          { 
+            type: 'incoming_call', 
+            bookingId: data.bookingId,
+            zegoRoomId: data.zegoRoomId,
+            mode: data.mode,
+            clientId: data.clientId,
+            advocateUserId: data.advocateUserId,
+            callerName: callerName
+          },
+          'calls'
+        );
+      }
     };
 
     // ── New Message (foreground — only if not in that chat) ─────────────────

@@ -219,6 +219,7 @@ export const authAPI = {
   forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
   verifyResetOTP: (email, otp) => api.post('/auth/verify-reset-otp', { email, otp }),
   resetPassword: (email, otp, newPassword) => api.post('/auth/reset-password', { email, otp, newPassword }),
+  updateFCMToken: (expoPushToken) => api.post('/users/push-token', { expoPushToken }),
 };
 
 

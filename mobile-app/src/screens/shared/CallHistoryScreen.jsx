@@ -4,7 +4,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  StatusBar, RefreshControl, ActivityIndicator,
+  StatusBar, RefreshControl, ActivityIndicator, Image,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -59,13 +59,49 @@ const CallItem = ({ item, myRole }) => {
   const status = STATUS_CONFIG[item.status] || STATUS_CONFIG.completed;
   const other  = myRole === 'advocate' ? item.client : item.advocateUser;
   const name   = other?.name || 'Unknown';
+  const avatar = other?.avatar || null;
   const initial = name[0]?.toUpperCase() || '?';
+  const { getSocket } = require('../../services/socket');
+  const { useNavigation } = require('@react-navigation/native');
+  const navigation = useNavigation();
+
+  const handleCallBack = () => {
+    const socket = getSocket();
+    if (!socket || !item.bookingId) return;
+
+    // Use a unique room ID
+    const newRoomId = `callback-${item.bookingId}-${Date.now()}`;
+    
+    socket.emit('initiate_call', {
+      bookingId: item.bookingId,
+      zegoRoomId: newRoomId,
+      mode: item.mode || 'voice',
+    });
+
+    navigation.navigate(myRole === 'advocate' ? 'AdvocateCall' : 'VideoCall', {
+      zegoRoomId: newRoomId,
+      mode: item.mode || 'voice',
+      bookingId: item.bookingId,
+      clientName: name,
+      clientAvatar: avatar,
+      clientId: myRole === 'advocate' ? other?._id : item.clientId,
+      advocateUserId: myRole === 'advocate' ? item.advocateUser?._id : other?._id,
+    });
+  };
 
   return (
     <View style={s.callRow}>
-      {/* Avatar */}
-      <View style={[s.avatar, { backgroundColor: mode.color + '18' }]}>
-        <Text style={[s.avatarText, { color: mode.color }]}>{initial}</Text>
+      {/* Avatar with photo */}
+      <View style={[s.avatarWrap, { backgroundColor: mode.color + '18' }]}>
+        {avatar ? (
+          <Image source={{ uri: avatar }} style={s.avatarImg} />
+        ) : (
+          <Text style={[s.avatarText, { color: mode.color }]}>{initial}</Text>
+        )}
+        {/* Call type badge */}
+        <View style={[s.modeBadge, { backgroundColor: mode.color }]}>
+          <Ionicons name={mode.icon} size={8} color="#fff" />
+        </View>
       </View>
 
       {/* Info */}
@@ -90,6 +126,11 @@ const CallItem = ({ item, myRole }) => {
           <Ionicons name={item.mode === 'video' ? 'videocam-outline' : 'call-outline'} size={14} color={mode.color} />
         </View>
       </View>
+
+      {/* Action: Call Back button */}
+      <TouchableOpacity style={s.callbackBtn} onPress={handleCallBack} activeOpacity={0.7}>
+        <Ionicons name={item.mode === 'video' ? 'videocam' : 'call'} size={20} color={COLORS.primary} />
+      </TouchableOpacity>
     </View>
   );
 };
@@ -227,8 +268,10 @@ const s = StyleSheet.create({
   separator: { height: 1, backgroundColor: '#F5F5F4' },
 
   callRow:     { flexDirection: 'row', alignItems: 'center', paddingVertical: 14 },
-  avatar:      { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  avatarWrap:  { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative' },
+  avatarImg:   { width: 48, height: 48, borderRadius: 24 },
   avatarText:  { fontSize: 18, fontWeight: '800' },
+  modeBadge:   { position: 'absolute', bottom: 0, right: 0, width: 16, height: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#FAF9F8' },
   callerName:  { fontSize: 14, fontWeight: '700', color: '#1C1917', marginBottom: 4 },
   metaRow:     { flexDirection: 'row', alignItems: 'center', gap: 4 },
   metaText:    { fontSize: 11, fontWeight: '600' },

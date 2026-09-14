@@ -6,9 +6,11 @@ const { Chat } = require("../models/Chat");
 const User = require("../models/User");
 const Booking = require("../models/Booking");
 const Advocate = require("../models/Advocate");
+const CallLog = require("../models/CallLog");
 const { sendPushNotification } = require("../utils/pushNotification");
 
 let io;
+const recentSystemMessages = new Set();
 
 const initSocket = async (server) => {
   // Redis adapter enables horizontal scaling (multiple API instances share events)
@@ -71,6 +73,8 @@ const initSocket = async (server) => {
 
   // Track online users: userId -> Set of socketIds
   const onlineUsers = new Map();
+  // Tracks users currently in an active ringing or connected call
+  const busyUsers = new Set();
 
   io.on("connection", (socket) => {
     logger.info(`Socket connected: ${socket.userId} (${socket.userRole})`);
@@ -252,6 +256,17 @@ const initSocket = async (server) => {
         callerUser = await User.findById(socket.userId).select('name avatar role').lean();
         const targetUser = await User.findById(targetUserId).select('expoPushToken role').lean();
 
+        if (busyUsers.has(targetUserId) || busyUsers.has(socket.userId)) {
+          socket.emit("call_busy", { 
+            message: "User is currently busy on another call.",
+            targetUserId 
+          });
+          return;
+        }
+
+        busyUsers.add(socket.userId);
+        busyUsers.add(targetUserId);
+
         // Determine client and advocate IDs based on roles if not already known
         let resolvedClientId = bookingDetails.clientId;
         let resolvedAdvocateId = bookingDetails.advocateUserId; // we need this if we have it
@@ -268,7 +283,7 @@ const initSocket = async (server) => {
         }
 
         // Notify target — they will open VideoCallScreen or AdvocateCallScreen
-        io.to(`user:${targetUserId}`).emit("incoming_call", {
+        const callPayload = {
           bookingId:     bookingId || null,
           chatId:        chatId || null,
           zegoRoomId:    bookingDetails.zegoRoomId || zegoRoomId,
@@ -279,31 +294,25 @@ const initSocket = async (server) => {
           clientId:      resolvedClientId,
           advocateUserId: resolvedAdvocateId,
           mode:          mode || 'video',
-        });
+        };
+
+        io.to(`user:${targetUserId}`).emit("incoming_call", callPayload);
+
+        // Send high-priority push notification to wake up device if app is in background/killed
+        if (targetUser?.expoPushToken) {
+          const modeLabel = mode === 'video' ? '📹 Video' : '📞 Voice';
+          await sendPushNotification(
+            targetUser.expoPushToken,
+            `${modeLabel} Call Incoming!`,
+            `${callerUser?.name || 'Someone'} is calling you. Tap to join.`,
+            { ...callPayload, type: 'incoming_call' },
+            'calls'
+          );
+        }
 
         logger.info(`[CALL] initiate_call: caller=${socket.userId} → target=${targetUserId} | booking=${bookingId}`);
 
-        // Push notification if target is offline
-        const isTargetOnline = onlineUsers.has(targetUserId) && onlineUsers.get(targetUserId).size > 0;
-        if (!isTargetOnline && targetUser?.expoPushToken) {
-          const pushTitle = `${mode === 'video' ? '📹' : '📞'} Incoming Call`;
-          const pushBody = `${callerUser?.name || 'Someone'} is calling you. Tap to join.`;
-          await sendPushNotification(
-            targetUser.expoPushToken,
-            pushTitle,
-            pushBody,
-            { 
-              type: 'incoming_call', 
-              bookingId: bookingId || null, 
-              chatId: chatId || null,
-              zegoRoomId: bookingDetails.zegoRoomId || zegoRoomId,
-              mode: mode || 'video',
-              clientId: resolvedClientId,
-              advocateUserId: resolvedAdvocateId,
-              callerName: callerUser?.name || 'Someone'
-            }
-          );
-        }
+        // Offline push notification block removed since it is now handled by the high-priority push block above.
       } catch (err) {
         logger.error("initiate_call error:", err.message);
       }
@@ -329,6 +338,9 @@ const initSocket = async (server) => {
           }
         }
 
+        if (finalClientId) busyUsers.delete(finalClientId);
+        if (finalAdvocateUserId) busyUsers.delete(finalAdvocateUserId);
+
         if (finalClientId && finalClientId !== socket.userId) {
           io.to(`user:${finalClientId}`).emit("call_ended", { bookingId });
         }
@@ -341,9 +353,214 @@ const initSocket = async (server) => {
       }
     });
 
+    // ── CALL ACCEPTED ──────────────────────────────────────────────────
+    socket.on("call_accepted", async ({ bookingId, clientId, advocateUserId }) => {
+      try {
+        let finalClientId = clientId;
+        let finalAdvocateUserId = advocateUserId;
+
+        if (!finalClientId || !finalAdvocateUserId) {
+          if (bookingId) {
+            const booking = await Booking.findById(bookingId).lean();
+            if (booking) {
+              finalClientId = booking.client?.toString();
+              if (booking.advocate) {
+                const advocate = await Advocate.findById(booking.advocate).lean();
+                finalAdvocateUserId = advocate?.user?.toString();
+              }
+            }
+          }
+        }
+
+        if (finalClientId) busyUsers.add(finalClientId);
+        if (finalAdvocateUserId) busyUsers.add(finalAdvocateUserId);
+
+        // Send to the caller (if client is calling, advocate sends this to client, etc.)
+        if (finalClientId && finalClientId !== socket.userId) {
+          io.to(`user:${finalClientId}`).emit("call_accepted", { bookingId });
+        }
+        if (finalAdvocateUserId && finalAdvocateUserId !== socket.userId) {
+          io.to(`user:${finalAdvocateUserId}`).emit("call_accepted", { bookingId });
+        }
+        
+        logger.info(`[CALL] call_accepted: emitter=${socket.userId} booking=${bookingId}`);
+      } catch (err) {
+        logger.error("call_accepted error:", err.message);
+      }
+    });
+
+    // ── MISSED CALL — fired when callee declines or IncomingCallScreen times out ──
+    socket.on("call_missed", async ({ bookingId, clientId, advocateUserId, mode }) => {
+      try {
+        if (clientId) busyUsers.delete(clientId);
+        if (advocateUserId) busyUsers.delete(advocateUserId);
+
+        let finalClientId = clientId;
+        let finalAdvocateId = advocateUserId;
+        let chatId = null;
+
+        if (bookingId) {
+          const booking = await Booking.findById(bookingId)
+            .select('advocate client chatId')
+            .lean();
+          if (booking) {
+            finalClientId = finalClientId || booking.client?.toString();
+            if (!finalAdvocateId && booking.advocate) {
+              const adv = await Advocate.findById(booking.advocate).lean();
+              finalAdvocateId = adv?.user?.toString();
+            }
+            chatId = booking.chatId?.toString() || null;
+          }
+        }
+
+        if (!chatId && finalClientId && finalAdvocateId) {
+          const chat = await Chat.findOne({
+            participants: { $all: [finalClientId, finalAdvocateId] }
+          }).lean();
+          chatId = chat?._id?.toString() || null;
+        }
+
+        // Insert missed-call message into chat
+        if (chatId) {
+          const msgKey = `missed_${chatId}_${bookingId || 'nb'}`;
+          if (!recentSystemMessages.has(msgKey)) {
+            recentSystemMessages.add(msgKey);
+            setTimeout(() => recentSystemMessages.delete(msgKey), 10000);
+
+            const callIcon = mode === 'video' ? '📹' : '📞';
+            const missedMsg = new Message({
+              chat:    chatId,
+              sender:  socket.userId,
+              content: `${callIcon} Missed ${mode === 'video' ? 'video' : 'voice'} call`,
+              type:    'system',
+              metadata: { callMissed: true, mode },
+            });
+            await missedMsg.save();
+            await Chat.findByIdAndUpdate(chatId, {
+              lastMessage: missedMsg._id,
+              updatedAt: new Date(),
+            });
+            // Broadcast missed-call message to chat participants
+            io.to(`chat:${chatId}`).emit('new_message', {
+              chatId,
+              message: {
+                _id:       missedMsg._id,
+                content:   missedMsg.content,
+                type:      'system',
+                sender:    { _id: socket.userId },
+                createdAt: missedMsg.createdAt,
+                metadata:  { callMissed: true, mode },
+              },
+            });
+          }
+        }
+
+        // Log to CallLog
+        if (finalClientId && finalAdvocateId) {
+          await CallLog.create({
+            booking: bookingId || null,
+            client: finalClientId,
+            advocateUser: finalAdvocateId,
+            mode: mode || 'video',
+            status: 'missed',
+            endReason: 'TIMEOUT',
+            duration: 0,
+            initiatedBy: socket.userId
+          }).catch(err => logger.error('CallLog missed error:', err.message));
+        }
+
+        // Notify the caller that call was missed
+        const targetId = socket.userId === finalClientId ? finalAdvocateId : finalClientId;
+        if (targetId) {
+          io.to(`user:${targetId}`).emit('call_missed_notify', { bookingId, mode });
+        }
+
+        logger.info(`[CALL] call_missed: emitter=${socket.userId} booking=${bookingId}`);
+      } catch (err) {
+        logger.error("call_missed error:", err.message);
+      }
+    });
+
+    // ── CALL COMPLETED ─────────────────────────────────────────
+    socket.on("call_completed", async ({ bookingId, clientId, advocateUserId, mode, duration }) => {
+      try {
+        if (clientId) busyUsers.delete(clientId);
+        if (advocateUserId) busyUsers.delete(advocateUserId);
+
+        let finalClientId = clientId;
+        let finalAdvocateId = advocateUserId;
+        let chatId = null;
+
+        if (bookingId) {
+          const booking = await Booking.findById(bookingId).select('advocate client chatId').lean();
+          if (booking) {
+            finalClientId = finalClientId || booking.client?.toString();
+            if (!finalAdvocateId && booking.advocate) {
+              const adv = await Advocate.findById(booking.advocate).lean();
+              finalAdvocateId = adv?.user?.toString();
+            }
+            chatId = booking.chatId?.toString() || null;
+          }
+        }
+
+        if (!chatId && finalClientId && finalAdvocateId) {
+          const chat = await Chat.findOne({ participants: { $all: [finalClientId, finalAdvocateId] } }).lean();
+          chatId = chat?._id?.toString() || null;
+        }
+
+        // Insert completed-call message into chat
+        if (chatId) {
+          const msgKey = `completed_${chatId}_${bookingId || 'nb'}`;
+          if (!recentSystemMessages.has(msgKey)) {
+            recentSystemMessages.add(msgKey);
+            setTimeout(() => recentSystemMessages.delete(msgKey), 10000);
+
+            const callIcon = mode === 'video' ? '📹' : '📞';
+            const mins = Math.floor(duration / 60);
+            const secs = duration % 60;
+            const durationStr = `${mins}:${secs.toString().padStart(2, '0')}`;
+            
+            const msg = new Message({
+              chat:    chatId,
+              sender:  socket.userId,
+              content: `${callIcon} ${mode === 'video' ? 'Video' : 'Voice'} call ended (${durationStr})`,
+              type:    'system',
+              metadata: { callCompleted: true, mode, duration },
+            });
+            await msg.save();
+            await Chat.findByIdAndUpdate(chatId, { lastMessage: msg._id, updatedAt: new Date() });
+            
+            const chatDoc = await Chat.findById(chatId).populate('participants', 'name avatar');
+            io.to(`chat:${chatId}`).emit('receive_message', {
+              ...msg.toObject(),
+              sender: { _id: socket.userId }, // simplified sender for client append
+              chat: chatDoc,
+            });
+          }
+        }
+
+        // Log to CallLog
+        if (finalClientId && finalAdvocateId) {
+          await CallLog.create({
+            booking: bookingId || null,
+            client: finalClientId,
+            advocateUser: finalAdvocateId,
+            mode: mode || 'video',
+            status: 'completed',
+            endReason: 'USER_ENDED',
+            duration: duration || 0,
+            initiatedBy: socket.userId
+          }).catch(err => logger.error('CallLog completed error:', err.message));
+        }
+      } catch (err) {
+        logger.error("call_completed error:", err.message);
+      }
+    });
+
     // ── DISCONNECT ─────────────────────────────────────────────
     socket.on("disconnect", (reason) => {
       logger.info(`Socket disconnected: ${socket.userId} (${reason})`);
+      busyUsers.delete(socket.userId);
       const sockets = onlineUsers.get(socket.userId);
       if (sockets) {
         sockets.delete(socket.id);

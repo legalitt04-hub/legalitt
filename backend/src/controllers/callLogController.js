@@ -56,13 +56,35 @@ exports.logCall = async (req, res, next) => {
       recordingConsent: Boolean(recordingConsent),
     });
 
-    // Auto-complete the booking if the call was successful and lasted more than 10 seconds
-    if (bookingId && status === 'completed' && callDuration > 10) {
+    // Auto-complete the booking if the call was successful and credit the advocate
+    if (bookingId && status === 'completed' && callDuration > 0) {
       const Booking = require('../models/Booking');
-      await Booking.findByIdAndUpdate(bookingId, { status: 'completed' }).catch(err => {
+      try {
+        const booking = await Booking.findById(bookingId);
+        if (booking && booking.status !== 'completed') {
+          booking.status = 'completed';
+          
+          // ─── Credit Advocate Wallet automatically on post-consultation ─────────
+          if (booking.advocate && !booking.walletCredited) {
+            try {
+              const { creditAdvocateWallet } = require('./walletController');
+              const bookingAmount = booking.payment?.amount || booking.amount || 500;
+              await creditAdvocateWallet({
+                advocateId: booking.advocate,
+                bookingAmount,
+                bookingId: booking._id,
+              });
+              booking.walletCredited = true;
+            } catch (wErr) {
+              logger.error(`[Wallet] Failed to credit wallet in logCall for booking ${bookingId}: ${wErr.message}`);
+            }
+          }
+          await booking.save();
+          logger.info(`[CallLog] Auto-completed booking ${bookingId} and credited wallet after successful ${mode} call.`);
+        }
+      } catch (err) {
         logger.error(`[CallLog] Failed to auto-complete booking ${bookingId}: ${err.message}`);
-      });
-      logger.info(`[CallLog] Auto-completed booking ${bookingId} after successful ${mode} call.`);
+      }
     }
 
     logger.info(`[CallLog] ${mode} call saved: ${clientId} ↔ ${advocateId} | ${callDuration}s | status: ${status} | reason: ${resolvedEndReason}`);

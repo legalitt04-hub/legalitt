@@ -133,7 +133,7 @@ const MapScreen = ({ navigation, route }) => {
       });
 
       if (response.data.success && response.data.data) {
-        const transformedAdvocates = response.data.data.map(adv => ({
+        const transformedAdvocates = (response?.data?.data || []).map((adv) => ({
           id: adv._id,
           name: adv.user?.name || 'Unknown',
           avatar: adv.user?.avatar || `https://i.pravatar.cc/150?u=${adv.user?._id || adv._id}`,
