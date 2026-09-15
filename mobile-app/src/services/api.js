@@ -323,7 +323,7 @@ export const uploadAPI = {
       try {
         const res = await FileSystem.uploadAsync(`${BASE_URL}/uploads/document`, uriToUpload, {
           httpMethod: 'POST',
-          uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+          uploadType: 1,
           fieldName: 'file',
           mimeType: cleanType,
           headers,
@@ -359,7 +359,7 @@ export const uploadAPI = {
       try {
         const res = await FileSystem.uploadAsync(`${BASE_URL}/uploads/avatar`, uriToUpload, {
           httpMethod: 'POST',
-          uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+          uploadType: 1,
           fieldName: 'file',
           mimeType: mimeType || 'image/jpeg',
           headers,
