@@ -250,7 +250,6 @@ export default function CustomCallScreen({ navigation, route }) {
             const tryPlay = (attempt = 0) => {
               try {
                 if (isVideo && remoteRef.current) {
-                  if (!ZegoViewClass) throw new Error('ZegoViewClass is null');
                   const reactTag = findNodeHandle(remoteRef.current);
                   if (reactTag) {
                     const zegoView = { reactTag, viewMode: 1, backgroundColor: 0 };
@@ -286,7 +285,6 @@ export default function CustomCallScreen({ navigation, route }) {
         const startLocalPreview = (attempt = 0) => {
           try {
             if (isVideo && localRef.current) {
-              if (!ZegoViewClass) throw new Error('ZegoViewClass is null for local preview');
               const localTag = findNodeHandle(localRef.current);
               if (localTag) {
                 const localView = { reactTag: localTag, viewMode: 1, backgroundColor: 0 };
