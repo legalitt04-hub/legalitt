@@ -1,68 +1,24 @@
 // ─── TARGETED POLYFILLS FOR REACT NATIVE ──────────────────────────────────────
-// IMPORTANT: We must NOT create a fake `document.createElement` because
-// react-native-web's `canUseDOM` checks for it and if true, runs browser-only
-// code that crashes on Android (e.g. `root instanceof ShadowRoot`).
-//
-// Instead, we only polyfill the specific globals that crash at module-load time.
-
 if (typeof global !== 'undefined') {
-  // ── window event listeners ─────────────────────────────────────────────────
-  // Some packages call window.addEventListener at import time.
-  // React Native has `global` but not full `window` API.
-  if (typeof global.addEventListener !== 'function') {
-    global.addEventListener = function() {};
-  }
-  if (typeof global.removeEventListener !== 'function') {
-    global.removeEventListener = function() {};
-  }
-
-  // ── ShadowRoot ─────────────────────────────────────────────────────────────
-  // Hermes throws ReferenceError (not just undefined) for `ShadowRoot`.
-  // Even with canUseDOM=false, some deep import chains touch it at parse time.
-  if (typeof global.ShadowRoot === 'undefined') {
-    global.ShadowRoot = function ShadowRoot() {};
-  }
-  if (typeof global.CSS === 'undefined') {
-    global.CSS = { supports: function() { return false; }, escape: function(v) { return v; } };
-  }
-
-  // ── window.location ────────────────────────────────────────────────────────
-  // Analytics / routing packages read window.location.href at load time.
-  // Only set if truly missing (React Native usually has it as undefined).
+  if (typeof global.addEventListener !== 'function') global.addEventListener = function() {};
+  if (typeof global.removeEventListener !== 'function') global.removeEventListener = function() {};
+  if (typeof global.ShadowRoot === 'undefined') global.ShadowRoot = function ShadowRoot() {};
+  if (typeof global.CSS === 'undefined') global.CSS = { supports: function() { return false; }, escape: function(v) { return v; } };
   if (typeof global.location === 'undefined' || global.location === null) {
     global.location = {
-      href: 'https://app.legalitt.in/',
-      host: 'app.legalitt.in',
-      hostname: 'app.legalitt.in',
-      protocol: 'https:',
-      pathname: '/',
-      search: '',
-      hash: '',
-      port: '',
+      href: 'https://app.legalitt.in/', host: 'app.legalitt.in', hostname: 'app.legalitt.in',
+      protocol: 'https:', pathname: '/', search: '', hash: '', port: '',
       origin: 'https://app.legalitt.in',
-      assign: function() {},
-      replace: function() {},
-      reload: function() {},
+      assign: function() {}, replace: function() {}, reload: function() {},
       toString: function() { return 'https://app.legalitt.in/'; },
     };
   }
-
-  // ── Element / Node constructors ────────────────────────────────────────────
-  // Some libs do `instanceof Element` checks.
-  if (typeof global.Element === 'undefined') {
-    global.Element = function Element() {};
-  }
-  if (typeof global.HTMLElement === 'undefined') {
-    global.HTMLElement = function HTMLElement() {};
-  }
+  if (typeof global.Element === 'undefined') global.Element = function Element() {};
+  if (typeof global.HTMLElement === 'undefined') global.HTMLElement = function HTMLElement() {};
   if (typeof global.Node === 'undefined') {
     global.Node = function Node() {};
-    global.Node.ELEMENT_NODE = 1;
-    global.Node.TEXT_NODE = 3;
-    global.Node.DOCUMENT_NODE = 9;
+    global.Node.ELEMENT_NODE = 1; global.Node.TEXT_NODE = 3; global.Node.DOCUMENT_NODE = 9;
   }
-
-  // ── localStorage (used by some analytics / caching libs) ───────────────────
   if (typeof global.localStorage === 'undefined') {
     var _ls = {};
     global.localStorage = {
@@ -82,89 +38,61 @@ try {
     ZegoExpressNativeModule: { prefix: 'zego' },
     ZIMNativeModule: { prefix: 'zim' },
   };
-
   var nativeModulesProxy = new Proxy(originalNativeModules, {
     get: function(target, prop, receiver) {
-      if (prop in customStubs) {
-        return customStubs[prop];
-      }
-      try {
-        return Reflect.get(target, prop, receiver);
-      } catch (e) {
-        return undefined;
-      }
+      if (prop in customStubs) return customStubs[prop];
+      try { return Reflect.get(target, prop, receiver); } catch (e) { return undefined; }
     },
-    set: function(target, prop, value) {
-      customStubs[prop] = value;
-      return true;
+    set: function(target, prop, value) { customStubs[prop] = value; return true; }
+  });
+  Object.defineProperty(RN, 'NativeModules', {
+    get: function() { return nativeModulesProxy; },
+    configurable: true, enumerable: true,
+  });
+} catch (err) {}
+
+// ─── Background Notification Task (Android EAS — app killed / background) ─────
+// MUST be registered at the top level, before registerRootComponent.
+// When a push notification arrives while app is killed, Expo wakes the JS runtime
+// briefly to run this task. We store the call data so the UI can pick it up on open.
+const BACKGROUND_NOTIFICATION_TASK = 'LEGALITT_BACKGROUND_CALL';
+
+try {
+  const TaskManager  = require('expo-task-manager');
+  const Notifications = require('expo-notifications');
+
+  // Register the background handler — runs even when app is killed
+  TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => {
+    if (error) { console.warn('[BGTask] Error:', error); return; }
+    const notification = data?.notification;
+    if (!notification) return;
+
+    const payload = notification.request?.content?.data || {};
+
+    // For incoming calls — store data so app can navigate when it opens
+    if (payload.type === 'incoming_call') {
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+      await AsyncStorage.setItem(
+        'PENDING_INCOMING_CALL',
+        JSON.stringify({
+          ...payload,
+          receivedAt: Date.now(),
+        })
+      );
     }
   });
 
-  Object.defineProperty(RN, 'NativeModules', {
-    get: function() { return nativeModulesProxy; },
-    configurable: true,
-    enumerable: true,
-  });
+  // Tell Expo to run the above task for every received notification
+  Notifications.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK);
+
 } catch (err) {
-  // Silent fallback
+  // Silent fallback — expo-task-manager not available in Expo Go
+  console.log('[BGTask] Background task not registered:', err.message);
 }
 
 // ─── Register App ────────────────────────────────────────────────────────────
 var registerRootComponent = require('expo').registerRootComponent;
 var AppModule = require('./App');
 var App = AppModule.default || AppModule;
-
-// ─── Firebase Background Message Handler ─────────────────────────────────────
-try {
-  const messaging = require('@react-native-firebase/messaging').default;
-  const notifee = require('@notifee/react-native').default;
-  const AndroidImportance = require('@notifee/react-native').AndroidImportance;
-  const AndroidVisibility = require('@notifee/react-native').AndroidVisibility;
-
-  messaging().setBackgroundMessageHandler(async remoteMessage => {
-    const data = remoteMessage.data || {};
-    
-    // Only handle incoming_call
-    if (data.type === 'incoming_call') {
-      const modeLabel = data.mode === 'video' ? '📹 Video' : '📞 Voice';
-      const callerName = data.callerName || 'Someone';
-
-      // Create high importance channel
-      const channelId = await notifee.createChannel({
-        id: 'calls',
-        name: 'Incoming Calls',
-        importance: AndroidImportance.HIGH,
-        sound: 'phone_ringing',
-        vibration: true,
-      });
-
-      // Display full screen notification to wake up device
-      await notifee.displayNotification({
-        title: `${modeLabel} Call Incoming!`,
-        body: `${callerName} is calling you. Tap to join.`,
-        data: data,
-        android: {
-          channelId,
-          importance: AndroidImportance.HIGH,
-          visibility: AndroidVisibility.PUBLIC,
-          fullScreenAction: {
-            id: 'default',
-            mainComponent: 'custom-incoming-call',
-          },
-          pressAction: {
-            id: 'default',
-            launchActivity: 'default',
-          },
-          actions: [
-            { title: 'Answer', pressAction: { id: 'answer', launchActivity: 'default' } },
-            { title: 'Decline', pressAction: { id: 'decline' } },
-          ],
-        },
-      });
-    }
-  });
-} catch (err) {
-  // Silent fallback if firebase isn't installed yet
-}
 
 registerRootComponent(App);

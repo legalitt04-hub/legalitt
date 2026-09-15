@@ -384,7 +384,7 @@ export default function MyBookingsScreen({ navigation }) {
   }, [fetchBookings]);
 
 
-  const handleOpenSession = (actionType, item, params) => {
+  const handleOpenSession = async (actionType, item, params) => {
     const rawSlot = item.notes?.replace('Preferred slot: ', '');
     if (rawSlot && item.status !== 'in_progress') {
       const slotDate = new Date(rawSlot);
@@ -405,13 +405,16 @@ export default function MyBookingsScreen({ navigation }) {
       navigation.navigate('Chat', params);
     } else if (actionType === 'call') {
       // Notify advocate that client is starting a call
-      const socket = getSocket();
+      const { connectSocket } = require('../../services/socket');
+      const socket = getSocket() || await connectSocket();
       if (socket && params.bookingId) {
         socket.emit('initiate_call', {
           bookingId: params.bookingId,
           zegoRoomId: params.zegoRoomId,
           mode: params.mode || 'video',
         });
+      } else {
+        Alert.alert('Error', 'Could not connect to call server.');
       }
       navigation.navigate('VideoCall', params);
     }

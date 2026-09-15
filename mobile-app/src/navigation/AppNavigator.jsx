@@ -360,9 +360,11 @@ const AppNavigator = () => {
   }, [isAuthenticated, isRestoring]);
 
   // ─── SYNCHRONIZED SPLASH ANIMATION GATE ─────────────────────────────────
-  // Render LegalittIntroScreen until the logo reveal animation completion event fires.
-  // Prevents Home screen or Auth screens from appearing while animation is running.
-  if (!splashFinished || hasOnboarded === null) {
+  // Render LegalittIntroScreen until the logo reveal animation completion event fires,
+  // AND the auth state restoration is completely finished.
+  // Prevents the navigation tree from rendering the wrong stack and then unmounting
+  // active screens (like IncomingCall) when the auth state suddenly changes.
+  if (!splashFinished || hasOnboarded === null || isRestoring) {
     return (
       <View style={{ flex: 1, minHeight: Platform.OS === 'web' ? '100vh' : '100%', backgroundColor: '#000000' }}>
         <LegalittIntroScreen
@@ -374,10 +376,54 @@ const AppNavigator = () => {
     );
   }
 
+  // ─── BACKGROUND CALL NAVIGATION (COLD START) ────────────────────────────
+  // When app opens from killed state via a push notification, the background task
+  // saves the call payload in AsyncStorage. We check for it here once navigation is ready.
+  const handleNavReady = async () => {
+    try {
+      let data = null;
+      
+      // 1. Check if app was launched directly by tapping a notification
+      const lastResponse = await Notifications.getLastNotificationResponseAsync();
+      if (lastResponse && lastResponse.notification.request.content.data?.type === 'incoming_call') {
+        data = lastResponse.notification.request.content.data;
+      }
+      
+      // 2. Fallback to AsyncStorage (from background task)
+      if (!data) {
+        const stored = await AsyncStorage.getItem('PENDING_INCOMING_CALL');
+        if (stored) {
+          await AsyncStorage.removeItem('PENDING_INCOMING_CALL');
+          data = JSON.parse(stored);
+        }
+      }
+
+      if (data) {
+        // Only ring if the notification is less than 60 seconds old
+        if (Date.now() - (data.receivedAt || Date.now()) < 60000) {
+          const nav = navigationRef.current;
+          if (nav && nav.isReady()) {
+            console.log('[AppNavigator] Waking up to pending background call:', data);
+            nav.navigate('IncomingCall', {
+              ...data,
+              callerName: data.clientName || data.callerName || 'Caller',
+              callerAvatar: data.clientAvatar || data.callerAvatar || null,
+              zegoToken: data.advocateToken || data.clientToken || null,
+            });
+          }
+        } else {
+          console.log('[AppNavigator] Pending call expired.');
+        }
+      }
+    } catch (err) {
+      console.warn('[AppNavigator] Error processing pending call:', err);
+    }
+  };
+
   return (
     <View style={{ flex: 1, minHeight: Platform.OS === 'web' ? '100vh' : '100%', backgroundColor: '#000000' }}>
       <OfflineBanner />
-      <NavigationContainer ref={navigationRef}>
+      <NavigationContainer ref={navigationRef} onReady={handleNavReady}>
         <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade', animationDuration: 400 }}>
           {!consentAccepted ? (
             // ─── CONSENT GATE FLOW (UNACCEPTED) ────────────────────────
@@ -431,8 +477,10 @@ const AppNavigator = () => {
               <Stack.Screen name="ConsultationScheduled" component={ConsultationScheduledScreen} />
               <Stack.Screen name="TrackConsultation" component={TrackConsultationScreen} />
               <Stack.Screen name="ConsultationCompleted" component={ConsultationCompletedScreen} />
-              <Stack.Screen name="VideoCall" component={VideoCallScreen}
-                options={{ animation: 'slide_from_bottom', gestureEnabled: false }} />
+              <Stack.Screen name="VideoCall" component={CustomCallScreen}
+                options={{ animation: 'slide_from_bottom', gestureEnabled: false, headerShown: false }} />
+              <Stack.Screen name="VoiceCall" component={CustomCallScreen}
+                options={{ animation: 'slide_from_bottom', gestureEnabled: false, headerShown: false }} />
               <Stack.Screen name="IncomingCall" component={IncomingCallScreen}
                 options={{ animation: 'slide_from_bottom', gestureEnabled: false, headerShown: false }} />
               <Stack.Screen name="Settings" component={SettingsScreen} />

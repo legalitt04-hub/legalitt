@@ -13,47 +13,74 @@ const SOCKET_URL = BASE_URL.replace('/api/v1', '');
 const TOKEN_KEY = 'authToken';
 
 let socket = null;
+let connectionPromise = null; // Lock for concurrent connection attempts
 
 /**
  * Connect to Socket.io server with JWT token.
- * @param {string} [tokenOverride] — Pass token directly after login to avoid async delay
+ * Returns a Promise that resolves when actually connected (or rejects on error).
  */
-export const connectSocket = async (tokenOverride) => {
-  if (socket && socket.connected) return socket;
-
-  try {
-    const token = tokenOverride || await SecureStore.getItemAsync(TOKEN_KEY);
-    if (!token) {
-      console.log('[Socket] No auth token — not connecting');
-      return null;
-    }
-
-    socket = io(SOCKET_URL, {
-      auth: { token },
-      transports: ['polling', 'websocket'],
-      reconnectionAttempts: 10,
-      reconnectionDelay: 1000,
-      timeout: 10000,
-    });
-
-    socket.on('connect', () => console.log('[Socket] ✅ Connected:', socket.id));
-    socket.on('connect_error', (err) => console.log('[Socket] ❌ Error:', err.message));
-    socket.on('disconnect', (reason) => console.log('[Socket] Disconnected:', reason));
-
-    return socket;
-  } catch (err) {
-    console.log('[Socket] Failed:', err.message);
-    return null;
+export const connectSocket = (tokenOverride) => {
+  // Already live — reuse
+  if (socket && socket.connected) {
+    return Promise.resolve(socket);
   }
+
+  // If a connection is already in progress, return the same promise
+  if (connectionPromise) {
+    return connectionPromise;
+  }
+
+  connectionPromise = new Promise(async (resolve) => {
+    try {
+      const token = tokenOverride || await SecureStore.getItemAsync(TOKEN_KEY);
+      if (!token) {
+        console.log('[Socket] No auth token — not connecting');
+        connectionPromise = null;
+        return resolve(null);
+      }
+
+      // Disconnect stale socket before creating new one
+      if (socket) { socket.disconnect(); socket = null; }
+
+      socket = io(SOCKET_URL, {
+        auth: { token },
+        transports: ['websocket', 'polling'], // websocket FIRST for low latency
+        reconnectionAttempts: 10,
+        reconnectionDelay: 1500,
+        timeout: 15000,
+      });
+
+      socket.once('connect', () => {
+        console.log('[Socket] ✅ Connected:', socket.id);
+        connectionPromise = null;
+        resolve(socket);
+      });
+
+      socket.once('connect_error', (err) => {
+        console.log('[Socket] ❌ Error:', err.message);
+        connectionPromise = null;
+        resolve(null); // Don't throw — caller handles null
+      });
+
+      socket.on('disconnect', (reason) => console.log('[Socket] Disconnected:', reason));
+
+    } catch (err) {
+      console.log('[Socket] Failed:', err.message);
+      connectionPromise = null;
+      resolve(null);
+    }
+  });
+
+  return connectionPromise;
 };
 
 /**
- * Get current socket (auto-reconnects if needed)
+ * Get current socket synchronously (already connected).
+ * Returns null if not yet connected — use connectSocket() to ensure connection.
  */
 export const getSocket = () => {
   if (socket && socket.connected) return socket;
-  connectSocket();
-  return socket;
+  return null;
 };
 
 /**

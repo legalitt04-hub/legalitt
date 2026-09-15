@@ -74,7 +74,8 @@ const initSocket = async (server) => {
   // Track online users: userId -> Set of socketIds
   const onlineUsers = new Map();
   // Tracks users currently in an active ringing or connected call
-  const busyUsers = new Set();
+  // Tracks users currently in an active ringing or connected call: userId -> peerUserId
+  const busyUsers = new Map();
 
   io.on("connection", (socket) => {
     logger.info(`Socket connected: ${socket.userId} (${socket.userRole})`);
@@ -264,8 +265,8 @@ const initSocket = async (server) => {
           return;
         }
 
-        busyUsers.add(socket.userId);
-        busyUsers.add(targetUserId);
+        busyUsers.set(socket.userId, targetUserId);
+        busyUsers.set(targetUserId, socket.userId);
 
         // Determine client and advocate IDs based on roles if not already known
         let resolvedClientId = bookingDetails.clientId;
@@ -378,8 +379,16 @@ const initSocket = async (server) => {
           }
         }
 
-        if (finalClientId) busyUsers.add(finalClientId);
-        if (finalAdvocateUserId) busyUsers.add(finalAdvocateUserId);
+        // Note: we can't easily map them back to each other if we only have one ID here,
+        // but normally they are already in the Map from initiate_call.
+        // We just ensure they are registered.
+        if (finalClientId && finalAdvocateUserId) {
+          busyUsers.set(finalClientId, finalAdvocateUserId);
+          busyUsers.set(finalAdvocateUserId, finalClientId);
+        } else {
+          if (finalClientId) busyUsers.set(finalClientId, 'unknown');
+          if (finalAdvocateUserId) busyUsers.set(finalAdvocateUserId, 'unknown');
+        }
 
         // Send to the caller (if client is calling, advocate sends this to client, etc.)
         if (finalClientId && finalClientId !== socket.userId) {
@@ -597,6 +606,11 @@ const initSocket = async (server) => {
     // ── DISCONNECT ─────────────────────────────────────────────
     socket.on("disconnect", (reason) => {
       logger.info(`Socket disconnected: ${socket.userId} (${reason})`);
+      const peerId = busyUsers.get(socket.userId);
+      if (peerId && peerId !== 'unknown') {
+        busyUsers.delete(peerId);
+        io.to(`user:${peerId}`).emit('call_ended', { reason: 'peer_disconnected' });
+      }
       busyUsers.delete(socket.userId);
       const sockets = onlineUsers.get(socket.userId);
       if (sockets) {

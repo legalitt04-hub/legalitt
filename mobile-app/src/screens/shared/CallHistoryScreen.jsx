@@ -65,8 +65,9 @@ const CallItem = ({ item, myRole }) => {
   const { useNavigation } = require('@react-navigation/native');
   const navigation = useNavigation();
 
-  const handleCallBack = () => {
-    const socket = getSocket();
+  const handleCallBack = async () => {
+    const { connectSocket } = require('../../services/socket');
+    const socket = getSocket() || await connectSocket();
     if (!socket || !item.bookingId) return;
 
     // Use a unique room ID

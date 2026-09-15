@@ -317,19 +317,34 @@ export const uploadAPI = {
 
     const uriToUpload = Platform.OS === 'android' ? fileUri : fileUri.replace('file://', '');
 
-    const res = await FileSystem.uploadAsync(`${BASE_URL}/uploads/document`, uriToUpload, {
-      httpMethod: 'POST',
-      uploadType: FileSystem.FileSystemUploadType.MULTIPART,
-      fieldName: 'file',
-      mimeType: cleanType,
-      headers,
-    });
+    let lastError;
+    // Retry up to 3 times for cold starts / network drops
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const res = await FileSystem.uploadAsync(`${BASE_URL}/uploads/document`, uriToUpload, {
+          httpMethod: 'POST',
+          uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+          fieldName: 'file',
+          mimeType: cleanType,
+          headers,
+        });
 
-    const json = JSON.parse(res.body);
-    if (res.status < 200 || res.status >= 300 || !json.success) {
-      throw new Error(json.message || 'Upload failed');
+        const json = JSON.parse(res.body);
+        if (res.status < 200 || res.status >= 300 || !json.success) {
+          throw new Error(json.message || 'Upload failed');
+        }
+        return { data: json };
+      } catch (err) {
+        lastError = err;
+        console.log(`[Upload API] Attempt ${attempt} failed:`, err.message);
+        if (attempt < 3) {
+          const delay = Math.pow(2, attempt) * 1000;
+          console.log(`[Upload API] Retrying in ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
     }
-    return { data: json };
+    throw new Error(lastError?.message || 'Upload failed after 3 attempts');
   },
   uploadAvatar: async (fileUri, fileName, mimeType) => {
     const token = await SecureStore.getItemAsync(TOKEN_KEY);
@@ -339,19 +354,32 @@ export const uploadAPI = {
 
     const uriToUpload = Platform.OS === 'android' ? fileUri : fileUri.replace('file://', '');
 
-    const res = await FileSystem.uploadAsync(`${BASE_URL}/uploads/avatar`, uriToUpload, {
-      httpMethod: 'POST',
-      uploadType: FileSystem.FileSystemUploadType.MULTIPART,
-      fieldName: 'file',
-      mimeType: mimeType || 'image/jpeg',
-      headers,
-    });
+    let lastError;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const res = await FileSystem.uploadAsync(`${BASE_URL}/uploads/avatar`, uriToUpload, {
+          httpMethod: 'POST',
+          uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+          fieldName: 'file',
+          mimeType: mimeType || 'image/jpeg',
+          headers,
+        });
 
-    const json = JSON.parse(res.body);
-    if (res.status < 200 || res.status >= 300 || !json.success) {
-      throw new Error(json.message || 'Upload failed');
+        const json = JSON.parse(res.body);
+        if (res.status < 200 || res.status >= 300 || !json.success) {
+          throw new Error(json.message || 'Upload failed');
+        }
+        return { data: json };
+      } catch (err) {
+        lastError = err;
+        console.log(`[Upload API] Avatar Attempt ${attempt} failed:`, err.message);
+        if (attempt < 3) {
+          const delay = Math.pow(2, attempt) * 1000;
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
     }
-    return { data: json };
+    throw new Error(lastError?.message || 'Upload failed after 3 attempts');
   },
 };
 

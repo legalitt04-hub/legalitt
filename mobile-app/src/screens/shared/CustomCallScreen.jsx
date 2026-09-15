@@ -19,15 +19,19 @@ import { callsAPI } from '../../services/api';
 // ── Safe lazy-load Zego (only in EAS builds, not Expo Go) ────────────────────
 let ZegoExpressEngine = null;
 let ZegoSurfaceView   = null;
+let ZegoViewClass     = null; // ZegoView constructor — required for startPreview / startPlayingStream
 
 try {
-  if (Constants.appOwnership !== 'expo') {
-    const eng = require('zego-express-engine-reactnative');
-    ZegoExpressEngine = eng.default ?? eng;
-    const rv = require('zego-express-engine-reactnative/lib/ZegoRenderView');
-    ZegoSurfaceView = rv.ZegoSurfaceView ?? rv.ZegoTextureView ?? null;
-  }
-} catch (_) {}
+  const zegoLib = require('zego-express-engine-reactnative');
+  ZegoExpressEngine = zegoLib.ZegoExpressEngine ?? zegoLib.default ?? zegoLib;
+  // iOS uses ZegoTextureView (UIView-backed), Android uses ZegoSurfaceView
+  ZegoSurfaceView = Platform.OS === 'ios'
+    ? (zegoLib.ZegoTextureView ?? zegoLib.ZegoSurfaceView ?? null)
+    : (zegoLib.ZegoSurfaceView ?? null);
+  ZegoViewClass = zegoLib.ZegoView ?? null; // class-based constructor
+} catch (err) {
+  console.log('Failed to load Zego natively:', err);
+}
 
 // ── Credentials ──────────────────────────────────────────────────────────────
 const _extra = Constants.expoConfig?.extra ?? {};
@@ -45,10 +49,12 @@ export default function CustomCallScreen({ navigation, route }) {
     zegoToken,
     zegoAppId,
     mode          = 'video',
-    clientName    = 'Caller',
+    clientName    = '',
     clientAvatar  = null,
     advocateName,
     advocateAvatar = null,
+    callerName,       // passed from IncomingCallScreen
+    callerAvatar,     // passed from IncomingCallScreen
     myUserId      = '',
     myUserName    = 'Me',
     bookingId,
@@ -59,9 +65,10 @@ export default function CustomCallScreen({ navigation, route }) {
   const insets   = useSafeAreaInsets();
   const isVideo  = mode === 'video';
 
-  // Peer display info — accept either clientName or advocateName
-  const peerName   = clientName || advocateName || 'Caller';
-  const peerAvatar = clientAvatar || advocateAvatar || null;
+  // Peer display info — accept any field name
+  const peerName   = callerName || clientName || advocateName || 'Caller';
+  const peerAvatar = callerAvatar || clientAvatar || advocateAvatar || null;
+
 
   // ── State ─────────────────────────────────────────────────────────────────
   const [status,         setStatus]         = useState('connecting');
@@ -234,53 +241,68 @@ export default function CustomCallScreen({ navigation, route }) {
           }
         });
 
-        // 4. Remote stream — save stream ID and try to play; retry if remoteRef not mounted yet
+        // 4. Remote stream — play as soon as we have a view handle
         engine.on('roomStreamUpdate', (rId, updateType, streamList) => {
           if (updateType === 0 && streamList?.length > 0) {
             const streamID = streamList[0].streamID;
             pendingStreamId.current = streamID;
 
-            const tryPlay = () => {
-              if (isVideo && remoteRef.current) {
-                const remoteView = findNodeHandle(remoteRef.current);
-                if (remoteView) {
-                  engine.startPlayingStream(streamID, { reactTag: remoteView, viewMode: 1, backgroundColor: 0 });
+            const tryPlay = (attempt = 0) => {
+              try {
+                if (isVideo && remoteRef.current) {
+                  if (!ZegoViewClass) throw new Error('ZegoViewClass is null');
+                  const reactTag = findNodeHandle(remoteRef.current);
+                  if (reactTag) {
+                    const zegoView = { reactTag, viewMode: 1, backgroundColor: 0 };
+                    engine.startPlayingStream(streamID, zegoView, {});
+                    pendingStreamId.current = null;
+                    return;
+                  }
+                } else if (!isVideo) {
+                  engine.startPlayingStream(streamID, undefined, {});
                   pendingStreamId.current = null;
                   return;
                 }
+              } catch (e) {
+                Alert.alert('Play Error', e.message);
+                return;
               }
-              // Audio-only fallback OR remoteRef not yet mounted
-              engine.startPlayingStream(streamID, null, {});
-              pendingStreamId.current = null;
+              if (attempt < 10) setTimeout(() => tryPlay(attempt + 1), 300);
             };
 
-            // Small delay so remoteRef has time to mount
-            setTimeout(tryPlay, 400);
+            setTimeout(() => tryPlay(), 400);
             setRemoteHere(true);
           }
         });
 
         // 5. Login room
-        const loginConfig = zegoToken ? { token: zegoToken } : {};
         await engine.loginRoom(
           roomId,
           { userID: stableId.current, userName: myUserName },
-          { isUserStatusNotify: true, ...loginConfig }
+          { isUserStatusNotify: true }
         );
 
         // 6. Start local camera preview — retry until localRef is mounted
-        const startLocalPreview = () => {
-          if (isVideo && localRef.current) {
-            const localView = findNodeHandle(localRef.current);
-            if (localView) {
-              engine.startPreview({ reactTag: localView, viewMode: 1, backgroundColor: 0 });
-              return;
+        const startLocalPreview = (attempt = 0) => {
+          try {
+            if (isVideo && localRef.current) {
+              if (!ZegoViewClass) throw new Error('ZegoViewClass is null for local preview');
+              const localTag = findNodeHandle(localRef.current);
+              if (localTag) {
+                const localView = { reactTag: localTag, viewMode: 1, backgroundColor: 0 };
+                engine.startPreview(localView, undefined);
+                return;
+              } else if (attempt === 9) {
+                Alert.alert('Preview Error', 'localTag is null. View style might be 0x0 or unmounted.');
+              }
             }
+          } catch (e) {
+            Alert.alert('Preview Error', e.message);
+            return;
           }
-          // Retry after 300ms if not mounted yet
-          setTimeout(startLocalPreview, 300);
+          if (attempt < 10) setTimeout(() => startLocalPreview(attempt + 1), 300);
         };
-        setTimeout(startLocalPreview, 300);
+        setTimeout(() => startLocalPreview(), 300);
 
         // 7. Start publishing
         engine.startPublishingStream(`${stableId.current}_stream`);
@@ -383,8 +405,9 @@ export default function CustomCallScreen({ navigation, route }) {
       try {
         await Audio.setAudioModeAsync({ playsInSilentModeIOS: true, staysActiveInBackground: true });
         const { sound } = await Audio.Sound.createAsync(
-          { uri: 'https://actions.google.com/sounds/v1/communications/dial_tone.ogg' },
-          { shouldPlay: true, isLooping: true }
+          // Reliable outgoing ringtone/dialling tone
+          { uri: 'https://www.soundjay.com/phone/sounds/telephone-ring-02a.mp3' },
+          { shouldPlay: true, isLooping: true, volume: 1.0 }
         );
         if (isMounted && !remoteHere) {
           dialSoundRef.current = sound;

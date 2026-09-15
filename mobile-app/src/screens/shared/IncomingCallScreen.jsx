@@ -13,8 +13,12 @@ const AUTO_DECLINE_SECS = 35; // Auto-decline after 35s
 
 export default function IncomingCallScreen({ navigation, route }) {
   const {
-    callerName = 'Unknown Caller',
+    callerName: _callerName,
     callerAvatar = null,
+    clientName,
+    advocateName,
+    clientAvatar,
+    advocateAvatar,
     mode = 'video',
     zegoRoomId,
     zegoToken,
@@ -27,6 +31,10 @@ export default function IncomingCallScreen({ navigation, route }) {
     targetRoute = 'VideoCall',
   } = route?.params ?? {};
 
+  // Resolve caller display name from any field provided
+  const callerName   = _callerName || clientName || advocateName || 'Unknown Caller';
+  const callerPhoto  = callerAvatar || clientAvatar || advocateAvatar || null;
+
   const insets = useSafeAreaInsets();
   const [countdown, setCountdown] = useState(AUTO_DECLINE_SECS);
 
@@ -36,6 +44,7 @@ export default function IncomingCallScreen({ navigation, route }) {
   const ring3 = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    Alert.alert('Debug', 'Incoming Call Screen Mounted! Call received.');
     const pulse = (anim, delay) =>
       Animated.loop(
         Animated.sequence([
@@ -77,17 +86,36 @@ export default function IncomingCallScreen({ navigation, route }) {
 
   // ── Listen for Caller cancelling the call ──────────────────────────────────
   useEffect(() => {
-    const socket = getSocket();
-    if (!socket) return;
-    
-    const onCallEnded = (data) => {
-      // Caller hung up before we picked up
-      if (soundRef.current) soundRef.current.stopAsync();
-      if (navigation.canGoBack()) navigation.goBack();
+    let activeSocket = null;
+    let isMounted = true;
+
+    const setupListener = async () => {
+      const { connectSocket } = require('../../services/socket');
+      activeSocket = getSocket() || await connectSocket();
+      
+      if (!isMounted) return;
+
+      const onCallEnded = (data) => {
+        // Caller hung up before we picked up
+        if (soundRef.current) soundRef.current.stopAsync();
+        if (navigation.canGoBack()) navigation.goBack();
+      };
+      
+      if (activeSocket) {
+        activeSocket.on('call_ended', onCallEnded);
+      }
     };
-    
-    socket.on('call_ended', onCallEnded);
-    return () => socket.off('call_ended', onCallEnded);
+
+    setupListener();
+
+    return () => {
+      isMounted = false;
+      if (activeSocket) {
+        // We can't easily reference onCallEnded here since it's scoped,
+        // but we can remove all 'call_ended' listeners or just rely on the component unmounting.
+        activeSocket.off('call_ended');
+      }
+    };
   }, [navigation]);
 
   // ── Ringtone ──────────────────────────────────────────────────────────────
@@ -102,8 +130,9 @@ export default function IncomingCallScreen({ navigation, route }) {
           staysActiveInBackground: true,
         });
         const { sound } = await Audio.Sound.createAsync(
-          { uri: 'https://actions.google.com/sounds/v1/alarms/phone_ringing.ogg' },
-          { shouldPlay: true, isLooping: true }
+          // Reliable public ringtone (Google Actions OGG + MP3 fallback)
+          { uri: 'https://www.soundjay.com/phone/sounds/telephone-ring-01a.mp3' },
+          { shouldPlay: true, isLooping: true, volume: 1.0 }
         );
         if (isMounted) {
           soundRef.current = sound;
@@ -132,13 +161,15 @@ export default function IncomingCallScreen({ navigation, route }) {
   const handleDecline = async () => {
     if (soundRef.current) await soundRef.current.stopAsync();
     try {
-      const socket = getSocket();
+      const { connectSocket } = require('../../services/socket');
+      const socket = getSocket() || await connectSocket();
       if (socket) {
         socket.emit('call_ended', { bookingId, clientId, advocateUserId });
-        // Also emit missed call for chat
         socket.emit('call_missed', { bookingId, clientId, advocateUserId, mode });
       }
-    } catch (_) {}
+    } catch (err) {
+      console.warn('Decline emit failed:', err);
+    }
     if (navigation.canGoBack()) navigation.goBack();
   };
 
@@ -147,11 +178,16 @@ export default function IncomingCallScreen({ navigation, route }) {
     if (soundRef.current) await soundRef.current.stopAsync();
     
     try {
-      const socket = getSocket();
+      const { connectSocket } = require('../../services/socket');
+      const socket = getSocket() || await connectSocket();
       if (socket) {
         socket.emit('call_accepted', { bookingId, clientId, advocateUserId });
+      } else {
+        console.warn('[IncomingCall] Failed to get socket for call_accepted');
       }
-    } catch (_) {}
+    } catch (err) {
+      console.warn('Accept emit failed:', err);
+    }
 
     navigation.replace(targetRoute, {
       zegoRoomId,
@@ -159,11 +195,11 @@ export default function IncomingCallScreen({ navigation, route }) {
       zegoAppId,
       mode,
       bookingId,
-      clientName:    callerName,
-      advocateName:  callerName,   // either side needs peerName
-      callerName:    callerName,
-      clientAvatar:  callerAvatar,
-      advocateAvatar: callerAvatar,
+      clientName:     callerName,
+      advocateName:   callerName,
+      callerName:     callerName,
+      clientAvatar:   callerPhoto,
+      advocateAvatar: callerPhoto,
       clientId,
       advocateUserId,
       myUserId:   myUserId || '',
@@ -211,8 +247,8 @@ export default function IncomingCallScreen({ navigation, route }) {
           <Animated.View style={ringStyle(ring3)} />
 
           <View style={styles.avatar}>
-            {callerAvatar ? (
-              <Image source={{ uri: callerAvatar }} style={styles.avatarImg} />
+            {callerPhoto ? (
+              <Image source={{ uri: callerPhoto }} style={styles.avatarImg} />
             ) : (
               <View style={styles.avatarFallback}>
                 <Text style={styles.avatarInitial}>
@@ -224,7 +260,9 @@ export default function IncomingCallScreen({ navigation, route }) {
         </View>
 
         <Text style={styles.callerName}>{callerName}</Text>
-        <Text style={styles.callerRole}>Advocate · Legalitt</Text>
+        <Text style={styles.callerRole}>
+          {targetRoute === 'AdvocateCall' ? 'Client · Legalitt' : 'Advocate · Legalitt'}
+        </Text>
 
         {/* Countdown ring */}
         <Text style={styles.countdown}>Auto-decline in {countdown}s</Text>

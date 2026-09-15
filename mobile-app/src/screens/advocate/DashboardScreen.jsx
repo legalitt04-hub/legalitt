@@ -223,7 +223,7 @@ const AdvocateDashboardScreen = ({ navigation }) => {
           { text: 'Later', style: 'cancel' },
           {
             text: data.consultationMode === 'chat' ? 'Open Chat' : 'Join Call',
-            onPress: () => {
+            onPress: async () => {
               if (data.consultationMode === 'chat' && data.chatId) {
                 navigation.navigate('Chat', {
                   chatId: data.chatId,
@@ -233,13 +233,16 @@ const AdvocateDashboardScreen = ({ navigation }) => {
                 });
               } else if (data.consultationMode === 'voice' || data.consultationMode === 'video') {
                 const effectiveRoomId = data.zegoRoomId || data.videoRoomId || null;
-                const socket = getSocket();
+                const { connectSocket } = require('../../services/socket');
+                const socket = getSocket() || await connectSocket();
                 if (socket && data.bookingId) {
                   socket.emit('initiate_call', {
                     bookingId: data.bookingId,
                     zegoRoomId: effectiveRoomId,
                     mode: data.consultationMode,
                   });
+                } else {
+                  Alert.alert('Error', 'Could not connect to call server.');
                 }
                 
                 navigation.navigate('AdvocateCall', {

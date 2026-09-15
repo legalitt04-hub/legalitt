@@ -84,6 +84,8 @@ export const AuthProvider = ({ children }) => {
 
         const { data } = await authAPI.getMe();
         dispatch({ type: 'LOGIN_SUCCESS', payload: data.data });
+        // Connect socket immediately using the saved token
+        connectSocket(token);
       } catch (err) {
         await SecureStore.deleteItemAsync(TOKEN_KEY);
         await SecureStore.deleteItemAsync(REFRESH_KEY);
@@ -100,8 +102,8 @@ export const AuthProvider = ({ children }) => {
       await SecureStore.setItemAsync(TOKEN_KEY, data.data.accessToken);
       await SecureStore.setItemAsync(REFRESH_KEY, data.data.refreshToken);
       dispatch({ type: 'LOGIN_SUCCESS', payload: data.data.user });
-      // Connect socket after login so real-time updates work
-      setTimeout(() => connectSocket(), 500);
+      // Connect socket immediately with the fresh token — no delay needed
+      connectSocket(data.data.accessToken);
       return { success: true, user: data.data.user };
     } catch (err) {
       const msg = err.response?.data?.message || 'Login failed';

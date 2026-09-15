@@ -390,7 +390,7 @@ const ChatScreen = ({ navigation, route }) => {
           {/* Voice Call Button */}
           <TouchableOpacity
             style={styles.callBtn}
-            onPress={() => {
+            onPress={async () => {
               if (callMode === 'chat') {
                 Alert.alert('Chat Only', 'This consultation is chat-based. Voice/video calls are not included.');
                 return;
@@ -399,7 +399,8 @@ const ChatScreen = ({ navigation, route }) => {
               const effectiveRoomId = zegoRoomId || (bookingId ? `legalitt-${bookingId}` : null) || (chatId ? `legalitt-${chatId}` : null);
               if (!effectiveRoomId) return Alert.alert('Error', 'Could not start call.');
 
-              const socket = getSocket();
+              const { connectSocket } = require('../../services/socket');
+              const socket = getSocket() || await connectSocket();
               if (socket && (bookingId || chatId)) {
                 socket.emit('initiate_call', {
                   bookingId,
@@ -407,6 +408,8 @@ const ChatScreen = ({ navigation, route }) => {
                   zegoRoomId: effectiveRoomId,
                   mode: 'voice',
                 });
+              } else {
+                return Alert.alert('Error', 'Could not connect to call server. Please try again.');
               }
 
               const userRole = userData?.role || 'client';
@@ -432,7 +435,7 @@ const ChatScreen = ({ navigation, route }) => {
           {/* Video Call Button */}
           <TouchableOpacity
             style={styles.callBtn}
-            onPress={() => {
+            onPress={async () => {
               if (callMode === 'chat') {
                 Alert.alert('Chat Only', 'This consultation is chat-based. Voice/video calls are not included.');
                 return;
@@ -441,14 +444,18 @@ const ChatScreen = ({ navigation, route }) => {
               const effectiveRoomId = zegoRoomId || (bookingId ? `legalitt-${bookingId}` : null) || (chatId ? `legalitt-${chatId}` : null);
               if (!effectiveRoomId) return Alert.alert('Error', 'Could not start call.');
 
-              const socket = getSocket();
+              const { connectSocket } = require('../../services/socket');
+              const socket = getSocket() || await connectSocket();
               if (socket && (bookingId || chatId)) {
+                Alert.alert('Debug', 'Sending call to server...');
                 socket.emit('initiate_call', {
                   bookingId,
                   chatId,
                   zegoRoomId: effectiveRoomId,
                   mode: 'video',
                 });
+              } else {
+                return Alert.alert('Error', 'Could not connect to call server. Please try again.');
               }
 
               const userRole = userData?.role || 'client';
